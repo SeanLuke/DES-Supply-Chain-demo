@@ -1,0 +1,88 @@
+<html>
+  <head>
+    <title>Supply Chain Demo</title>
+  </head>
+  <body>
+    <h1>Supply Chain Demo</h1>
+
+    <p>The code in this project represesnts a simple supply chain simulation implemented in Java using the <a href="https://cs.gmu.edu/~eclab/projects/mason/">MASON</a> API and the <a href="https://github.com/eclab/mason/tree/distributed-3.0/contrib/des/sim/des">MASON DES library</a>
+
+      <h2>Prepare</h2>
+
+<p>You need a Java compile, which can be obtained from Oracle or OpenJPA. For convenience, I also use a Git client and Apache Ant (a <tt>make<tt>-like tool for Java).
+      
+      <ul>
+	<li>Check out the source code from GitHub. Let's say you've put it to ~/mason/work on your machine.
+	<li>Create also ~/mason/lib, and put into it the MASON jar file,
+	  mason.20.jar, from the MASON site above.
+	<li>Obtain the DES source code from its own GitHub repo (see the link above), compile it and package it into 	  des.jar, and place the JAR file into the same ~/mason/lib directory. Sample commands for doing this:
+	  <pre>
+#!/bin/csh
+
+set m=~/mason
+
+cd $m
+mkdir git
+cd git
+git init
+git remote add origin https://github.com/eclab/mason.git
+git pull origin distributed-3.0
+
+cd $m/git/code/contrib/des
+javac -d $m/out -cp $m/lib/mason.20.jar sim/des/*.java
+# javadoc  -d $m/javadoc -cp $m/lib/mason.20.jar:$m/out -sourcepath . sim.des
+cd $m/out
+jar cf des.jar sim/des/*.class
+cp des.jar ../lib    
+</pre>	
+      </ul>
+      
+      <h2>Compile</h2>
+
+      <p>I compile with Apache Ant:
+
+	<pre>
+cd ~/mason/work
+ant
+</pre>
+
+<p>Apache Ant is the tool that takes its commands from build.xml. If you don't want to use Ant, just compile the Java code from <tt>src</tt>
+</pre>
+
+
+	       <h2>Run</h2>
+
+<p>You can run the simulation with
+  <pre>
+    ./run.sh > tmp.log
+  </pre>
+
+  The output file may look like this:
+  <pre>
+===== Start: =========
+[IngStor.StoreOfIng0(cap=1000.0), has 0.0 units of Ing0. EverReceived=0.0]
+[IngStor.StoreOfIng1(cap=1000.0), has 0.0 units of Ing1. EverReceived=0.0]
+[IngStor.Pack.Mat.Store(cap=1000.0), has 0.0 units of Pack.Mat.. EverReceived=0.0]
+[PrePStor.PrePStore0(cap=1000.0), has 0.0 units of Ing0, plus 0.0+0.0 still in QA; discarded 0.0 faulty units, accepted 0.0 good ones]
+[PrePStor.PrePStore1(cap=1000.0), has 0.0 units of Ing1, plus 0.0+0.0 still in QA; discarded 0.0 faulty units, accepted 0.0 good ones]
+[PrePStor.TestedPackmatStore(cap=1000.0), has 0.0 units of Pack.Mat., plus 0.0+0.0 still in QA; discarded 0.0 faulty units, accepted 0.0 good ones]
+[Production.Prod, has 0.0+0.0 in the work, 0.0+0.0 in QA, and 0.0 in ready storage. Ever started: 0.0. Produced: faulty=0.0, good=0.0]
+[PostProcStore has 0.0 units]
+[Packaging.Packaging, has 0.0 in the work, 0.0 in QA, 0.0 in ready storage. Packaged: faulty=0.0, good=0.0]
+[DispatchStorage.Dispatch, has 0.0 units. Ever shipped: 0.0]
+===== Finish: =========
+[IngStor.StoreOfIng0(cap=1000.0), has 0.0 units of Ing0. EverReceived=1680.0]
+[IngStor.StoreOfIng1(cap=1000.0), has 0.0 units of Ing1. EverReceived=1660.0]
+[IngStor.Pack.Mat.Store(cap=1000.0), has 0.0 units of Pack.Mat.. EverReceived=1680.0]
+[PrePStor.PrePStore0(cap=1000.0), has 231.0 units of Ing0, plus 0.0+0.0 still in QA; discarded 169.0 faulty units, accepted 1511.0 good ones]
+[PrePStor.PrePStore1(cap=1000.0), has 80.0 units of Ing1, plus 0.0+0.0 still in QA; discarded 300.0 faulty units, accepted 1360.0 good ones]
+[PrePStor.TestedPackmatStore(cap=1000.0), has 467.0 units of Pack.Mat., plus 0.0+0.0 still in QA; discarded 173.0 faulty units, accepted 1507.0 good ones]
+[Production.Prod, has 10.0+0.0 in the work, 10.0+0.0 in QA, and 0.0 in ready storage. Ever started: 1280.0. Produced: faulty=186.0, good=1074.0]
+[PostProcStore has 34.0 units]
+[Packaging.Packaging, has 0.0 in the work, 30.0 in QA, 0.0 in ready storage. Packaged: faulty=152.0, good=858.0]
+[DispatchStorage.Dispatch, has 500.0 units. Ever shipped: 119.0]
+    
+  </pre>
+      
+  </body>
+</html>
