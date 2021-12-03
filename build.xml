@@ -1,0 +1,111 @@
+<!-- This is the main build file for use with Apache Ant. It tells Ant how to
+    compile our application from the source code, how to build Javadoc documentation,
+    etc. 
+
+    To carry out a particular operation with Ant, you provide the name of the
+    appropriate target. E.g., to compile the code, you type 
+
+      and compile
+
+     Apache Ant is available for most modern operating systems.
+     You can read more about Apache Ant at http://ant.apache.org/manual/index.html
+
+-->
+
+<project name="pharmademo" default="jar" basedir=".">
+
+ <property name="main" location="."/>
+
+ <property name="src" location="src"/>
+ <!-- property name="src.doc" location="src.doc"/ -->
+
+ <property name="classes" location="${main}/classes"/>
+ <property name="lib" location="${main}/lib"/>
+ <property name="build.tmp" location="/tmp"/>
+
+ <property name="our.jar" value="demo.jar"/>
+
+
+<path id="classpath"
+       description="The classpath to use for compiling this app">
+
+   <fileset dir="${main}/../lib">
+     <include name="*.jar"/>
+   </fileset> 
+ </path>
+
+
+<!-- An auxiliary target; you aren't likely to use it directly.  It just creates necessary directories -->
+<target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${lib}"/>
+    <mkdir dir="${classes}"/>
+    <mkdir dir=""/>
+</target>
+
+
+<target name="clean"
+        description="Clean up compiled files and generated database files">
+
+  <delete dir="${classes}"/>
+	
+  <delete file="${lib}/${our.jar}"/>
+ </target>
+
+
+
+<!-- This target tells Ant how to compile the application. -->
+<target name="compile" depends="init"
+        description="Compile the source code" >
+  <!-- Compile the java code from ${src} into ${classes} -->
+  <javac srcdir="${src}" destdir="${classes}"
+	 includes="edu/**"  optimize="on"
+	 debug="on" debuglevel="lines,vars,source"	 
+	 includeantruntime="false"
+	 target="1.9" source="1.9"
+	 >
+    <classpath refid="classpath"/>
+    <!-- compilerarg value="-Xlint"/ -->
+  </javac>
+  <!-- copy todir="${classes}">
+    <fileset dir="${src}">
+      <include name="**/*.png"/>
+    </fileset>
+  </copy -->
+</target>
+
+
+
+<target name="jar" depends="compile"
+        description="Builds a Jar file that will include all  class files.">
+  <echo message="lib=${lib}, our=${our.jar}. Preparing jar file ${lib}/${our.jar}, from ${classes}"/>
+ <jar destfile="${lib}/${our.jar}"   basedir="${classes}">
+
+   <!-- file="manifest-data.dat" mode="replace" -->
+   <!-- attribute name="Class-Path" value=". xercesImpl.jar xml-apis.jar"/ -->
+   <!-- manifest> 
+      <attribute name="Main-Class" value="edu.rutgers.enats.Enats"/>
+      <attribute name="Class-Path" value="."/>	
+    </manifest -->
+  </jar>
+</target>
+
+<target name="javadoc" depends="init,compile">
+ 
+  <javadoc sourcepath="src" packagenames="edu.*"
+	   classpathref="classpath"
+	   destdir="web/api"
+           use="true"
+	   link="https://docs.oracle.com/en/java/javase/11/docs/api/"
+	   header="&lt;em&gt;Rule Game&lt;/em&gt;"   
+	   windowtitle="Rule Game web API documentation" 
+	   additionalparam="-Xdoclint:none" />
+</target>
+
+<!--	   overview="${src.doc}/html/api/overview.html" -->
+
+
+</project>
+
