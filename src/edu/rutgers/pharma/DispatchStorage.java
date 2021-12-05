@@ -26,8 +26,7 @@ class DispatchStorage extends sim.des.Queue implements Reporting {
 	    the entire content of the warehouse
 	 */
 	public void step(SimState state) {
-	    DispatchStorage.this.provide( consumer);
-	    
+	    DispatchStorage.this.truckIsHere();
 	}
     }
 
@@ -61,13 +60,15 @@ class DispatchStorage extends sim.des.Queue implements Reporting {
 	    double nextTime = state.schedule.getTime() +  Math.abs(outDelayDistribution.nextDouble());
 	    
 	    emptyTruckTimer = new EmptyTruckTimer();
-	    state.schedule.scheduleOnce(nextTime, emptyTruckTimer);    	    
+	    state.schedule.scheduleOnce(nextTime, emptyTruckTimer);
+	    System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " calls for a truck; ETA=" + nextTime);
 	}
     }
 
     /** This is triggered by the time when the empty truck has come
 	to take everything away */
     void truckIsHere() {
+	System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " loading to a customer's truck");
 	provide( consumer);
 	emptyTruckTimer=null;
     }

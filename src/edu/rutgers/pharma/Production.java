@@ -9,6 +9,8 @@ import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
 
+import edu.rutgers.util.*;
+
 /** A Production plant takes ingredients from 2 Preprocessing storage units,
     puts them through production and QA delays, and sends the output 
     to Postprocessing store.
@@ -32,34 +34,37 @@ class Production extends sim.des.Queue
     /** Dummy receivers used for the consumption of ingredients */
     final Sink[] sink;
 
-    Production(SimState state, String name,
+    Production(SimState state, String name, Config config,
 	       PreprocStorage[] _preprocStore,
 	       sim.des.Queue _postprocStore,
 	       int[] _inBatchSizes, int _outBatchSize,
 	       Resource outResource,
-	       int maximum,		   
-		   AbstractDistribution  prodDelayDistribution,
-		   AbstractDistribution  qaDelayDistribution,
-		   AbstractDistribution  faultyPortionDistribution
-		   )
+	       int maximum //,		   
+	       //		   AbstractDistribution  prodDelayDistribution,
+	       //		   AbstractDistribution  qaDelayDistribution,
+	       //		   AbstractDistribution  faultyPortionDistribution
+		   ) throws IllegalInputException
     {
 	super(state, outResource);
 	setCapacity(maximum);
 	setName(name);
+	ParaSet para = config.get(name);
+	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 
 	inBatchSizes = _inBatchSizes;
 	outBatchSize = _outBatchSize;
 	preprocStore = _preprocStore;
 	postprocStore =	_postprocStore;
 			   
-	qaDelay = new QaDelay(state,resource, faultyPortionDistribution);
-	qaDelay.setDelayDistribution(qaDelayDistribution);
+	qaDelay = new QaDelay(state,resource, para.getDistribution("faulty",state.random));
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
 	qaDelay.addReceiver(postprocStore);
 	qaDelay.addReceiver(this);
 	qaDelay.setOfferPolicy​(Provider.OFFER_POLICY_FORWARD);
 	
 	prodDelay = new Delay(state,resource);
-	prodDelay.setDelayDistribution(prodDelayDistribution);
+	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
+				       
 	prodDelay.addReceiver(qaDelay);
 
 	sink = new Sink[preprocStore.length];

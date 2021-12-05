@@ -1,5 +1,6 @@
 package  edu.rutgers.pharma;
 
+import java.io.*;
 import java.util.*;
 import java.text.*;
 
@@ -8,6 +9,8 @@ import sim.util.*;
 import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
+
+import edu.rutgers.util.*;
 
 /** The main class for a  simple pharmaceutical supply chain simulation demo */
 public class Demo extends SimState {
@@ -39,7 +42,7 @@ public class Demo extends SimState {
     /** Here, the supply network elements are added to the Demo object */
     public void start(){
 	super.start();
-
+	try {
 	CountableResource[] ing = {new CountableResource("Ing0",0), new CountableResource("Ing1",0)};
 	final int NI = ing.length;
 	CountableResource packmat = new CountableResource("Pack.Mat.",0);
@@ -71,17 +74,18 @@ public class Demo extends SimState {
 	postprocStore.setName("PostPStore");
 	postprocStore.setCapacity(1000);
 	
-	production = new Production(this, "Prod",
+	production = new Production(this, "Production", config,
 				    preprocStore,
 				    postprocStore,
 				    new int[] {10,10}, 10,
-				    product, 1000,
+				    product, 1000);
+	    /*
 				    //prodDelayDistribution,
 				    new Uniform(1,3, random),
 				    // qaDelayDistribution,
 				    new Uniform(1,4, random),
 				    // faultyPortionDistribution
-				    new Uniform(0.1, 0.2, random));
+				    new Uniform(0.1, 0.2, random));*/
 	add(production);
 
 	CountableResource packaged = new CountableResource("PackagedProduct",0);
@@ -108,10 +112,11 @@ public class Demo extends SimState {
 	packaging.setDispatchStore(dispatchStore);
 
 	add(packaging);
-	add(dispatchStore);
-
-	
+	add(dispatchStore);	
 	System.out.println("===== Start: =========\n" + report());
+	} catch(IllegalInputException ex) {
+	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
+	}
     }
 
     public void	finish() {
@@ -132,10 +137,15 @@ public class Demo extends SimState {
     }
     
     static  String[] argv;
+    static Config config;
     
-    public static void main(String[] _argv){
+    public static void main(String[] _argv) throws IOException, IllegalInputException {
 	argv= _argv;
 
+	File f= new File("config/pharma.csv");
+	config  = Config.readConfig(f);
+	
+	
 	doLoop(Demo.class, argv);
 	
 	System.exit(0);
