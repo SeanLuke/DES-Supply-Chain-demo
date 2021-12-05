@@ -9,19 +9,11 @@ import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
 
+import edu.rutgers.util.*;
+
 /** Ingredient storage */
 class IngredientStorage extends sim.des.Queue implements Reporting {
 
-    /** Enables access to the resource, so that we can pass it as an argument
-	in the accept() calls in downstream users 
-    */
-    //    CountableResource getResource() { return resource; }
-    
-
-
-    
-    /** (4*24,5*24) */
-    AbstractDistribution supplierDelayDistribution;
     /** It seems like one needs a Provider object to call Delay.accept()
 	with,  	so let's create one. 
      */
@@ -31,13 +23,16 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	shipping by truck) */
     Delay supplierDelay;
     
-    IngredientStorage(SimState state, String name, CountableResource resource, int maximum) {
-	super(state, resource);
-	setCapacity(maximum);
+    IngredientStorage(SimState state, String name, Config config,
+		      CountableResource resource) throws IllegalInputException {
+	super(state, resource);	
 	setName(name);
-	supplierDelayDistribution = new Uniform(4*24,5*24,state.random);
+	ParaSet para = config.get(name);
+	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	setCapacity(para.getDouble("capacity"));
+		
 	supplierDelay = new Delay(state,resource);
-	supplierDelay.setDelayDistribution(supplierDelayDistribution);
+	supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",state.random));
 	supplierDelay.addReceiver(this);
     }
 

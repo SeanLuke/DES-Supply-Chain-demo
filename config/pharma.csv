@@ -5,3 +5,29 @@ Production,prodDelay,Uniform,1,3
 Production,qaDelay,Uniform,1,4
 #-- The distribution of the percentage of faulty output (on the 0.0 to 1.0 scale)
 Production,faulty,Uniform,0.1,0.2
+#--- On-site storage capacity, for stuff that has passed QA but cannot be immediately put to Post-proc storage because the latter is out of space
+Production,capacity,1000
+#--- The amount of each ingredient that needs to be consumed to produce each production batch
+Production,inBatch,10,10
+#--- The size of the production batch (amount of output product) that can be started every hour
+Production,batch,10
+
+#----------------------------------------------------------------------
+Packaging,capacity,1000
+Packaging,batch,10
+Packaging,prodDelay,Uniform,1,3
+Packaging,qaDelay,Uniform,1,4
+Packaging,faulty,Uniform,0.1,0.2
+
+#----------------------------------------------------------------------
+#--- Ingredient storage 0
+IngStore0,capacity,1000
+IngStore0,supplierDelay,Uniform,96,120
+
+#--- Ingredient storage 1
+IngStore1,capacity,1000
+IngStore1,supplierDelay,Uniform,96,120
+
+#--- Packing material storage
+PackMatStore,capacity,1000
+PackMatStore,supplierDelay,Uniform,96,120

@@ -9,6 +9,8 @@ import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
 
+import edu.rutgers.util.*;
+
 /** A Packaging facility reprocessing Storage unit receievs an ingredient from
     an Ingredient Storage unit (via a built-in quality check unit),
     and supplies quality-assured ingredient to the Production unit.
@@ -28,32 +30,29 @@ class Packaging extends sim.des.Queue implements Reporting {
     PreprocStorage testedPackmatStore;
     sim.des.Queue dispatchStore;
     //Source packagingMachine;
-    int batchSize;
+    double batchSize;
     
-    Packaging(SimState state, String name,
+    Packaging(SimState state, String name, Config config,
 	      sim.des.Queue _postprocStore,
 	      PreprocStorage _testedPackmatStore,
-	      int _batchSize,
-	      Resource outResource,
-	       int maximum,		   
-		   AbstractDistribution  prodDelayDistribution,
-		   AbstractDistribution  qaDelayDistribution,
-		   AbstractDistribution  faultyPortionDistribution
-		   )
+	      Resource outResource) throws IllegalInputException
     {
 	super(state, outResource);
 	setName(name);
-	setCapacity(maximum);
+	ParaSet para = config.get(name);
+	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	setCapacity(para.getDouble("capacity"));
+
 	postprocStore = _postprocStore ;
 	testedPackmatStore = _testedPackmatStore;
-	batchSize = _batchSize;
+	batchSize = para.getDouble("batch");
 	
-	qaDelay = new QaDelay(state,resource, faultyPortionDistribution);
-	qaDelay.setDelayDistribution(qaDelayDistribution);
+	qaDelay = new QaDelay(state,resource,  para.getDistribution("faulty",state.random));
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
 	qaDelay.setOfferPolicy​(Provider.OFFER_POLICY_FORWARD);
 	
 	prodDelay = new Delay(state,resource);
-	prodDelay.setDelayDistribution(prodDelayDistribution);
+	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
 	prodDelay.addReceiver(qaDelay);
 
 	

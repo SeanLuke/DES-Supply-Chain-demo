@@ -23,9 +23,9 @@ class Production extends sim.des.Queue
     QaDelay qaDelay;
 
     /** How many units of each input need to be taken to start cooking a batch? */
-    final int[] inBatchSizes;
+    final double[] inBatchSizes;
     /** How big is the output batch? */
-    final int outBatchSize;
+    final double outBatchSize;
 
     /** Where inputs come from */
     final PreprocStorage[] preprocStore;
@@ -37,24 +37,22 @@ class Production extends sim.des.Queue
     Production(SimState state, String name, Config config,
 	       PreprocStorage[] _preprocStore,
 	       sim.des.Queue _postprocStore,
-	       int[] _inBatchSizes, int _outBatchSize,
-	       Resource outResource,
-	       int maximum //,		   
-	       //		   AbstractDistribution  prodDelayDistribution,
-	       //		   AbstractDistribution  qaDelayDistribution,
-	       //		   AbstractDistribution  faultyPortionDistribution
-		   ) throws IllegalInputException
+	       Resource outResource ) throws IllegalInputException
     {
 	super(state, outResource);
-	setCapacity(maximum);
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	setCapacity(para.getDouble("capacity"));
 
-	inBatchSizes = _inBatchSizes;
-	outBatchSize = _outBatchSize;
 	preprocStore = _preprocStore;
 	postprocStore =	_postprocStore;
+
+	//	inBatchSizes = _inBatchSizes;
+	inBatchSizes = para.getDoubles("inBatch");
+	if (inBatchSizes.length!=preprocStore.length) throw new  IllegalInputException("Mismatch of the number of inputs: given " + preprocStore.length + " preproc stores, but " + inBatchSizes.length + " input batch sizes");
+	//outBatchSize = _outBatchSize;
+	outBatchSize = para.getDouble("batch");
 			   
 	qaDelay = new QaDelay(state,resource, para.getDistribution("faulty",state.random));
 	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));

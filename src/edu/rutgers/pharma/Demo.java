@@ -49,8 +49,9 @@ public class Demo extends SimState {
 
 	ingStore = new IngredientStorage[NI];
 	preprocStore = new PreprocStorage[NI];
-	AbstractDistribution  qaDelayDistribution = new Uniform(1,4,random);	for(int j=0; j<NI; j++) {
-	    ingStore[j] = new IngredientStorage(this, "StoreOfIng" + j,  ing[j], 1000);
+	AbstractDistribution  qaDelayDistribution = new Uniform(1,4,random);
+	for(int j=0; j<NI; j++) {
+	    ingStore[j] = new IngredientStorage(this, "IngStore" + j, config,  ing[j]);
 	    add(ingStore[j]);
 
 
@@ -60,7 +61,7 @@ public class Demo extends SimState {
 	    preprocStore[j] = new PreprocStorage(this, "PrePStore" + j, ingStore[j], 1000,  qaDelayDistribution, faultyPortionDistribution);
 	    add(preprocStore[j]);
 	}
-	packmatStore = new IngredientStorage(this,"Pack.Mat.Store",  packmat, 1000);
+	packmatStore = new IngredientStorage(this,"PackMatStore", config, packmat);
 	add(packmatStore);
 
 	AbstractDistribution  faultyPortionDistribution = new Uniform(0.05, 0.15, random);
@@ -77,30 +78,14 @@ public class Demo extends SimState {
 	production = new Production(this, "Production", config,
 				    preprocStore,
 				    postprocStore,
-				    new int[] {10,10}, 10,
-				    product, 1000);
-	    /*
-				    //prodDelayDistribution,
-				    new Uniform(1,3, random),
-				    // qaDelayDistribution,
-				    new Uniform(1,4, random),
-				    // faultyPortionDistribution
-				    new Uniform(0.1, 0.2, random));*/
+				    product);
 	add(production);
 
 	CountableResource packaged = new CountableResource("PackagedProduct",0);
-	packaging = new Packaging(this, "Packaging",
+	packaging = new Packaging(this, "Packaging", config,
 				  postprocStore,
 				  testedPackmatStore,
-				  10,
-				  packaged,
-				  1000,
-				  //prodDelayDistribution,
-				  new Uniform(1,3, random),
-				  //qaDelayDistribution,
-				  new Uniform(1,4, random),
-				  //faultyPortionDistribution
-				  new Uniform(0.1, 0.2, random));
+				  packaged);
 				  
 	
 	dispatchStore = new  DispatchStorage(this, "Dispatch",
@@ -116,6 +101,7 @@ public class Demo extends SimState {
 	System.out.println("===== Start: =========\n" + report());
 	} catch(IllegalInputException ex) {
 	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
+	    System.exit(1);
 	}
     }
 
