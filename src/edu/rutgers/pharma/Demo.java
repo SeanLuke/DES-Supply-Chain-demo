@@ -95,20 +95,32 @@ public class Demo extends SimState {
 	packaging.setDispatchStore(dispatchStore);
 
 	add(packaging);
-	add(dispatchStore);	
-	System.out.println("===== Start: ===================================\n"
-			   + report());
-	System.out.println("================================================");
+	add(dispatchStore);
+	doReport("Start");
 	} catch(IllegalInputException ex) {
 	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
 	    System.exit(1);
 	}
+	final int CENSUS_INTERVAL=500;
+	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
+
     }
 
     public void	finish() {
-	System.out.println("===== Finish: ==================================\n"
+	doReport("Finish");
+    }
+
+    static class Reporter implements Steppable {
+	public void step(SimState state) {
+	    ((Demo)state).doReport("Report at t=" + state.schedule.getTime());
+	}  
+    }
+
+    void doReport(String msg) {
+	System.out.println("===== "+msg+" ===================================\n"
 			   + report());
 	System.out.println("================================================");
+	
     }
     
     String report() {
@@ -124,13 +136,29 @@ public class Demo extends SimState {
 	return String.join("\n", v);
     }
     
-    static  String[] argv;
     static Config config;
-    
-    public static void main(String[] _argv) throws IOException, IllegalInputException {
-	argv= _argv;
 
-	File f= new File("config/pharma.csv");
+    /** Extracts a few command-line options we understand, and leaves
+	the rest of them to MASON.
+    */
+    public static void main(String[] argv) throws IOException, IllegalInputException {
+	String confPath = "config/pharma.csv";
+
+	Vector<String> va = new Vector<String>();
+	for(int j=0; j<argv.length; j++) {
+	    String a = argv[j];
+	    if (a.equals("-verbose")) {
+		verbose = true;
+	    } else if (a.equals("-config") && j+1<argv.length) {
+		confPath= argv[++j];
+	    } else {
+		va.add(a);
+	    }
+	}
+
+	argv = va.toArray(new String[0]);
+	
+	File f= new File(confPath);
 	config  = Config.readConfig(f);
 	
 	
