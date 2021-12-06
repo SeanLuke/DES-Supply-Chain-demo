@@ -6,18 +6,16 @@ import java.text.*;
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
+
 import sim.des.*;
 
-/** Dispatch store sits at the end of our model
+import edu.rutgers.util.*;
+
+/** Dispatch store sits at the end of our model.
   */
 class DispatchStorage extends sim.des.Queue implements Reporting {
 
-    /** This simply serves as a time to indicate that we have 
-	called for an empty truck to come and pick the entire
-	content of the warehouse */
-    //    Delay emptyTruckDelay;
-
+    /** The outside consumer, who does not have a lot of properties */
     MSink consumer;
 
     /** One schedules this thing once when ordering an empty truck */
@@ -30,45 +28,49 @@ class DispatchStorage extends sim.des.Queue implements Reporting {
 	}
     }
 
+    /** When null, it means that the truck has not been called; when non-null,
+	the truck has been called, but has not arrived yet. */
     EmptyTruckTimer emptyTruckTimer;
 
     AbstractDistribution  outDelayDistribution;
+    final double threshold;
     
-    DispatchStorage(SimState state, String name,
-	      Resource outResource,
-		    int maximum,		   
-		    AbstractDistribution  _outDelayDistribution
-		   )
+    DispatchStorage(SimState state, String name, Config config,
+	      Resource outResource ) throws IllegalInputException
     {
 	super(state, outResource);
 	setName(name);
-	setCapacity(maximum);
-       
-	outDelayDistribution = _outDelayDistribution;
+	ParaSet para = config.get(name);
+	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	setCapacity(para.getDouble("capacity"));
+	threshold = para.getDouble("threshold");
+	       
+	outDelayDistribution = para.getDistribution("delay",state.random);
 	consumer = new MSink( state,  outResource);
-	//CountableResource truck = new CountableResource("Truck",0);
-	//emptyTruckDelay = new Delay(state, truck);
-	//	emptyTruckDelay.setDelayDistribution(outDDelayDistribution);
     }
 
-    /** If there is enough stuff to call for a truck, call it
+    /** If there is enough stuff to call for a truck, and a truck
+	has not been called yet, call it now.
      */
     public void step​(SimState state) {
-	final int threshold = 50;
+
 	if (getAvailable()>threshold && emptyTruckTimer==null) {
 
 	    double nextTime = state.schedule.getTime() +  Math.abs(outDelayDistribution.nextDouble());
 	    
 	    emptyTruckTimer = new EmptyTruckTimer();
 	    state.schedule.scheduleOnce(nextTime, emptyTruckTimer);
-	    System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " calls for a truck; ETA=" + nextTime);
+	    if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " calls for a truck; ETA=" + nextTime);
 	}
     }
 
     /** This is triggered by the time when the empty truck has come
-	to take everything away */
+	to take everything away. The method offloads the entire
+	content of the warehouse, and turns off the timer, so that
+	it can be turned on again when needed.
+    */
     void truckIsHere() {
-	System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " loading to a customer's truck");
+	if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " loading to a customer's truck; available="+getAvailable());
 	provide( consumer);
 	emptyTruckTimer=null;
     }

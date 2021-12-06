@@ -1,4 +1,50 @@
+#----------------------------------------------------------------------
+# Lines that begin with a hash mark are comments
+#----------------------------------------------------------------------
 #Element Name,Parameter name,val1,val2...
+
+#----------------------------------------------------------------------
+#--- Ingredient storage elements
+#----------------------------------------------------------------------
+#--- Ingredient storage 0
+IngStore0,capacity,1000
+IngStore0,threshold,350
+IngStore0,restock,650
+IngStore0,supplierDelay,Uniform,96,120
+
+#--- Ingredient storage 1
+IngStore1,capacity,1000
+IngStore1,threshold,350
+IngStore1,restock,650
+IngStore1,supplierDelay,Uniform,96,120
+
+#--- Packing material storage
+PackMatStore,capacity,1000
+PackMatStore,threshold,350
+PackMatStore,restock,650
+PackMatStore,supplierDelay,Uniform,96,120
+
+
+#----------------------------------------------------------------------
+#--- Preprocessed material storage 0
+PreprocStore0,capacity,1000
+PreprocStore0,qaDelay,Uniform,1,2
+PreprocStore0,faulty,Uniform,0.025,0.175
+PreprocStore0,batch,20
+
+PreprocStore1,capacity,1000
+PreprocStore1,qaDelay,Uniform,1,2
+PreprocStore1,faulty,Uniform,0.025,0.325
+PreprocStore1,batch,20
+
+TestedPackMatStore,capacity,1000
+TestedPackMatStore,qaDelay,Uniform,1,2
+TestedPackMatStore,faulty,Uniform,0.05,0.15
+TestedPackMatStore,batch,20
+
+#----------------------------------------------------------------------
+#--  Production unit --------------------------------------------------
+#----------------------------------------------------------------------
 #-- The distribution of time taken by the production process, in hours
 Production,prodDelay,Uniform,1,3
 #-- The distribution of time taken by the post-production QA process, in hours
@@ -13,6 +59,9 @@ Production,inBatch,10,10
 Production,batch,10
 
 #----------------------------------------------------------------------
+PostprocStore,capacity,1000
+
+#----------------------------------------------------------------------
 Packaging,capacity,1000
 Packaging,batch,10
 Packaging,prodDelay,Uniform,1,3
@@ -20,14 +69,6 @@ Packaging,qaDelay,Uniform,1,4
 Packaging,faulty,Uniform,0.1,0.2
 
 #----------------------------------------------------------------------
-#--- Ingredient storage 0
-IngStore0,capacity,1000
-IngStore0,supplierDelay,Uniform,96,120
-
-#--- Ingredient storage 1
-IngStore1,capacity,1000
-IngStore1,supplierDelay,Uniform,96,120
-
-#--- Packing material storage
-PackMatStore,capacity,1000
-PackMatStore,supplierDelay,Uniform,96,120
+DispatchStore,capacity,500
+DispatchStore,delay,Uniform,5,10
+DispatchStore,threshold,50

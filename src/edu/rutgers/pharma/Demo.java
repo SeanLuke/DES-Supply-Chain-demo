@@ -38,6 +38,15 @@ public class Demo extends SimState {
     sim.des.Queue postprocStore;
     DispatchStorage dispatchStore;
 
+    /** Creates a named queue for a specified resource */
+    private sim.des.Queue mkQueue(String name, CountableResource resource)  throws IllegalInputException {	
+	sim.des.Queue q  = new  sim.des.Queue(this, resource);
+	q.setName(name);
+	ParaSet para = config.get2(name);
+	q.setCapacity(para.getDouble("capacity"));
+	return q;
+    }
+	
     
     /** Here, the supply network elements are added to the Demo object */
     public void start(){
@@ -53,12 +62,7 @@ public class Demo extends SimState {
 	for(int j=0; j<NI; j++) {
 	    ingStore[j] = new IngredientStorage(this, "IngStore" + j, config,  ing[j]);
 	    add(ingStore[j]);
-
-
-	    AbstractDistribution  faultyPortionDistribution = new Uniform(0.05, j==0? 0.15: 0.30, random);
-
-
-	    preprocStore[j] = new PreprocStorage(this, "PrePStore" + j, ingStore[j], 1000,  qaDelayDistribution, faultyPortionDistribution);
+	    preprocStore[j] = new PreprocStorage(this, "PreprocStore" + j, config, ingStore[j]);
 	    add(preprocStore[j]);
 	}
 	packmatStore = new IngredientStorage(this,"PackMatStore", config, packmat);
@@ -66,14 +70,12 @@ public class Demo extends SimState {
 
 	AbstractDistribution  faultyPortionDistribution = new Uniform(0.05, 0.15, random);
 	
-	testedPackmatStore =  new PreprocStorage(this, "TestedPackmatStore", packmatStore, 1000,  qaDelayDistribution, faultyPortionDistribution);
+	testedPackmatStore =  new PreprocStorage(this, "TestedPackMatStore", config, packmatStore);
 	add( testedPackmatStore);
 	
 	CountableResource product = new CountableResource("Product",0);
 
-	postprocStore = new  sim.des.Queue(this, product);
-	postprocStore.setName("PostPStore");
-	postprocStore.setCapacity(1000);
+	postprocStore = mkQueue( "PostprocStore", product);
 	
 	production = new Production(this, "Production", config,
 				    preprocStore,
@@ -86,19 +88,17 @@ public class Demo extends SimState {
 				  postprocStore,
 				  testedPackmatStore,
 				  packaged);
-				  
-	
-	dispatchStore = new  DispatchStorage(this, "Dispatch",
-					     packaged, 500,
-					     new Uniform(5,10, random));
-	
-	dispatchStore.setCapacity(500);
+				  	
+	dispatchStore = new  DispatchStorage(this, "DispatchStore", config,
+					     packaged);	
 	
 	packaging.setDispatchStore(dispatchStore);
 
 	add(packaging);
 	add(dispatchStore);	
-	System.out.println("===== Start: =========\n" + report());
+	System.out.println("===== Start: ===================================\n"
+			   + report());
+	System.out.println("================================================");
 	} catch(IllegalInputException ex) {
 	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
 	    System.exit(1);
@@ -106,7 +106,9 @@ public class Demo extends SimState {
     }
 
     public void	finish() {
-	System.out.println("===== Finish: =========\n" + report());
+	System.out.println("===== Finish: ==================================\n"
+			   + report());
+	System.out.println("================================================");
     }
     
     String report() {

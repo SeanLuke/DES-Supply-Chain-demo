@@ -5,6 +5,8 @@
   <body>
     <h1>Supply Chain Demo</h1>
 
+<div align="center"><em>Updated: 2021-12-04</em></div>
+    
     <p>The code in this project represesnts a simple supply chain simulation implemented in Java using the <a href="https://cs.gmu.edu/~eclab/projects/mason/">MASON</a> API and the <a href="https://github.com/eclab/mason/tree/distributed-3.0/contrib/des/sim/des">MASON DES library</a>
 
       <h2>Prepare</h2>
@@ -52,11 +54,34 @@ ant
 
 	       <h2>Run</h2>
 
-<p>You can run the simulation with
+<p>You can run the simulation with a command like this:
   <pre>
-    ./run.sh > tmp.log
+    ./run.sh -until 300 > tmp.log
+  </pre>
+This will run it for 300 units of simulation time.
+
+	       <h2>Configuation file</h2>
+
+<p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>conf/pharma.csv</tt>
+
+<p>The configuration file is in CSV format. All lines beginning with a hash mark (#) are ignored, as well as all empty lines.
+
+<p>The data lines have the following format:
+  <pre>
+    elementName,propertyName,val1[,val2,...]
   </pre>
 
+<p>
+  The first column contains the name of the element of the network to which the property applies. The second column, the name of the specific property. The third column (and any subsequent) columns contain the value of the property.
+
+<p>Normally, there is just one value column in each row. However, some types of properties need several columns to be described. For example, the following line
+  <pre>
+Production,faulty,Uniform,0.1,0.2
+    </pre>
+means the that the parameter <tt>faulty</tt> for the element called <tt>Production</tt> describes a uniform distribution with the range [0.1,0.2].  (This is the distribution from which the model of the post-production QA step draws the number that determines the portion of faulty items in each produced lot. This particular distribution means that 10% to 20% of items in each lot are found faulty.)
+  
+  	       <h2>Sample output</h2>
+  <p>
   The output file may look like this:
   <pre>
 ===== Start: =========

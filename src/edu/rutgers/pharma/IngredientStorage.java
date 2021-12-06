@@ -22,6 +22,9 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	pool, and the delay involving in processing this order (say,
 	shipping by truck) */
     Delay supplierDelay;
+
+    final double threshold, restock;
+
     
     IngredientStorage(SimState state, String name, Config config,
 		      CountableResource resource) throws IllegalInputException {
@@ -30,7 +33,10 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	setCapacity(para.getDouble("capacity"));
-		
+
+	threshold = para.getDouble("threshold");
+	restock = para.getDouble("restock");
+	
 	supplierDelay = new Delay(state,resource);
 	supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",state.random));
 	supplierDelay.addReceiver(this);
@@ -56,13 +62,12 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	(thru supplierDelay).
      */
     public void step​(sim.engine.SimState state) {
-	final double threshold = 350;
 	// FIXME: Abhisekh likes to "over-order" (asking for 800 units),
 	// but I am not doing it because I don't have proper support for
 	// a possible overflow. 
 	if (nothingInSupplyQueue() &&
 	    resource.getAmount() < threshold) {
-	    double neededAmount = getCapacity() - resource.getAmount();
+	    double neededAmount = Math.min(restock, getCapacity() - resource.getAmount());
 	    if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypical());
 	    Resource onTheTruck = new CountableResource((CountableResource)getTypical(), neededAmount);
 	    Provider provider = null;  // FIXME: replace with a bottomless Source

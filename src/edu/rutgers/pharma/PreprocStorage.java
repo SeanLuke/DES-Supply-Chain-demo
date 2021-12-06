@@ -9,6 +9,8 @@ import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
 
+import edu.rutgers.util.*;
+
 /** A Preprocessing Storage unit receievs an ingredient from
     an Ingredient Storage unit (via a built-in quality check unit),
     and supplies quality-assured ingredient to the Production unit.
@@ -31,18 +33,25 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
 	preproc storage
      */
     QaDelay qaDelay;
+    final double batchSize;
 
     
-    PreprocStorage(SimState state, String name, IngredientStorage _ingStore, int maximum,
-		   AbstractDistribution	qaDelayDistribution, 	   
-		   AbstractDistribution  faultyPortionDistribution)
-    {
+    PreprocStorage(SimState state, String name, Config config,
+		   IngredientStorage _ingStore) throws IllegalInputException {
+    
 	super(state, _ingStore.getTypicalResource() );
-	ingStore = _ingStore;
-	setCapacity(maximum);
+
 	setName(name);
-	qaDelay = new QaDelay(state,resource, faultyPortionDistribution);
-	qaDelay.setDelayDistribution(qaDelayDistribution);
+	ParaSet para = config.get(name);
+	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	setCapacity(para.getDouble("capacity"));
+
+	batchSize = para.getDouble("batch");
+	
+	ingStore = _ingStore;
+
+	qaDelay = new QaDelay(state,resource, para.getDistribution("faulty",state.random));
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
 	qaDelay.addReceiver(this);
     }
 
@@ -57,7 +66,6 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
 	that are currently been checked), get a batch into checking
      */
     public void step​(sim.engine.SimState state) {
-	final double batchSize=20;
 	boolean hasSpace = resource.getAmount() + qaDelay.getTotal() <= getCapacity() - batchSize;
 	if (hasSpace &&    ingStore.getAvailable() >=  batchSize	    ) {
 	    double neededAmount = batchSize;
