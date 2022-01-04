@@ -17,10 +17,23 @@
 <p>You need a Java compile, which can be obtained from Oracle or OpenJDK. For convenience, I also use a Git client and Apache Ant (a <tt>make</tt>-like tool for Java).
       
       <ul>
-	<li>Check out the source code from GitHub. Let's say you've put it to ~/mason/work on your machine. We'll call this location your <em>work directory</em>.
+	<li>Check out the source code for this project from GitHub. Let's say you've put it to ~/mason/work on your machine:
+	  <pre>
+mkdir ~/mason	    
+cd ~/mason
+mkdir work
+cd work
+git remote add origin https://github.com/vmenkov/DES-Supply-Chain-demo.git
+git pull origin master
+</pre>
+      </ul>
+
+      We'll call this location your <em>work directory</em>.
+      
 	<li>Create also <tt>~/mason/lib</tt>, and put into it the MASON jar file,
 	  <tt>mason.20.jar</tt>, which you should download from the MASON site above.
 	  <br>Note: as of 2022-01-01, we are using a customized version of mason.20.jar, which has an extra class added to support skewed triangular distribution. Ask Vladimir or Sean Luke to provide you with this customized version.
+
 	<li>Obtain the DES library source code from its own GitHub repo (see the link above), compile it and package it into <tt>des.jar</tt>, and place the JAR file into the same <tt>~/mason/lib</tt> directory. Sample commands for doing this (assuming you place the DES library source code under <tt>~/mason/git</tt>):
 	  <pre>
 #!/bin/csh
@@ -41,8 +54,8 @@ cd $m/out
 jar cf des.jar sim/des/*.class
 cp des.jar ../lib    
 	  </pre>
-	  Alternatively, just ask me for des.jar.
-      </ul>
+Warning: the above may take forever, as GitHub will tend to give you megabutyes and gigabytes of stuff you don't need. So, alternatively, you can just ask me for precompiled  des.jar, and put it into your ~/mason/lib
+
 
       
       <h2>Compile</h2>
