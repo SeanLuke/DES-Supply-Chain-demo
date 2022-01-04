@@ -11,7 +11,8 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** Dispatch store sits at the end of our model.
+/** Dispatch store sits at the end of our model. The main app sets it
+    as the receiever for Packaging, and that's how product gets here.  
   */
 class DispatchStorage extends sim.des.Queue implements Reporting {
 

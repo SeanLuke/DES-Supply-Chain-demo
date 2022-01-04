@@ -59,10 +59,6 @@ class Packaging extends sim.des.Queue implements Reporting {
 	sinkProduct = new Sink(state,  _postprocStore.getTypical());
 	sinkPackaging = new Sink(state, _testedPackmatStore.getTypical());
 
-
-	//packagingMachine = new Source(state, outResource);
-	//packagingMachine.setAutoSchedules​(false);
-
 	addReceiver(dispatchStore);
     }
 

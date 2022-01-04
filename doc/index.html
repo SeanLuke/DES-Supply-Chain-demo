@@ -1,17 +1,19 @@
 <html>
   <head>
-    <title>Supply Chain Demo</title>
+    <title>Supply Chain Demo 1</title>
   </head>
   <body>
-    <h1>Supply Chain Demo</h1>
+    <h1>Supply Chain Demo 1</h1>
 
 <div align="center"><em>Updated: 2021-12-05</em></div>
-    
+
+<p>This demo is based on the model provided by Abhisekh, from Sean Luke's team at GMU.</p>
+
     <p>The code in this project represesnts a simple supply chain simulation implemented in Java using the <a href="https://cs.gmu.edu/~eclab/projects/mason/">MASON</a> API and the <a href="https://github.com/eclab/mason/tree/distributed-3.0/contrib/des/sim/des">MASON DES library</a>
 
       <h2>Prepare</h2>
 
-<p>You need a Java compile, which can be obtained from Oracle or OpenJPA. For convenience, I also use a Git client and Apache Ant (a <tt>make<tt>-like tool for Java).
+<p>You need a Java compile, which can be obtained from Oracle or OpenJDK. For convenience, I also use a Git client and Apache Ant (a <tt>make<tt>-like tool for Java).
       
       <ul>
 	<li>Check out the source code from GitHub. Let's say you've put it to ~/mason/work on your machine. We'll call this location your <em>work directory</em>.
@@ -66,12 +68,12 @@ The <tt>-until 300</tt> is a standard MASON option, which will cause the applica
 
   <ul>
     <li><tt>-verbose</tt> --- causes various elements of the supply chain model to print various progress messages
-    <li><tt>-config confog/pharma.csv</tt>  -- specifies the name of the configuration file (see below)
+    <li><tt>-config config/pharma.csv</tt>  -- specifies the name of the configuration file (see below)
   </ul>
 
 <p>You can also use any of the options that all MASON applications take, such as the already-mentioned <tt>-until</tt>. See the MASON manual (found at the same web site) for details.
   
-	       <h2>Configuation file</h2>
+	       <h2>Configuration file</h2>
 
 <p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>conf/pharma.csv</tt>
 

@@ -53,20 +53,25 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	
     }
 
-
-
-    public double getDouble(String key) throws IllegalInputException {
+    
+    public Double getDouble(String key, Double defVal) throws IllegalInputException {
 	Vector<String> v = get(key);
-	if (v==null)  throwII(key, "Missing");
+	if (v==null)  return defVal;
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
 	try {
-	    return Double.parseDouble(s);
+	    return new Double(s);
 	} catch(Exception ex) {
 	    throwII(key, "Cannot parse as a real number: " + s);
-	    return 0; // never reached
-	}
-	
+	    return null; // never reached
+	}	
+    }
+
+
+    public double getDouble(String key) throws IllegalInputException {
+	Double  x = getDouble(key, null);
+	if (x==null)  throwII(key, "Missing");
+	return x.doubleValue();
     }
 
     public double [] getDoubles(String key) throws IllegalInputException {
@@ -88,7 +93,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     public long getLong(String key) throws IllegalInputException {
 	Vector<String> v = get(key);
 	if (v==null)  throwII(key, "Missing");
-	if (v.size()!=1) throwII(key, "Expected exactlt 1 data column");
+	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
 	try {
 	    return Long.parseLong(s);
@@ -105,23 +110,41 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 						MersenneTwisterFast random) throws IllegalInputException {
 	Vector<String> v = get(key);	
 	if (v==null)  throwII(key, "Missing");
-	if (v.size()!=3) throwII(key, "Expected exactly 3 data column");
-	if (v.get(0).equals("Uniform")) {
-	    Vector<Double> p = new Vector<>();
-	    for(int j=0; j<2; j++) {
-		String s = v.get(1+j);
-		try {
-		    p.add(new Double(s));
-		} catch(Exception ex) {
-		    throwII(key, "Cannot parse as a real number: " + s);
-		}
-	    }
+	if (v.size()<1) throwII(key, "No data in the row");
+	if (v.get(0).equals("Binomial")) {
+	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
+	    return new Binomial((int)Math.round(p.get(0)),p.get(1), random);
+	} else if (v.get(0).equals("Uniform")) {
+	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
 	    return new Uniform(p.get(0),p.get(1), random);
+	} else if (v.get(0).equals("Normal")) {
+	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
+	    return new Normal(p.get(0),p.get(1), random);
+	} else if (v.get(0).equals("Triangular")) {
+	    Vector<Double> p = parseDoubleParams(key, v, 1, 3);
+	    return new Triangular(p.get(0),p.get(1), p.get(2), random);
 	} else {
 	    throwII(key, "Random distribution type not supported: " +v.get(0));
 	    return null;
 	}
     }
 
+    private Vector<Double> parseDoubleParams(String key,Vector<String> v, int startPos, int n)  throws IllegalInputException{
+	if (v.size()!=startPos+n) throwII(key, "Expected exactly 3 data column");
+
+	Vector<Double> p = new Vector<>();
+
+	for(int j=0; j<n; j++) {
+	    String s = v.get(startPos+j);
+	    try {
+		p.add(new Double(s));
+	    } catch(Exception ex) {
+		throwII(key, "Cannot parse as a real number: " + s);
+	    }
+	}
+	return p;
+    }
+
+    
     
 }

@@ -1,0 +1,53 @@
+#----------------------------------------------------------------------
+# Lines that begin with a hash mark are comments
+# Product amounts are in millions
+#----------------------------------------------------------------------
+#Element Name,Parameter name,val1,val2...
+
+HospitalPool,intervalBetweenOrders,30
+HospitalPool,orderSize,1.9e3
+
+
+PharmaCompany,orderDelay,Normal,1.14,0.1
+
+
+RawMaterialSupplier,delay,Triangular,30,60,90
+RawMaterialSupplier,faulty,Uniform,0.02,0.10
+
+PacMatSupplier,delay,Triangular,30,60,90
+PacMatSupplier,faulty,Uniform,0.02,0.10
+
+ExcipientSupplier,delay,Triangular,30,60,90
+ExcipientSupplier,faulty,Uniform,0.02,0.10
+
+ApiProduction,inBatch,100
+ApiProduction,batch,100
+ApiProduction,batchesPerDay,4
+ApiProduction,faulty,Binomial,1,0.1
+#--- What fraction of faulty product can be sent back to reprocessing, rather
+#--- then discarded?
+ApiProduction,rework,0.25
+ApiProduction,prodDelay,Uniform,2,30
+ApiProduction,qaDelay,Uniform,1,1
+
+
+DrugProduction,inBatch,100,100
+DrugProduction,batch,100
+DrugProduction,batchesPerDay,4
+DrugProduction,faulty,Binomial,1,0.1
+DrugProduction,prodDelay,Triangular,40,80,100
+DrugProduction,qaDelay,Uniform,1,1
+
+
+Packaging,inBatch,100,100
+Packaging,batch,100
+Packaging,batchesPerDay,4
+Packaging,faulty,Binomial,1,0.05
+Packaging,prodDelay,Triangular,10,15,25
+Packaging,qaDelay,Uniform,1,1
+
+
+Distributor,batch,1000
+Distributor,interval,30
+Distributor,shipOutDelay,Uniform,1,2
+

@@ -285,5 +285,12 @@ The Java programming language guarantees that the operands of operators appear t
 	return result;
     }
 
+
+    /** Returns the last component of a class name, e.g. "String" for "java.util.String" */
+    public static String cname(Object o) {
+	String s = o.getClass().getName();
+	String q[] = s.split("\\.");
+	return q[q.length-1];
+    }
     
 }

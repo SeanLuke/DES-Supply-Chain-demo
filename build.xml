@@ -61,7 +61,7 @@
         description="Compile the source code" >
   <!-- Compile the java code from ${src} into ${classes} -->
   <javac srcdir="${src}" destdir="${classes}"
-	 includes="edu/**"  optimize="on"
+	 includes="edu/**,sim/**"  optimize="on"
 	 debug="on" debuglevel="lines,vars,source"	 
 	 includeantruntime="false"
 	 target="1.9" source="1.9"
@@ -83,12 +83,7 @@
   <echo message="lib=${lib}, our=${our.jar}. Preparing jar file ${lib}/${our.jar}, from ${classes}"/>
  <jar destfile="${lib}/${our.jar}"   basedir="${classes}">
 
-   <!-- file="manifest-data.dat" mode="replace" -->
-   <!-- attribute name="Class-Path" value=". xercesImpl.jar xml-apis.jar"/ -->
-   <!-- manifest> 
-      <attribute name="Main-Class" value="edu.rutgers.enats.Enats"/>
-      <attribute name="Class-Path" value="."/>	
-    </manifest -->
+ 
   </jar>
 </target>
 
