@@ -163,4 +163,13 @@ public class Demo extends SimState {
     }
 
 
+    //--- display methods for Sean
+    public HospitalPool getHospitalPool() {
+	return hospitalPool;
+    }
+    
+    public PharmaCompany getPharmaCompany() {
+	return pharmaCompany;
+    }
+    
 }

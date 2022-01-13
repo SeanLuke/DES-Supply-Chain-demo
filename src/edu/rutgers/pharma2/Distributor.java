@@ -92,7 +92,9 @@ class Distributor extends sim.des.Queue
 	}
     }
 
-
+    public double getOnHand() {
+	return getAvailable();
+    }
     
    public String report() {
        String s = "Shipping plan=" + needsToShip +", has shipped=" + everShipped + ", in " + loadsShipped+ " loads. Of this, " + shipOutDelay.getTotal() + " is still being shipped. Remains on hand=" + getAvailable();

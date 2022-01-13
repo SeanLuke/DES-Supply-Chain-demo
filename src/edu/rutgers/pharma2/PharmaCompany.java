@@ -35,7 +35,22 @@ class PharmaCompany extends Sink // Delay
     private Delay orderDelay;
     Production apiProduction, drugProduction, packaging;
 
+    public Production getApiProduction() {
+	return apiProduction;
+    }
+
+    public Production getDrugProduction() {
+	return drugProduction;
+    }
+
+    public Production getPackaging() {
+	return packaging;
+    }
+
     Distributor distro;
+    public Distributor getDistributor() {
+	return distro;
+    }
 
     
     MSink dongle; 

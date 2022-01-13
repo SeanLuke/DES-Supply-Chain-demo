@@ -18,7 +18,15 @@ import edu.rutgers.util.*;
 class HospitalPool extends sim.des.Queue implements Reporting {
 
 
-    double everReceieved = 0;
+    double everReceived = 0;
+    
+    public double getEverReceived() {
+	return everReceived;
+    }
+    public double getEverOrdered() {
+	return everOrdered;
+    }
+    
     /** Interval between orders, e.g. 30 days */
     final double intervalBetweenOrders;
     double orderSize;// = 1.9e6;
@@ -77,14 +85,14 @@ class HospitalPool extends sim.des.Queue implements Reporting {
 	//+					      ", while delay.ava=" + supplierDelay.getAvailable());
 	double s0 = getAvailable();
 	boolean z = super.accept(provider, amount, atLeast, atMost);
-	everReceieved += getAvailable()-s0;
+	everReceived += getAvailable()-s0;
 	return z;
     }
  
     
    public String report() {
        String s = "Has ordered="+everOrdered+"; has " + resource.getAmount() + " units of " + getTypical().getName() + " on hand. Has Received="+
-	   everReceieved;
+	   everReceived;
        return wrap(s);
    }
 

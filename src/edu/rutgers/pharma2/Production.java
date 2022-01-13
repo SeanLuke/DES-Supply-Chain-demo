@@ -209,7 +209,16 @@ class Production // extends sim.des.Queue
 	return  reportInputs(false);
     }
 
-    
+
+    public double getDiscarded() {
+	return qaDelay.badResource;
+    }
+
+
+    public double getReleased() {
+	return qaDelay.releasedGoodResource;
+    }
+
     public String report() {
 	
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
