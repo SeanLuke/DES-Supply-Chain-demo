@@ -176,7 +176,10 @@ class Production // extends sim.des.Queue
 	    for(int j=0; j<inBatchSizes.length; j++) {
 		//inputStore[j].getResource().decrease(inBatchSizes[j]);
 		double s0 =	inputStore[j].getAvailable();
-		inputStore[j].provide(sink[j], inBatchSizes[j]);
+		
+System.out.println("inputStore["+j+ "] has available="+
+s0+", does provide(sink, "+inBatchSizes[j]+")");
+inputStore[j].provide(sink[j], inBatchSizes[j]);
 		double s1 =	inputStore[j].getAvailable();
 		//System.out.println("At t=" + state.schedule.getTime() + ", Production took " + inBatchSizes[j] + " from " + inputStore[j].getName() + "; changed from " +s0 + " to " + s1);
 	    }
