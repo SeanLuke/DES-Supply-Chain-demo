@@ -105,7 +105,7 @@ public class Demo extends SimState {
 	various supply chain elements, read from a
 	config file
     */
-    private static Config config;
+    static Config config;
 
     /** Unit test for Binomial */
     public static void main2(String[] argv)      {
