@@ -30,7 +30,7 @@ public class DemoWithUI extends GUIState
 
 		try
 			{
-			String confPath = "config/pharma2.csv";
+			String confPath = "../config/pharma2.csv";
 			File f= new File(confPath);
 			Demo.config  = Config.readConfig(f);
 			}
