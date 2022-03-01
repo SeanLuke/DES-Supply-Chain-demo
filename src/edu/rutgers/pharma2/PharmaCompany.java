@@ -15,7 +15,7 @@ import edu.rutgers.util.*;
     The "Delay" functionality corresponds to the order's travel from the hospital pool 
     to the pharma company.
  */
-class PharmaCompany extends Sink // Delay
+public class PharmaCompany extends Sink // Delay
     implements //Receiver, Named,
  Reporting {
 

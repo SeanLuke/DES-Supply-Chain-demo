@@ -5,6 +5,8 @@ import sim.display.*;
 import sim.portrayal.grid.*;
 import java.awt.*;
 import javax.swing.*;
+import java.io.*;
+import edu.rutgers.util.*;
 
 public class DemoWithUI extends GUIState
     {
@@ -25,12 +27,23 @@ public class DemoWithUI extends GUIState
     public void init(Controller c)
         {
         super.init(c);
+
+		try
+			{
+			String confPath = "config/pharma2.csv";
+			File f= new File(confPath);
+			Demo.config  = Config.readConfig(f);
+			}
+		catch (Exception ex)
+			{
+			ex.printStackTrace();
+			}
         }
 
     public static void main(String[] args)
         {
         DemoWithUI tutorial2 = new DemoWithUI();
-        Console c = new Console(tutorial2);
+        sim.display.Console c = new sim.display.Console(tutorial2);
         c.setVisible(true);
         }
     

@@ -15,7 +15,7 @@ import edu.rutgers.util.*;
     stored product, which has been received from Distribution and
     is available for Consumer.
  */
-class HospitalPool extends sim.des.Queue implements Reporting {
+public class HospitalPool extends sim.des.Queue implements Reporting {
 
 
     double everReceived = 0;

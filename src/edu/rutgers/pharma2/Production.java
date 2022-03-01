@@ -31,9 +31,8 @@ import edu.rutgers.util.*;
 
 
   */
-class Production // extends sim.des.Queue
-    implements Reporting,
-	       Steppable, Named
+public class Production // extends sim.des.Queue
+    implements Reporting,	       Steppable, Named
 {
 
 
@@ -158,8 +157,11 @@ class Production // extends sim.des.Queue
 	return true;
     }
 
+
     int batchesStarted=0;
     double everStarted = 0;
+
+    public double getEverStarted() { return everStarted; }
     
     public void step​(SimState state) {
 	// FIXME: should stop working if the production plan has been fulfilled
