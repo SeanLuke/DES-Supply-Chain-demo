@@ -6,7 +6,7 @@
 
 
 set h=`(cd ..; pwd)`
-setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*':/opt/java3d/lib/ext/'*'
+setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*':$h/lib/libraries/'*':/opt/java3d/lib/ext/'*'
 
 
 

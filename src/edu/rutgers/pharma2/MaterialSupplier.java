@@ -29,7 +29,7 @@ object to which this supplier should push QA'ed material.
  receiever. </ol>
 
  */
-class MaterialSupplier extends Sink //Delay
+public class MaterialSupplier extends Sink //Delay
     implements // Receiver,
 			       Reporting
 {
@@ -39,7 +39,11 @@ class MaterialSupplier extends Sink //Delay
 
     private double everOrdered=0;
     private double badResource = 0, releasedGoodResource=0;
-    
+
+    public double getEverOrdered() { return everOrdered; }
+    public double getBadResource() { return badResource; }
+    public double getReleasedGoodResource() { return releasedGoodResource; }
+
  
     /** Transportation delay */
     private final Delay delay;

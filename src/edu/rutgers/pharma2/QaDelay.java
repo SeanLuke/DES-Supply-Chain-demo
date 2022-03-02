@@ -12,7 +12,7 @@ import sim.des.*;
     some portion of the input as "bad", and removes it from the channel 
     before it's offered to the downstream consumer.
  */
-class QaDelay extends Delay {
+public class QaDelay extends Delay {
 
     /** It is expected that it only returns numbers within [0:1] range */
     final AbstractDistribution faultyPortionDistribution;
@@ -25,7 +25,10 @@ class QaDelay extends Delay {
     final double batchSize;
 
     double badResource = 0, reworkResource=0, releasedGoodResource=0;
-    
+    public double getBadResource() { return badResource; }
+    public double getReleasedGoodResource() { return releasedGoodResource; }
+    public double getReworkResource() { return reworkResource; }
+ 
     public QaDelay(SimState state, Resource typical, double _batchSize, AbstractDistribution _faultyPortionDistribution) {
 	super(state, typical);
 	batchSize = _batchSize;

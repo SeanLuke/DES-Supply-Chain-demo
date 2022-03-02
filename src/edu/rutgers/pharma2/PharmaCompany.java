@@ -31,26 +31,19 @@ public class PharmaCompany extends Sink // Delay
     //static CountableResource pacDrug = new CountableResource("packagedDrug",0);
 
     MaterialSupplier rawMatSupplier, pacMatFacility, excipientFacility;
+    public MaterialSupplier getRawMatSupplier() { return rawMatSupplier; }
+    public MaterialSupplier getExcipientFacility() { return excipientFacility; }
+    public MaterialSupplier getPacMatFacility() { return pacMatFacility; }
 
     private Delay orderDelay;
     Production apiProduction, drugProduction, packaging;
 
-    public Production getApiProduction() {
-	return apiProduction;
-    }
-
-    public Production getDrugProduction() {
-	return drugProduction;
-    }
-
-    public Production getPackaging() {
-	return packaging;
-    }
+    public Production getApiProduction() {return apiProduction;    }
+    public Production getDrugProduction() {	return drugProduction;    }
+    public Production getPackaging() {	return packaging;    }
 
     Distributor distro;
-    public Distributor getDistributor() {
-	return distro;
-    }
+    public Distributor getDistributor() {return distro;    }
 
     
     MSink dongle; 

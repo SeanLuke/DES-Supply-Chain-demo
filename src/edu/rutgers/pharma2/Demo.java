@@ -109,34 +109,32 @@ public class Demo extends SimState {
 
     /** Unit test for Binomial */
     public static void main2(String[] argv)      {
-	    if (argv.length != 2)
-	    	throw new IllegalArgumentException("Usage: Binomial n p");
-	    	
-	    int n=Integer.parseInt(argv[0]);
-	    double p=Double.parseDouble(argv[1]);
-	    MersenneTwisterFast random = new MersenneTwisterFast();
-	    //Triangular t = new Triangular(min, mode, max, random);
-	    Binomial t = new Binomial(n, p, random);
-	    System.out.println(t);
-	    for(int j=0; j<10; j++) 
-	    {
-		for(int k=0; k<10; k++) {
-		    System.out.print(t.nextInt() + " ");
-		}
-		System.out.println();
-
+	if (argv.length != 2)
+	    throw new IllegalArgumentException("Usage: Binomial n p");
+	
+	int n=Integer.parseInt(argv[0]);
+	double p=Double.parseDouble(argv[1]);
+	MersenneTwisterFast random = new MersenneTwisterFast();
+	//Triangular t = new Triangular(min, mode, max, random);
+	Binomial t = new Binomial(n, p, random);
+	System.out.println(t);
+	for(int j=0; j<10; j++) 	    {
+	    for(int k=0; k<10; k++) {
+		System.out.print(t.nextInt() + " ");
 	    }
+	    System.out.println();
+	    
+	}
     }
 
     
     
-      /** Extracts a few command-line options we understand, and leaves
+    /** Extracts a few command-line options we understand, and leaves
 	the rest of them to MASON.
     */
     public static void main(String[] argv) throws IOException, IllegalInputException {
 	//main2(argv);	System.exit(0);
  	       	
-	
 	String confPath = "config/pharma2.csv";
 
 	Vector<String> va = new Vector<String>();

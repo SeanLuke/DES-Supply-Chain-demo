@@ -41,10 +41,14 @@ public class Production // extends sim.des.Queue
 	stuff from them (by calling Queue.provide(..) when needed
     */
     sim.des.Queue[] inputStore;
-
-    static class ProdDelay extends Delay implements Reporting {
+    public sim.des.Queue[] getInputStore() { return inputStore;}
+    
+    public static class ProdDelay extends Delay implements Reporting {
 	int batchCnt=0;
+	public int getBatchCnt() { return batchCnt; }
 	double totalStarted=0;
+        public double getTotalStarted() { return totalStarted; }
+
 	ProdDelay(SimState state,       Resource resource) {
 	    super(state, resource);
 	}
@@ -71,6 +75,11 @@ public class Production // extends sim.des.Queue
     /** Models the delay taking by the QA testing at the output
 	*/
     QaDelay qaDelay;
+
+
+    public ProdDelay getProdDelay() { return prodDelay; }
+    public QaDelay getQaDelay() { return qaDelay; }
+
 
     /** How many units of each input need to be taken to start cooking a batch? */
     final double[] inBatchSizes;

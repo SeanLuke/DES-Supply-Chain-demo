@@ -12,7 +12,7 @@ import sim.des.*;
 import edu.rutgers.util.*;
 
 /** The main Queue is the storage facility; additionally a Delay is used to ship things out */
-class Distributor extends sim.des.Queue
+public class Distributor extends sim.des.Queue
     implements Reporting //,	       Steppable, Named
 {
 
@@ -39,6 +39,8 @@ class Distributor extends sim.des.Queue
     //Receiver rcv;
 
     double needsToShip=0, everShipped=0;
+    public double getNeedsToShip() { return needsToShip; }
+    public double getEverShipped() { return everShipped; }
 
     /** To whom are we shipping */
     void setDeliveryReceiver(Receiver rcv) {
@@ -54,6 +56,7 @@ class Distributor extends sim.des.Queue
 
     private double lastShippedAt = 0, lastMonthShippedAt=0;
     private int loadsShipped = 0;
+    public int getLoadsShipped() { return loadsShipped; }
 
     /** Ships product out on a certain schedule */
     public void step​(sim.engine.SimState state) {
