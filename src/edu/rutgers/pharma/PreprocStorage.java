@@ -39,7 +39,7 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
     PreprocStorage(SimState state, String name, Config config,
 		   IngredientStorage _ingStore) throws IllegalInputException {
     
-	super(state, _ingStore.getTypicalResource() );
+	super(state, _ingStore.getTypicalReceived() );
 
 	setName(name);
 	ParaSet para = config.get(name);

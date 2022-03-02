@@ -25,9 +25,9 @@ interface Reporting {
 	    s += "."+ ((Named)this).getName();
 	}
 	if (this instanceof Receiver) {
-	    s +=  "("+((Receiver)this).getTypical().getName()+")";
+	    s +=  "("+((Receiver)this).getTypicalReceived().getName()+")";
 	} else if (this instanceof Provider) {
-	    s +=  "("+((Provider)this).getTypicalResource().getName()+")";
+	    s +=  "("+((Provider)this).getTypical().getName()+")";
 	}
 	s += ": " + msg +	    "]";
  
