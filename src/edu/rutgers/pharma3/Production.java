@@ -62,8 +62,8 @@ public class Production // extends sim.des.Queue
 	    return super.accept( provider, batch, atLeast, atMost);
 	}
 	public String hasBatches() {
-	    String s = "" + getTotal();
-	    if (getAvailable()>0) s += "+"+getAvailable();
+	    String s = "" + (long)getTotal();
+	    if (getAvailable()>0) s += "+"+(long)getAvailable();
 	    return s;
 	}
 	       
@@ -247,14 +247,17 @@ public class Production // extends sim.des.Queue
     public String report() {
 	
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
-	    "Ever started: "+everStarted;
+	    "Ever started: "+everStarted + " ("+batchesStarted+" ba)";
 	if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
 	s += " = ("+
 	    "in the works=" +   prodDelay.hasBatches() +
 	    " batches; in QA= " +  qaDelay.hasBatches() +
-	    " batches; discarded="+qaDelay.badResource;
-	if (qaDelay.reworkProb>0) s+= "; rework="+qaDelay.reworkResource;
-	s += "; good=" + qaDelay.releasedGoodResource+")]";
+	    " batches; discarded="+qaDelay.badResource  +
+				      " ("+qaDelay.badBatches+" ba)";
+	if (qaDelay.reworkProb>0) s+= "; rework="+qaDelay.reworkResource +
+				      " ("+qaDelay.reworkBatches+" ba)";
+
+	s += "; good=" + qaDelay.releasedGoodResource+" ("+qaDelay.releasedBatches+" ba))]";
 	s += "\n" + prodDelay.report();
 	return s;
 

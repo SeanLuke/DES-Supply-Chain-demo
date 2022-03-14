@@ -31,8 +31,8 @@ public class QaDelay extends Delay {
     public QaDelay(SimState state, Batch typicalBatch,  double _discardProb, double _reworkProb) {
 	super(state, typicalBatch);
 	setOfferPolicy(Provider.OFFER_POLICY_FORWARD);
-	discardProb = 	_discardProb;
-	reworkProb=_reworkProb;
+	discardProb = _discardProb;
+	reworkProb= _reworkProb;
 	discardSink = new MSink( state, typicalBatch);
 	//addReceiver(discardSink);
     }
@@ -96,16 +96,22 @@ public class QaDelay extends Delay {
 	double amt = batch.getContentAmount();
 	
 	if (willRework) {
-	    badResource +=  amt;
-	} else if (willDiscard) {
 	    reworkResource += amt;
+	    reworkBatches++;
+	} else if (willDiscard) {
+	    badResource +=  amt;
+	    badBatches++;
 	} else {
 	    releasedGoodResource += amt;
+	    releasedBatches++;
 	}
 	
 	return z;
 
     }
+
+    int reworkBatches=0, badBatches=0,    releasedBatches=0;
+ 
 
     /** Still under processing + at the output */
     double hasBatchesOnBothSides() {
@@ -113,8 +119,8 @@ public class QaDelay extends Delay {
     }
 
     public String hasBatches() {
-	String s = "" + getTotal();
-	if (getAvailable()>0) s += "+"+getAvailable();
+	String s = "" + (long)getTotal();
+	if (getAvailable()>0) s += "+"+(long)getAvailable();
 	return s;
     }
 

@@ -20,10 +20,7 @@ public class Demo extends SimState {
     static boolean verbose=false;
     
     void add(Steppable z) {
-	//allPersons.add(z);
-	
 	IterativeRepeat ir =	schedule.scheduleRepeating(z);
-	// z.repeater=ir;
     }
 
     
@@ -77,7 +74,8 @@ public class Demo extends SimState {
     }
 
     void doReport(String msg) {
-	System.out.println("===== "+msg+" ===================================\n"
+	System.out.println("===== "+schedule.getTime() + ": " +
+			   msg+" =================\n"
 			   + report());
 	System.out.println("================================================");
 	
