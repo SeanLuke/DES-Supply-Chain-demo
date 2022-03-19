@@ -8,13 +8,33 @@ import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
 
+import  edu.rutgers.util.*;
+
+
 /** A Quality Assurance Delay serves as a delay unit that identifies
     some portion of the input as "bad", and removes it from the channel 
-    before it's offered to the downstream consumer.
+    before it's offered to the downstream consumer. Optionally, it
+    can also direct some portion of the input to the "rework" receiver.
  */
 public class QaDelay extends Delay {
 
-    /** It is expected that it only returns numbers within [0:1] range */
+    /** If non-null, we reschedule this object at the end of each 
+	offerReceiver. This can be used to get the QaDelay automatically
+	reloaded a bit later.
+    */
+    private Steppable whomToWakeUp = null;
+
+    public void setWhomToWakeUp(Steppable x)  { whomToWakeUp = x; }
+    
+    /** This is non-null if we have item-by-item testing, with partial
+      discard. If it is present, then discardProb and reworkProb. It
+      must be zero. is expected that it only returns numbers within
+      [0:1] range */
+    final AbstractDistribution faultyPortionDistribution;
+
+    /** If any of these is non-zero, then we do whole-batch test-and-discard.
+	In this case, faultyPortionDistribution must be null.
+     */
     final double discardProb, reworkProb;
     
     /** Pill counts */
@@ -22,19 +42,48 @@ public class QaDelay extends Delay {
     public double getBadResource() { return badResource; }
     public double getReleasedGoodResource() { return releasedGoodResource; }
     public double getReworkResource() { return reworkResource; }
-
-    //final DiscardSink discardSink;
+    
+    long badResourceBatches = 0, releasedGoodResourceBatches=0;
+ 
     final MSink discardSink;
 
-    /** @param typicalBatch A Batch of the appropriate type. Size does not matter.
+    /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
+	@param _faultyPortionDistribution If non-null, then _discardProb and double _reworkProb must be zero, and vice versa.
      */
-    public QaDelay(SimState state, Batch typicalBatch,  double _discardProb, double _reworkProb) {
+    public QaDelay(SimState state, Resource typicalBatch,  double _discardProb, double _reworkProb, AbstractDistribution _faultyPortionDistribution) {
 	super(state, typicalBatch);
+	setName("QaDelay("+typicalBatch.getName()+")");
 	setOfferPolicy(Provider.OFFER_POLICY_FORWARD);
 	discardProb = _discardProb;
 	reworkProb= _reworkProb;
-	discardSink = new MSink( state, typicalBatch);
+	faultyPortionDistribution = _faultyPortionDistribution;
+  	discardSink = new MSink( state, typicalBatch);
 	//addReceiver(discardSink);
+
+	if (faultyPortionDistribution!=null) {
+	    if (discardProb!=0 || reworkProb !=0) throw new IllegalArgumentException("Cannot set both faultyPortionDistribution and discardProb/reworkProb on the same QaDelay!");
+	} 
+    }
+
+    /** Creates a QaDelay based on the parameters from a specified ParaSet */
+    static public QaDelay mkQaDelay(ParaSet para, SimState state, Resource outResource) throws IllegalInputException {	
+	// See if "faulty" in the config file is a number or
+	// a distribution....
+	double faultyProb=0;	
+	AbstractDistribution faultyPortionDistribution=null;
+	try {
+	    faultyPortionDistribution = 
+		para.getDistribution("faulty",state.random);
+	} catch(IllegalInputException ex) {
+	    faultyProb = para.getDouble("faulty");
+	}
+	double reworkProb = para.getDouble("rework", 0.0);	    
+
+	if (faultyPortionDistribution !=null && faultyProb+reworkProb!=0) throw new IllegalInputException("For " + para.name +", specify either faulty portion distribution or faulty+rework probabilities, but not both!");    
+    
+	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution);			      
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	return qaDelay;
     }
 
     Receiver sentBackTo=null;
@@ -49,17 +98,6 @@ public class QaDelay extends Delay {
 	sentBackTo=_sentBackTo;
     }
     
-    /*
-    class DiscardSink extends Msink {
-	DiscardSink(SimState state, Resource typical) {
-	    super(state,typical);
-	}
-	
-	public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
-	}
-    }  
-    */
-
     /** This is a wrapper over the standard Provider.offerReceiver(),
 	which reduces the amount of available stuff (resource) we
 	are to offer to the receiver. The reduction is due to 
@@ -71,40 +109,79 @@ public class QaDelay extends Delay {
 	bad items in the already-checked pool. This can be fixed
 	by creating a separate Queue for the already-checked stuff,
 	and passing it to Receiver.accept() calls.
-       	
-	
+       		
     */
     protected boolean offerReceiver(Receiver receiver, double atMost) {
 
-	boolean willDiscard=false, willRework=false;
-	if ( discardProb + reworkProb >0) {
-	    boolean isBad = state.random.nextBoolean(discardProb + reworkProb);
-	    if (isBad) {
-		willRework = state.random.nextBoolean( reworkProb/(discardProb + reworkProb));
-		willDiscard = !willRework;
+	if (Demo.verbose) System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+")");
+	
+	boolean z;
+
+	if (faultyPortionDistribution!=null) {
+	    double amt, faulty;
+
+	    double r = faultyPortionDistribution.nextDouble();
+	    if (r<0) r=0;
+	    if (r>1) r=1;
+
+	    if (entities == null) {
+		CountableResource cr = (CountableResource) resource;
+		amt = Math.min( cr.getAmount(), atMost);
+		faulty = Math.round( amt * r);
+		// The faulty product is destroyed, so we decrease the resource now
+		cr.decrease(faulty);
+		z = super.offerReceiver(receiver, atMost-faulty);
+	    } else {
+		Batch e = (Batch)entities.getFirst();
+		amt = e.getContentAmount();
+		faulty = Math.round( amt * r);
+		e.getContent().decrease(faulty);
+		z = super.offerReceiver(receiver, e);
+	    }
+	    badResource +=  faulty;
+	    if (faulty>0) 	    badBatches++;
+	    releasedGoodResource += (amt-faulty);
+	    releasedBatches ++;
+	    
+	} else {
+	    if (entities == null) throw new IllegalArgumentException("pharma3.QaDelay with faultyProb only works with Batches!");
+  
+	    boolean willDiscard=false, willRework=false;
+	    if ( discardProb + reworkProb >0) {
+		boolean isBad = state.random.nextBoolean(discardProb + reworkProb);
+		if (isBad) {
+		    willRework = state.random.nextBoolean( reworkProb/(discardProb + reworkProb));
+		    willDiscard = !willRework;
+		}
+	    }
+	    
+	    z =
+		willRework ? super.offerReceiver(sentBackTo, atMost):
+		willDiscard? super.offerReceiver(discardSink, atMost):
+		super.offerReceiver(receiver, atMost);
+		
+	    ArrayList<Resource> lao = getLastAcceptedOffers();
+	    if (lao==null || lao.size()!=1) throw new IllegalArgumentException("Unexpected result from shipOutDelay.getLastAcceptedOffers()");
+	    Batch batch = (Batch)lao.get(0);
+	    double amt = batch.getContentAmount();
+	    
+	    if (willRework) {
+		reworkResource += amt;
+		reworkBatches++;
+	    } else if (willDiscard) {
+		badResource +=  amt;
+		badBatches++;
+	    } else {
+		releasedGoodResource += amt;
+		releasedBatches++;
 	    }
 	}
 
-	boolean z =
-	    willRework ? super.offerReceiver(sentBackTo, atMost):
-	    willDiscard? super.offerReceiver(discardSink, atMost):
-	    super.offerReceiver(receiver, atMost);
-		
-	ArrayList<Resource> lao = getLastAcceptedOffers();
-	if (lao==null || lao.size()!=1) throw new IllegalArgumentException("Unexpected result from shipOutDelay.getLastAcceptedOffers()");
-	Batch batch = (Batch)lao.get(0);
-	double amt = batch.getContentAmount();
-	
-	if (willRework) {
-	    reworkResource += amt;
-	    reworkBatches++;
-	} else if (willDiscard) {
-	    badResource +=  amt;
-	    badBatches++;
-	} else {
-	    releasedGoodResource += amt;
-	    releasedBatches++;
+	if (whomToWakeUp != null) {
+	    double t = state.schedule.getTime();
+	    state.schedule.scheduleOnce(t+ 1e-5, whomToWakeUp);
 	}
+
 	
 	return z;
 

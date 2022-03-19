@@ -51,24 +51,18 @@ public class PharmaCompany extends Sink // Delay
     PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException {
 	super(state, drugOrderResource);
 	setName(name);
-
-
-	//Batch pacDrugBatch  = (Batch)hospitalPool.getTypical();
-	//System.out.println("pacDrugBatch = " + pacDrugBatch  );
 	
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
-
-
-
 	
 	orderDelay = new Delay( state, drugOrderResource);
 	orderDelay.setDelayDistribution(para.getDistribution("orderDelay",state.random));
 	orderDelay.addReceiver(this);
 
-	Batch rawMatBatch = new Batch(rawMaterial), pacMatBatch = new Batch(pacMaterial), excipientBatch = new Batch(excipient);
+	Batch rawMatBatch = new Batch(rawMaterial), excipientBatch = new Batch(excipient);
+	// pacMatBatch = new Batch(pacMaterial)
 	rawMatSupplier = new MaterialSupplier(state, "RawMaterialSupplier", config, rawMatBatch);
-	pacMatFacility = new MaterialSupplier(state, "PacMatSupplier", config, 	pacMatBatch);
+	pacMatFacility = new MaterialSupplier(state, "PacMatSupplier", config, 	pacMaterial);
 	excipientFacility = new MaterialSupplier(state, "ExcipientSupplier", config, excipientBatch);
 
 
@@ -80,13 +74,13 @@ public class PharmaCompany extends Sink // Delay
 
 	
 	drugProduction = new Production(state, "DrugProduction",  config,
-					new Batch[] {apiBatch, excipientBatch}, bulkDrugBatch);
+					new Batch[]{ apiBatch, excipientBatch}, bulkDrugBatch);
 	apiProduction.setQaReceiver(drugProduction.getEntrance(0));
 	excipientFacility.setQaReceiver(drugProduction.getEntrance(1));
 
 
 	packaging = new Production(state, "Packaging",  config,
-					new Batch[] {bulkDrugBatch, pacMatBatch}, pacDrugBatch);
+					new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
 	drugProduction.setQaReceiver(packaging.getEntrance(0));
 	pacMatFacility.setQaReceiver(packaging.getEntrance(1));
 

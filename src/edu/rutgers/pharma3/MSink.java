@@ -16,7 +16,7 @@ import sim.des.*;
 class MSink extends Sink implements Reporting {
     /** How much stuff has this Sink consumed since it's been created? */    
     double everConsumed = 0;
-    /** Consumed in the most recent accept() call */
+    /** Consumed in the most recent accept() call. (In terms of underlying CountableResource) */
     double lastConsumed = 0;
 	
     public MSink(SimState state, Resource typical) {

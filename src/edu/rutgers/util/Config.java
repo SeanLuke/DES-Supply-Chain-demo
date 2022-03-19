@@ -21,7 +21,7 @@ public class Config extends HashMap<String,ParaSet> {
 	    CsvData.BasicLineEntry e = (CsvData.BasicLineEntry)_e;
 	    String name = e.getKey();
 	    ParaSet para = h.get(name);
-	    if (para==null) h.put(name, para=new ParaSet(name));
+	    if (para==null) 	h.put(name, para=new ParaSet(name));	    
 	    para.add(e);
 	}
 	

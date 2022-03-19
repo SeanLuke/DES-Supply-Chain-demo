@@ -105,12 +105,12 @@ public class Production // extends sim.des.Queue
 
     final Batch outResource; 
     
-    /** @param inResource batches of inputs (e.g. API and excipient)
+    /** @param inResource Inputs (e.g. API and excipient). Each of them is either a Batch or CountableResource
 	@param outResource batches of output (e.g. bulk drug)
      */
 
     Production(SimState state, String name, Config config,
-	       Batch[] inResources,
+	       Resource[] inResources,
 	       Batch _outResource ) throws IllegalInputException
     {
 	//super(state, outResource);
@@ -132,23 +132,16 @@ public class Production // extends sim.des.Queue
 
 	outBatchSize = para.getDouble("batch");
 	batchesPerDay = (int)para.getLong("batchesPerDay");
-	
-	double reworkProb = para.getDouble("rework", 0.0);
-	qaDelay = new QaDelay(state, outResource, para.getDouble("faulty"), reworkProb);
-			      
-	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
 
+	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
 	
 	prodDelay = new ProdDelay(state,outResource);
 	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));				       
 	prodDelay.addReceiver(qaDelay);
 
-
-	if (reworkProb >0) {
+	if (qaDelay.reworkProb >0) {
 	    qaDelay.setRework( prodDelay);
 	}
-
-
 	
 	sink = new MSink[inputStore.length];
 	for(int j=0; j<sink.length; j++) {
@@ -171,7 +164,12 @@ public class Production // extends sim.des.Queue
      */
     private boolean hasEnoughInputs() {
 	for(int j=0; j<inBatchSizes.length; j++) {
-	    if (inputStore[j].getAvailable()==0) return false;
+	    Provider p = inputStore[j];
+	    if (p.getTypical() instanceof Batch) {
+		return (p.getAvailable()>0);
+	    } else if (p.getTypical()  instanceof CountableResource) {
+		return p.getAvailable()>=inBatchSizes[j];
+	    } else throw new IllegalArgumentException("Wrong input resource type");
 	}
 	return true;
     }
@@ -190,19 +188,29 @@ public class Production // extends sim.des.Queue
 	if (!hasEnoughInputs()) {
 	    if (Demo.verbose)  System.out.println("At t=" + state.schedule.getTime() + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " +
 			       reportInputs(true));
+	    return;
 	}
 	
 	for(int nb=0; nb<batchesPerDay && hasEnoughInputs(); nb++) {
 
+	    
 	    for(int j=0; j<inBatchSizes.length; j++) {
-		
-		boolean z = inputStore[j].provide(sink[j], 1);
+
+		Provider p = inputStore[j];
+		boolean z;
+		//System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
+		if (p.getTypical() instanceof Batch) {
+		    z = p.provide(sink[j], 1);
+		} else if (p.getTypical() instanceof CountableResource) {
+		    z = p.provide(sink[j], inBatchSizes[j]);		    
+		} else throw new IllegalArgumentException("Wrong input resource type");
 		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
 		if (sink[j].lastConsumed != inBatchSizes[j]) {
 		    String msg = "Batch size mismatch on sink["+j+"]=" +
 			sink[j] +": have " + sink[j].lastConsumed+", expected " + inBatchSizes[j];
 		    throw new IllegalArgumentException(msg);
 		}
+	    		
 	    }
 	    
 	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getTotal()+"+"+prodDelay.getAvailable());
