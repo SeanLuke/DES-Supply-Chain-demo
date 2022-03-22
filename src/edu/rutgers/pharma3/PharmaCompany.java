@@ -39,6 +39,7 @@ public class PharmaCompany extends Sink // Delay
 
     private Delay orderDelay;
     Production apiProduction, drugProduction, packaging;
+    Production cmoApiProduction, cmoDrugProduction, cmoPackaging;
 
     public Production getApiProduction() {return apiProduction;    }
     public Production getDrugProduction() {	return drugProduction;    }
@@ -46,6 +47,8 @@ public class PharmaCompany extends Sink // Delay
 
     Distributor distro;
     public Distributor getDistributor() {return distro;    }
+
+    Splitter rawMatSplitter, apiSplitter, drugSplitter;
     
     //    MSink dongle; 
     PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException {
@@ -70,22 +73,45 @@ public class PharmaCompany extends Sink // Delay
 
 	apiProduction = new Production(state, "ApiProduction",  config,
 				       new Batch[] {rawMatBatch}, apiBatch);
-	rawMatSupplier.setQaReceiver(apiProduction.getEntrance(0));
+	cmoApiProduction = new Production(state, "CmoApiProduction",  config,
+				       new Batch[] {rawMatBatch}, apiBatch);
+
+
+	rawMatSplitter = new Splitter( state, rawMatBatch);	
+	rawMatSupplier.setQaReceiver(rawMatSplitter);	
+	rawMatSplitter.addReceiver(apiProduction.getEntrance(0), 90);
+	rawMatSplitter.addReceiver(cmoApiProduction.getEntrance(0), 10);
 
 	
 	drugProduction = new Production(state, "DrugProduction",  config,
 					new Batch[]{ apiBatch, excipientBatch}, bulkDrugBatch);
-	apiProduction.setQaReceiver(drugProduction.getEntrance(0));
+	cmoDrugProduction = new Production(state, "CmoDrugProduction",  config,
+					new Batch[]{ apiBatch}, bulkDrugBatch);
+	
+
+	apiSplitter = new Splitter( state, apiBatch);	
+	apiProduction.setQaReceiver(apiSplitter);
+	apiSplitter.addReceiver(drugProduction.getEntrance(0), 70);
+	apiSplitter.addReceiver(cmoDrugProduction.getEntrance(0), 30);
+
 	excipientFacility.setQaReceiver(drugProduction.getEntrance(1));
 
-
+	
 	packaging = new Production(state, "Packaging",  config,
-					new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
-	drugProduction.setQaReceiver(packaging.getEntrance(0));
+				   new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
+	cmoPackaging = new Production(state, "CmoPackaging",  config,
+				      new Resource[] {bulkDrugBatch}, pacDrugBatch);
+
+	drugSplitter = new Splitter( state, bulkDrugBatch);	
+       	drugProduction.setQaReceiver(drugSplitter);
+	drugSplitter.addReceiver( packaging.getEntrance(0), 50);
+	drugSplitter.addReceiver( cmoPackaging.getEntrance(0), 50);
+	
 	pacMatFacility.setQaReceiver(packaging.getEntrance(1));
 
 	distro = new Distributor(state, "Distributor", config,  pacDrugBatch);
 	packaging.setQaReceiver(distro);	
+	cmoPackaging.setQaReceiver(distro);	
 	distro.setDeliveryReceiver(hospitalPool);
 	
     	//dongle = new MSink(state,pacDrug);
@@ -94,6 +120,11 @@ public class PharmaCompany extends Sink // Delay
 	state.schedule.scheduleRepeating(apiProduction);
 	state.schedule.scheduleRepeating(drugProduction);
 	state.schedule.scheduleRepeating(packaging);
+
+	state.schedule.scheduleRepeating(cmoApiProduction);
+	state.schedule.scheduleRepeating(cmoDrugProduction);
+	state.schedule.scheduleRepeating(cmoPackaging);
+
 	state.schedule.scheduleRepeating(distro);
 
 	
@@ -129,13 +160,22 @@ public class PharmaCompany extends Sink // Delay
     }
 
     public String report() {
+	String sep =  "----------------------------------------------------------------------";	   
 	Vector<String> v= new Vector<>();
+	v.add( "---- Suppliers: -------------------------------");
 	v.add( 	rawMatSupplier.report());
+	v.add( 	rawMatSplitter.report());
 	v.add( 	pacMatFacility.report());
 	v.add( 	excipientFacility.report());
+	v.add( "---- FC: --------------------------------------");
 	v.add( 	apiProduction.report());
 	v.add( 	drugProduction.report());
 	v.add(  packaging.report());
+	v.add( "---- CMO: -------------------------------------");
+	v.add( 	cmoApiProduction.report());
+	v.add( 	cmoDrugProduction.report());
+	v.add(  cmoPackaging.report());
+	v.add( sep);
 	v.add( 	distro.report());
 	//v.add( 	dongle.report());
 	return String.join("\n", v);

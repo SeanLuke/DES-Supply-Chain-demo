@@ -68,7 +68,7 @@ public class Production // extends sim.des.Queue
 	}
 	       
 	public String report() {
-	    return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" batches, totaling " + totalStarted+"]";
+	    return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"]";
 	}
 	    
     }
@@ -124,11 +124,11 @@ public class Production // extends sim.des.Queue
 	inputStore = new sim.des.Queue[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
 	    inputStore[j] = new sim.des.Queue(state,inResources[j]);
-	    inputStore[j].setName("Input store for " + inResources[j].getName());
+	    inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
 	}
 	
 	inBatchSizes = para.getDoubles("inBatch");
-	if (inBatchSizes.length!=inputStore.length) throw new  IllegalInputException("Mismatch of the number of inputs: given " + inputStore.length + " resources, but " + inBatchSizes.length + " input batch sizes");
+	if (inBatchSizes.length!=inputStore.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inputStore.length + " resources ("+Util.joinNonBlank(";",inputStore)+"), but " + inBatchSizes.length + " input batch sizes");
 
 	outBatchSize = para.getDouble("batch");
 	batchesPerDay = (int)para.getLong("batchesPerDay");
@@ -255,7 +255,7 @@ public class Production // extends sim.des.Queue
     public String report() {
 	
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
-	    "Ever started: "+everStarted + " ("+batchesStarted+" ba)";
+	    "Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 	if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
 	s += " = ("+
 	    "in the works=" +   prodDelay.hasBatches() +
