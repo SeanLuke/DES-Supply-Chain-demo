@@ -258,14 +258,14 @@ public class Production // extends sim.des.Queue
 	    "Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 	if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
 	s += " = ("+
-	    "in the works=" +   prodDelay.hasBatches() +
-	    " batches; in QA= " +  qaDelay.hasBatches() +
-	    " batches; discarded="+qaDelay.badResource  +
-				      " ("+qaDelay.badBatches+" ba)";
-	if (qaDelay.reworkProb>0) s+= "; rework="+qaDelay.reworkResource +
+	    "in prod=" +   prodDelay.hasBatches() +
+	    " ba; in QA= " +  qaDelay.hasBatches() +
+	    " ba; discarded="+(long)qaDelay.badResource  +
+	    " ("+qaDelay.badBatches+" ba)";
+	if (qaDelay.reworkProb>0) s+= "; rework="+(long)qaDelay.reworkResource +
 				      " ("+qaDelay.reworkBatches+" ba)";
 
-	s += "; good=" + qaDelay.releasedGoodResource+" ("+qaDelay.releasedBatches+" ba))]";
+	s += "; good=" + (long)qaDelay.releasedGoodResource+" ("+qaDelay.releasedBatches+" ba))]";
 	s += "\n" + prodDelay.report();
 	return s;
 

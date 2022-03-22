@@ -55,6 +55,9 @@ public class Splitter extends Provider implements Receiver    {
     }
 
     Vector<Double> givenToEach = new Vector<Double>();
+
+    double totalAcecepted=0;
+
     
     /**
        Accepts the resource, which must be a composite Entity, and offers the resources in its
@@ -69,6 +72,8 @@ public class Splitter extends Provider implements Receiver    {
         if (!(atLeast >= 0 && atMost >= atLeast))
         	throwInvalidAtLeastAtMost(atLeast, atMost);
 
+
+	
 	if (givenToEach.size() < fractions.size()) {
 	    int j = givenToEach.size();
 	    givenToEach.setSize( fractions.size());
@@ -84,6 +89,9 @@ public class Splitter extends Provider implements Receiver    {
 
 
 	double amt = amount.getAmount();
+	totalAcecepted+= amt;
+
+
 	int chosenJ = -1;
 	double minR = 0;
 	
@@ -95,9 +103,13 @@ public class Splitter extends Provider implements Receiver    {
 		minR = r;
 	    }
 	}
-       	
 	Receiver recv = myReceivers.get(chosenJ);
-	return recv.accept(this, amount, atLeast, atMost);
+	boolean z = recv.accept(this, amount, atLeast, atMost);
+	if (z) {
+	    double x = givenToEach.get(chosenJ) + amt;
+	    givenToEach.set(chosenJ, x);
+	}
+	return z;
     }
         
     public String toString()
@@ -117,7 +129,7 @@ public class Splitter extends Provider implements Receiver    {
 
 
     public String report() {
-	String s = "Split: ";
+	String s = "Split "+	totalAcecepted+" ba: ";
 	Vector<String> v=new Vector<>();
 	for(int j=0; j< givenToEach.size(); j++) {
 	    v.add("To " + myReceivers.get(j).getName() + ", " + givenToEach.get(j));

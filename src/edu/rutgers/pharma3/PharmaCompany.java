@@ -48,7 +48,7 @@ public class PharmaCompany extends Sink // Delay
     Distributor distro;
     public Distributor getDistributor() {return distro;    }
 
-    Splitter rawMatSplitter, apiSplitter, drugSplitter;
+    Splitter rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter;
     
     //    MSink dongle; 
     PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException {
@@ -68,7 +68,6 @@ public class PharmaCompany extends Sink // Delay
 	pacMatFacility = new MaterialSupplier(state, "PacMatSupplier", config, 	pacMaterial);
 	excipientFacility = new MaterialSupplier(state, "ExcipientSupplier", config, excipientBatch);
 
-
 	Batch apiBatch = new Batch(api),  bulkDrugBatch = new Batch( bulkDrug);
 
 	apiProduction = new Production(state, "ApiProduction",  config,
@@ -76,36 +75,37 @@ public class PharmaCompany extends Sink // Delay
 	cmoApiProduction = new Production(state, "CmoApiProduction",  config,
 				       new Batch[] {rawMatBatch}, apiBatch);
 
-
-	rawMatSplitter = new Splitter( state, rawMatBatch);	
-	rawMatSupplier.setQaReceiver(rawMatSplitter);	
-	rawMatSplitter.addReceiver(apiProduction.getEntrance(0), 90);
-	rawMatSplitter.addReceiver(cmoApiProduction.getEntrance(0), 10);
-
-	
 	drugProduction = new Production(state, "DrugProduction",  config,
 					new Batch[]{ apiBatch, excipientBatch}, bulkDrugBatch);
 	cmoDrugProduction = new Production(state, "CmoDrugProduction",  config,
 					new Batch[]{ apiBatch}, bulkDrugBatch);
-	
 
-	apiSplitter = new Splitter( state, apiBatch);	
-	apiProduction.setQaReceiver(apiSplitter);
-	apiSplitter.addReceiver(drugProduction.getEntrance(0), 70);
-	apiSplitter.addReceiver(cmoDrugProduction.getEntrance(0), 30);
 
-	excipientFacility.setQaReceiver(drugProduction.getEntrance(1));
-
-	
 	packaging = new Production(state, "Packaging",  config,
 				   new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
 	cmoPackaging = new Production(state, "CmoPackaging",  config,
 				      new Resource[] {bulkDrugBatch}, pacDrugBatch);
 
-	drugSplitter = new Splitter( state, bulkDrugBatch);	
-       	drugProduction.setQaReceiver(drugSplitter);
+	rawMatSupplier.setQaReceiver(rawMatSplitter = new Splitter( state, rawMatBatch));	
+	rawMatSplitter.addReceiver(apiProduction.getEntrance(0), 90);
+	rawMatSplitter.addReceiver(cmoApiProduction.getEntrance(0), 10);
+
+		
+	apiProduction.setQaReceiver(apiSplitter = new Splitter( state, apiBatch));	
+	apiSplitter.addReceiver(drugProduction.getEntrance(0), 70);
+	apiSplitter.addReceiver(cmoDrugProduction.getEntrance(0), 30);
+
+	cmoApiProduction.setQaReceiver(cmoApiSplitter = new Splitter( state, apiBatch));	
+	cmoApiSplitter.addReceiver(cmoDrugProduction.getEntrance(0), 50);
+	cmoApiSplitter.addReceiver(drugProduction.getEntrance(0), 50);
+	
+	excipientFacility.setQaReceiver(drugProduction.getEntrance(1));
+	
+       	drugProduction.setQaReceiver(drugSplitter = new Splitter( state, bulkDrugBatch));	
 	drugSplitter.addReceiver( packaging.getEntrance(0), 50);
 	drugSplitter.addReceiver( cmoPackaging.getEntrance(0), 50);
+
+	cmoDrugProduction.setQaReceiver(cmoPackaging.getEntrance(0));
 	
 	pacMatFacility.setQaReceiver(packaging.getEntrance(1));
 
