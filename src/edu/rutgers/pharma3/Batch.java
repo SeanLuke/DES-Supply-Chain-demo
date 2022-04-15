@@ -32,6 +32,14 @@ class Batch extends Entity {
 	
     }
 
+    /** How soon after being created will this product expire. This is 
+	measured in the same units as used in the simulation Scheduler,
+	i.e. days. The value of Double.POSITIVE_INFINITY means "never expires"
+    */
+    double shelfLife;
+
+
+
     public String toString() {
 	String s = "Batch(" + getName() + ", storage=" + getStorage();
 	if (getStorage()!=null) {
@@ -44,8 +52,9 @@ class Batch extends Entity {
     
     long lotNo;
     /** Creates "typicals", rather than actual batches */
-    Batch(CountableResource typicalUnderlying) {
+    Batch(CountableResource typicalUnderlying, double _shelfLife) {
 	super(  "Batch of " + typicalUnderlying.getName());
+	shelfLife = _shelfLife;
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created: " +this);
     }
@@ -57,8 +66,9 @@ class Batch extends Entity {
 	@param _lotNo
 	@param amount The amount of underlying resource
     */
-    Batch(Batch prototype, long _lotNo, double amount) {
+    private Batch(Batch prototype, long _lotNo, double amount) {
 	super(prototype);
+	shelfLife = prototype.shelfLife;
 	lotNo = _lotNo;
 	CountableResource r0 = prototype.getContent();
 	CountableResource r = new CountableResource(r0, amount);
@@ -75,9 +85,13 @@ class Batch extends Entity {
     }
 
     /** Creates a Batch of the same type as this Batch, with a new
-	lot number and a specified amount of resource stored in it  */
-    public Batch mkNewLot(double size) {
-	return	new Batch(this, nextLotNo(),  size);
+	lot number and a specified amount of resource stored in it.
+	@param now The "birthdate" (manufacturing date) of this lot
+    */
+    public Batch mkNewLot(double size, double now) {
+	Batch b = new Batch(this, nextLotNo(),  size);
+	Lot.registerLot(b.lotNo, now, now + shelfLife);
+	return	b;
     }
     
 

@@ -51,7 +51,7 @@ public class Demo extends SimState {
 	    add(pharmaCompany);
 	    
 	    hospitalPool.setOrderDestination(pharmaCompany);
-	    if (2*2  !=4) throw new IllegalInputException("test");
+	    //if (2*2  !=4) throw new IllegalInputException("test");
 	    
     	} catch( IllegalInputException ex) {
 	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
