@@ -214,7 +214,7 @@ public class Production // extends sim.des.Queue
 	    }
 	    
 	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getTotal()+"+"+prodDelay.getAvailable());
-	    Batch onTheTruck = outResource.mkNewLot(outBatchSize);
+	    Batch onTheTruck = outResource.mkNewLot(outBatchSize, state.schedule.getTime());
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, 1, 1);
 	    batchesStarted++;

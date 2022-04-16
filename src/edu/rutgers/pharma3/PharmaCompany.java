@@ -49,26 +49,34 @@ public class PharmaCompany extends Sink // Delay
     public Distributor getDistributor() {return distro;    }
 
     Splitter rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter;
+
+    //final Batch pacDrugBatch;
     
     //    MSink dongle; 
     PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException {
 	super(state, drugOrderResource);
 	setName(name);
-	
 	ParaSet para = config.get(name);
+
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	
 	orderDelay = new Delay( state, drugOrderResource);
 	orderDelay.setDelayDistribution(para.getDistribution("orderDelay",state.random));
 	orderDelay.addReceiver(this);
 
-	Batch rawMatBatch = new Batch(rawMaterial), excipientBatch = new Batch(excipient);
-	// pacMatBatch = new Batch(pacMaterial)
-	rawMatSupplier = new MaterialSupplier(state, "RawMaterialSupplier", config, rawMatBatch);
-	pacMatFacility = new MaterialSupplier(state, "PacMatSupplier", config, 	pacMaterial);
-	excipientFacility = new MaterialSupplier(state, "ExcipientSupplier", config, excipientBatch);
 
-	Batch apiBatch = new Batch(api),  bulkDrugBatch = new Batch( bulkDrug);
+	// pacMatBatch = new Batch(pacMaterial)
+	rawMatSupplier = MaterialSupplier.mkMaterialSupplier(state, "RawMaterialSupplier", config, rawMaterial, true);
+	Batch rawMatBatch = (Batch)rawMatSupplier.getPrototype();
+	
+	pacMatFacility =  MaterialSupplier.mkMaterialSupplier(state, "PacMatSupplier", config,pacMaterial, false);
+	
+	excipientFacility = MaterialSupplier.mkMaterialSupplier(state, "ExcipientSupplier", config, excipient, true);
+	Batch excipientBatch = (Batch)excipientFacility.getPrototype();
+	
+	Batch apiBatch = Batch.mkPrototype(api, config.get( "ApiProduction")),
+	    bulkDrugBatch = Batch.mkPrototype(bulkDrug, config.get( "DrugProduction"));
+
 
 	apiProduction = new Production(state, "ApiProduction",  config,
 				       new Batch[] {rawMatBatch}, apiBatch);

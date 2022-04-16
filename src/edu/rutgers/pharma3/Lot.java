@@ -15,8 +15,9 @@ import edu.rutgers.util.*;
     manufacturing date and expiration date. */
 
 public class Lot {
-    /** Maps lotNo to the Lot object */
-    HashMap<Long, Lot> allLots = new HashMap<>();
+    /** This table stores information of all lots that have ever been created.
+	It Maps lotNo to the Lot object */
+    static HashMap<Long, Lot> allLots = new HashMap<>();
 
     final long lotNo;
 
@@ -28,13 +29,12 @@ public class Lot {
     private Lot(long _lotNo, double now, double _expirationDate) {
 	lotNo = _lotNo;
 	manufacturingDate = now;
-	expirationDate = _expirationDate;
-	
+	expirationDate = _expirationDate;	
     }
     
     static void registerLot(long lotNo, double now, double _expirationDate) {
 	Lot x = new Lot( lotNo, now,  _expirationDate);
-	allLots.put( new Double(lotNo), x);
+	allLots.put( new Long(lotNo), x);
     }
     
 }

@@ -51,12 +51,21 @@ class Batch extends Entity {
     }
     
     long lotNo;
-    /** Creates "typicals", rather than actual batches */
+    /** Creates "typicals" (prototype batches), rather than actual batches */
     Batch(CountableResource typicalUnderlying, double _shelfLife) {
 	super(  "Batch of " + typicalUnderlying.getName());
 	shelfLife = _shelfLife;
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created: " +this);
+    }
+
+    /**
+       @param para A ParaSet that has a parameter named "expiration", to get
+       the shelf life from.
+     */
+    static Batch mkPrototype(CountableResource typicalUnderlying, ParaSet para)
+	throws IllegalInputException     {
+	return new Batch( typicalUnderlying, para.getDouble("expiration"));
     }
     
     /** Creates a new batch of underlying resource, with

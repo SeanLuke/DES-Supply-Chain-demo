@@ -42,12 +42,15 @@ public class Demo extends SimState {
 	try {
 
 	    CountableResource drug = new CountableResource("packagedDrug", 0);
-	    Batch drugBatch = new Batch(drug);
+
+	    String pcName = "PharmaCompany", hosName="HospitalPool";
+	    Batch pacDrugBatch = Batch.mkPrototype( drug, config.get(pcName));
+	    
 	    //System.out.println("Demo: drugBatch = " + drugBatch  );
 	    
-	    hospitalPool = new HospitalPool(this, "HospitalPool",  config,drugBatch);
+	    hospitalPool = new HospitalPool(this, hosName,  config, pacDrugBatch);
 	    add(hospitalPool);
-	    pharmaCompany = new PharmaCompany(this, "PharmaCompany", config, hospitalPool, drugBatch);
+	    pharmaCompany = new PharmaCompany(this, pcName, config, hospitalPool, pacDrugBatch);
 	    add(pharmaCompany);
 	    
 	    hospitalPool.setOrderDestination(pharmaCompany);

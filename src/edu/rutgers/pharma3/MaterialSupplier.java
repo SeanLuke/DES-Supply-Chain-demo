@@ -61,17 +61,31 @@ public class MaterialSupplier extends Sink
 
     /** Similar to "typical", but with the storage array */
     private final Resource prototype;
+    Resource getPrototype() { return prototype; }
+
+    /** Creates a MaterialSupplier that will supply either a specified
+	CountableResource or "batched resource" based on that resource.
+	@param needLots If true, the supplier will supply lots 
+     */
+    static MaterialSupplier mkMaterialSupplier(SimState state, String name, Config config, 
+					CountableResource resource, boolean needLots) 	throws IllegalInputException {
+	ParaSet para = config.get(name);
+	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	Resource proto = 
+	    needLots?  Batch.mkPrototype(resource, para):
+	    resource;
+	return new   MaterialSupplier( state, para, proto);
+    }
+	
     
     /** @param resource The product supplied by this supplier. Either a "prototype" Batch, or a CountableResource.
      */
-    MaterialSupplier(SimState state, String name, Config config, 
-		     Resource resource	     ) 	throws IllegalInputException {
+    private MaterialSupplier(SimState state, ParaSet para,
+			     Resource resource	     ) 	throws IllegalInputException {
 	super(state, resource);
 	prototype = resource;
 
-	setName(name);
-	ParaSet para = config.get(name);
-	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	setName(para.name);
 
 	prodDelay = new Delay(state, resource);
 	transDelay = new Delay(state, resource);
@@ -128,7 +142,7 @@ public class MaterialSupplier extends Sink
 	if (outstandingOrderAmount<=0) return false;
 	//double x = Math.min(outstandingOrderAmount ,  standardBatchSize);
 	double x = standardBatchSize;
-	Resource batch = (prototype instanceof Batch) ? ((Batch)prototype).mkNewLot(x) :
+	Resource batch = (prototype instanceof Batch) ? ((Batch)prototype).mkNewLot(x, state.schedule.getTime()) :
 	    new CountableResource((CountableResource)prototype, x);
 
 	Provider provider = null;
