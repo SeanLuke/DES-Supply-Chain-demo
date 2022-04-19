@@ -7,7 +7,6 @@ import java.text.*;
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
 import sim.des.*;
 
 import ec.util.MersenneTwisterFast;
@@ -18,11 +17,10 @@ import edu.rutgers.util.*;
 public class Demo extends SimState {
 
     static boolean verbose=false;
-    
+   
     void add(Steppable z) {
 	IterativeRepeat ir =	schedule.scheduleRepeating(z);
     }
-
     
     public Demo(long seed)    {
 	super(seed);
@@ -32,8 +30,6 @@ public class Demo extends SimState {
     PharmaCompany pharmaCompany;
     public HospitalPool getHospitalPool() {	return hospitalPool;    }    
     public PharmaCompany getPharmaCompany() {	return pharmaCompany;    }
-
-
 
     /** Here, the supply network elements are added to the Demo object */
     public void start(){
@@ -64,9 +60,8 @@ public class Demo extends SimState {
 	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
 	doReport("Start");
     }
-
-
-   public void	finish() {
+   
+    public void	finish() {
 	doReport("Finish");
     }
 
@@ -93,8 +88,6 @@ public class Demo extends SimState {
 	return String.join("\n", v);
     }
   
-
-
     
     /** The Config object contains the parameters for
 	various supply chain elements, read from a
@@ -102,13 +95,12 @@ public class Demo extends SimState {
     */
     static Config config;
 
- 
-    
-    /** Extracts a few command-line options we understand, and leaves
-	the rest of them to MASON.
-    */
-    public static void main(String[] argv) throws IOException, IllegalInputException {
+
+    static String[] processArgv(String[] argv) throws IOException, IllegalInputException
+    {
+
 	String confPath = "config/pharma3.csv";
+
 
 	Vector<String> va = new Vector<String>();
 	for(int j=0; j<argv.length; j++) {
@@ -121,18 +113,24 @@ public class Demo extends SimState {
 		va.add(a);
 	    }
 	}
-
-	argv = va.toArray(new String[0]);
 	
 	File f= new File(confPath);
 	config  = Config.readConfig(f);
+
+	return va.toArray(new String[0]);
 	
+    }
+    
+    /** Extracts a few command-line options we understand, and leaves
+	the rest of them to MASON.
+    */
+    public static void main(String[] argv) throws IOException, IllegalInputException {
+
+	argv = processArgv(argv);
 	
 	doLoop(Demo.class, argv);
 	
 	System.exit(0);
     }
-
-
     
 }

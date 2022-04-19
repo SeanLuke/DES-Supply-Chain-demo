@@ -160,7 +160,7 @@ public class Production // extends sim.des.Queue
     }
 
     /** Do we have enough input materials of each kind to make a batch? 
-	FIXME: we have a simplifying assumption that all batches are same size.
+	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
      */
     private boolean hasEnoughInputs() {
 	for(int j=0; j<inBatchSizes.length; j++) {
