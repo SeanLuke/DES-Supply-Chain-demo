@@ -135,7 +135,7 @@ public class MaterialSupplier extends Sink //Delay
 	String s =// "[" + cname()
 	    //+ "."+getName()+ "("+getTypical().getName()+")" +
 	    "Ever ordered="+everOrdered+
-	    "; of this, still on ships=" +  delay.getTotal();
+	    "; of this, still on ships=" +  delay.getDelayed();
 	if (delay.getAvailable()>0) s += "+" +  delay.getAvailable();
 	s += ", QA discarded=" + badResource +
 	    ", QA released=" + releasedGoodResource; //+	    "]";

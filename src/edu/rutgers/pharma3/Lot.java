@@ -26,6 +26,10 @@ public class Lot {
 	we store Double.POSITIVE_INFINITY here */
     final double expirationDate;
 
+    static Lot get(long _lotNo) {
+	return allLots.get(_lotNo);
+    }
+
     private Lot(long _lotNo, double now, double _expirationDate) {
 	lotNo = _lotNo;
 	manufacturingDate = now;
@@ -36,5 +40,10 @@ public class Lot {
 	Lot x = new Lot( lotNo, now,  _expirationDate);
 	allLots.put( new Long(lotNo), x);
     }
+
+    boolean hasExpired(double now) {
+	return now >=  expirationDate;
+    }
+
     
 }

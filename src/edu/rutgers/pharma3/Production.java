@@ -35,12 +35,39 @@ public class Production // extends sim.des.Queue
     implements Reporting,	       Steppable, Named
 {
 
+    /** A Queue for storing an input ingredient, with a facility
+	to discard expired lots */
+    class InputStore extends sim.des.Queue {
+	/** Used to discard expired lots */
+	Sink expiredDump;
+	InputStore(SimState _state,
+		   Resource resource) {
+	    super(_state, resource);
+	    setName(Production.this.getName() + "/Input store for " + resource.getName());
+	    expiredDump = new Sink(state, resource);
+	}
+
+
+	/** Do we have enough input materials of this kind to make a batch? 
+	    FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
+	*/
+	private boolean hasEnough(double inBatchSize) {
+	    if (getTypical() instanceof Batch) {
+		return (getAvailable()>0);
+	    } else if (getTypical()  instanceof CountableResource) {
+		return getAvailable()>=inBatchSize;
+	    } else throw new IllegalArgumentException("Wrong input resource type");
+	}
+
+    }
+
+	
 
     /** Represents the storage of input materials (in Batches). They are already QA-tested by previous
 	stages of the chain. These Queues are not scheduled; instead, Production.step() pulls
 	stuff from them (by calling Queue.provide(..) when needed. 
     */
-    sim.des.Queue[] inputStore;
+    InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
     
     public static class ProdDelay extends Delay implements Reporting {
@@ -62,7 +89,7 @@ public class Production // extends sim.des.Queue
 	    return super.accept( provider, batch, atLeast, atMost);
 	}
 	public String hasBatches() {
-	    String s = "" + (long)getTotal();
+	    String s = "" + (long)getDelayed();
 	    if (getAvailable()>0) s += "+"+(long)getAvailable();
 	    return s;
 	}
@@ -121,10 +148,10 @@ public class Production // extends sim.des.Queue
 	//setCapacity(para.getDouble("capacity"));
 
 	// Storage for input ingredients
-	inputStore = new sim.des.Queue[inResources.length];
+	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
-	    inputStore[j] = new sim.des.Queue(state,inResources[j]);
-	    inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
+	    inputStore[j] = new InputStore(state,inResources[j]);
+	    //inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
 	}
 	
 	inBatchSizes = para.getDoubles("inBatch");
@@ -164,12 +191,7 @@ public class Production // extends sim.des.Queue
      */
     private boolean hasEnoughInputs() {
 	for(int j=0; j<inBatchSizes.length; j++) {
-	    Provider p = inputStore[j];
-	    if (p.getTypical() instanceof Batch) {
-		return (p.getAvailable()>0);
-	    } else if (p.getTypical()  instanceof CountableResource) {
-		return p.getAvailable()>=inBatchSizes[j];
-	    } else throw new IllegalArgumentException("Wrong input resource type");
+	    if (!inputStore[j].hasEnough(inBatchSizes[j])) return false;
 	}
 	return true;
     }
@@ -182,7 +204,7 @@ public class Production // extends sim.des.Queue
     
     public void step​(SimState state) {
 	// FIXME: should stop working if the production plan has been fulfilled
-	//double haveNow = getAvailable() + prodDelay.getTotal() +	    qaDelay.getTotal();
+	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
 	//if (haveNow  + outBatchSize < getCapacity() &&
 
 	if (!hasEnoughInputs()) {
@@ -192,7 +214,6 @@ public class Production // extends sim.des.Queue
 	}
 	
 	for(int nb=0; nb<batchesPerDay && hasEnoughInputs(); nb++) {
-
 	    
 	    for(int j=0; j<inBatchSizes.length; j++) {
 
@@ -213,7 +234,7 @@ public class Production // extends sim.des.Queue
 	    		
 	    }
 	    
-	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getTotal()+"+"+prodDelay.getAvailable());
+	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 	    Batch onTheTruck = outResource.mkNewLot(outBatchSize, state.schedule.getTime());
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, 1, 1);

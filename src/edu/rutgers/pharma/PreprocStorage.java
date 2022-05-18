@@ -56,7 +56,7 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
     }
 
     public String report() {
-	return "[PrePStor."+getName()+"(cap="+getCapacity()+"), has " + resource.getAmount() + " units of " + getTypical().getName() + ", plus "+qaDelay.getTotal()+"+"+qaDelay.getAvailable()+" still in QA; discarded "+qaDelay.badResource+" faulty units, accepted "+qaDelay.releasedGoodResource+" good ones]";
+	return "[PrePStor."+getName()+"(cap="+getCapacity()+"), has " + resource.getAmount() + " units of " + getTypical().getName() + ", plus "+qaDelay.getDelayed()+"+"+qaDelay.getAvailable()+" still in QA; discarded "+qaDelay.badResource+" faulty units, accepted "+qaDelay.releasedGoodResource+" good ones]";
     }
 
 
@@ -66,7 +66,7 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
 	that are currently been checked), get a batch into checking
      */
     public void step​(sim.engine.SimState state) {
-	boolean hasSpace = resource.getAmount() + qaDelay.getTotal() <= getCapacity() - batchSize;
+	boolean hasSpace = resource.getAmount() + qaDelay.getDelayed() <= getCapacity() - batchSize;
 	if (hasSpace &&    ingStore.getAvailable() >=  batchSize	    ) {
 	    double neededAmount = batchSize;
 	    //System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " requesting QA on " +  neededAmount + " units of " + getTypical());

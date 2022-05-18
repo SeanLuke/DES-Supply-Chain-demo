@@ -46,7 +46,7 @@ class QaDelay extends Delay {
 
     /** Still under processing + at the output */
     double hasOnBothSides() {
-	return getTotal() + getAvailable();
+	return getDelayed() + getAvailable();
     }
     
 }

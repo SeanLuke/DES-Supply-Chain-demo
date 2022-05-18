@@ -85,8 +85,8 @@ class Production extends sim.des.Queue
     double everStarted = 0;
     
     public void step​(SimState state) {
-	double haveNow = getAvailable() + prodDelay.getTotal() +
-	    qaDelay.getTotal();
+	double haveNow = getAvailable() + prodDelay.getDelayed() +
+	    qaDelay.getDelayed();
 	if (haveNow  + outBatchSize < getCapacity() &&	    
 	    hasEnoughInputs()) {
 
@@ -111,7 +111,12 @@ class Production extends sim.des.Queue
     }
 
     public String report() {
-	return "[Production."+getName()+", has "+ prodDelay.getTotal()+"+"+prodDelay.getAvailable()+ " in the work, " +  qaDelay.getTotal() +"+"+qaDelay.getAvailable()+ " in QA, and " + getAvailable() + " in ready storage. Ever started: "+everStarted+". Produced: faulty="+qaDelay.badResource+", good=" + qaDelay.releasedGoodResource+"]";
+	return "[Production."+getName()+
+	    ", has "+ prodDelay.getDelayed()+
+	    "+"+prodDelay.getAvailable()+
+	    " in the work, " +  qaDelay.getDelayed() +
+	    "+"+qaDelay.getAvailable()+
+	    " in QA, and " + getAvailable() + " in ready storage. Ever started: "+everStarted+". Produced: faulty="+qaDelay.badResource+", good=" + qaDelay.releasedGoodResource+"]";
 
     }
 

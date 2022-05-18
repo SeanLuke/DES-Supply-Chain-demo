@@ -85,7 +85,7 @@ class Packaging extends sim.des.Queue implements Reporting {
 
     
     public void step​(sim.engine.SimState state) {
-	double workedUpon = prodDelay.getTotal() +  qaDelay.getTotal() + batchSize;
+	double workedUpon = prodDelay.getDelayed() +  qaDelay.getDelayed() + batchSize;
 	boolean haveSpace = (getAvailable() + workedUpon  <=getCapacity()) ||
 	    (dispatchStore.getAvailable() +  workedUpon  <= dispatchStore.getCapacity());
 	
@@ -105,7 +105,7 @@ class Packaging extends sim.des.Queue implements Reporting {
     }
 
     public String report() {
-	return "[Packaging."+getName()+", has "+ prodDelay.getTotal() + " in the work, " +  qaDelay.getTotal() + " in QA, " + getAvailable() + " in ready storage. Packaged: faulty="+qaDelay.badResource+", good=" + qaDelay.releasedGoodResource+"]";
+	return "[Packaging."+getName()+", has "+ prodDelay.getDelayed() + " in the work, " +  qaDelay.getDelayed() + " in QA, " + getAvailable() + " in ready storage. Packaged: faulty="+qaDelay.badResource+", good=" + qaDelay.releasedGoodResource+"]";
 
     }
 

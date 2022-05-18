@@ -138,7 +138,7 @@ public class MaterialSupplier extends Sink
 	the last short batch, in order to simplify Production.
     */
     private boolean startProductionIfCan() {
-	if (prodDelay.getTotal()>0) return false;
+	if (prodDelay.getDelayed()>0) return false;
 	if (outstandingOrderAmount<=0) return false;
 	//double x = Math.min(outstandingOrderAmount ,  standardBatchSize);
 	double x = standardBatchSize;
@@ -161,7 +161,7 @@ public class MaterialSupplier extends Sink
     /** Starts the QA on the next batch that needs QA, if the QA 
 	system is not busy. */
     private boolean startQaIfCan() {
-	if (qaDelay.getTotal()>0) return false;
+	if (qaDelay.getDelayed()>0) return false;
 	int n = 0;
 	if (needQa.size()==0) return false;
 	Resource batch = needQa.firstElement();
@@ -170,7 +170,7 @@ public class MaterialSupplier extends Sink
 	double t = state.schedule.getTime();
 	double a =batch.getAmount();
 	boolean z = qaDelay.accept( provider, batch, a, a);
-	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " putting batch into qaDelay, z="+z +". qaDelay has " + qaDelay.getTotal());
+	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " putting batch into qaDelay, z="+z +". qaDelay has " + qaDelay.getDelayed());
 	return z;
     }
 
@@ -231,19 +231,19 @@ public class MaterialSupplier extends Sink
 	    //+ "."+getName()+ "("+getTypical().getName()+")" +
 	    "Ever ordered="+everOrdered+
 	    "; ever started production="+	startedProdBatches+
-	    " ba. Of this, still in factory=" +  (long)prodDelay.getTotal() +
-	    " ba, on truck " + (long)transDelay.getTotal() +
+	    " ba. Of this, still in factory=" +  (long)prodDelay.getDelayed() +
+	    " ba, on truck " + (long)transDelay.getDelayed() +
 	    " ba, wait for QA " + needQa.size() +
-	    " ba, in QA " + (long)qaDelay.getTotal();
+	    " ba, in QA " + (long)qaDelay.getDelayed();
 	if (transDelay.getAvailable()>0) s += "+" +  (long)transDelay.getAvailable();
 	s += " ba. ";
 	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+" ba)" +
 	    ", QA released=" + qaDelay.releasedGoodResource + " ("+qaDelay.releasedBatches+" ba)";
 
-	long missing = startedProdBatches - ((long)prodDelay.getTotal() +
-					     (long)transDelay.getTotal() +
+	long missing = startedProdBatches - ((long)prodDelay.getDelayed() +
+					     (long)transDelay.getDelayed() +
 					     needQa.size() +
-					     (long)qaDelay.getTotal() +
+					     (long)qaDelay.getDelayed() +
 					     qaDelay.badBatches+ qaDelay.releasedBatches);
 	if ( prototype instanceof Batch &&     missing!=0) s += ". Missing " + missing + " ba";
 

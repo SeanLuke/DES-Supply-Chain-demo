@@ -192,11 +192,11 @@ public class QaDelay extends Delay {
 
     /** Still under processing + at the output */
     double hasBatchesOnBothSides() {
-	return getTotal() + getAvailable();
+	return getDelayed() + getAvailable();
     }
 
     public String hasBatches() {
-	String s = "" + (long)getTotal();
+	String s = "" + (long)getDelayed();
 	if (getAvailable()>0) s += "+"+(long)getAvailable();
 	return s;
     }

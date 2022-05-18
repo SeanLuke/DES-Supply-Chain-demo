@@ -60,7 +60,7 @@ public class Production // extends sim.des.Queue
 	    return super.accept( provider, amount, atLeast, atMost);
 	}
 	public String has() {
-	    String s = "" + getTotal();
+	    String s = "" + getDelayed();
 	    if (getAvailable()>0) s += "+"+getAvailable();
 	    return s;
 	}
@@ -174,7 +174,7 @@ public class Production // extends sim.des.Queue
     
     public void step​(SimState state) {
 	// FIXME: should stop working if the production plan has been fulfilled
-	//double haveNow = getAvailable() + prodDelay.getTotal() +	    qaDelay.getTotal();
+	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
 	//if (haveNow  + outBatchSize < getCapacity() &&
 
 	if (!hasEnoughInputs()) {
@@ -195,7 +195,7 @@ public class Production // extends sim.des.Queue
 		//System.out.println("At t=" + state.schedule.getTime() + ", Production took " + inBatchSizes[j] + " from " + inputStore[j].getName() + "; changed from " +s0 + " to " + s1);
 	    }
 	    
-	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getTotal()+"+"+prodDelay.getAvailable());
+	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 	    Resource onTheTruck = new CountableResource((CountableResource)qaDelay.getTypical(), outBatchSize);
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, outBatchSize, outBatchSize);

@@ -133,7 +133,11 @@ class Batch extends Entity {
     }
     
 
-    
+    boolean hasExpired(double now) {
+	return Lot.get(lotNo).hasExpired(now);
+    }
+
+ 
 		
 }
     

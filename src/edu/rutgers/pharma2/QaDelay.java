@@ -121,11 +121,11 @@ public class QaDelay extends Delay {
 
     /** Still under processing + at the output */
     double hasOnBothSides() {
-	return getTotal() + getAvailable();
+	return getDelayed() + getAvailable();
     }
 
     public String has() {
-	String s = "" + getTotal();
+	String s = "" + getDelayed();
 	if (getAvailable()>0) s += "+"+getAvailable();
 	return s;
     }

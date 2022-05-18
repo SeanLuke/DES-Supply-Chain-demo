@@ -100,7 +100,7 @@ public class Distributor extends sim.des.Queue
     }
     
    public String report() {
-       String s = "Shipping plan=" + needsToShip +", has shipped=" + everShipped + ", in " + loadsShipped+ " loads. Of this, " + shipOutDelay.getTotal() + " is still being shipped. Remains on hand=" + getAvailable();
+       String s = "Shipping plan=" + needsToShip +", has shipped=" + everShipped + ", in " + loadsShipped+ " loads. Of this, " + shipOutDelay.getDelayed() + " is still being shipped. Remains on hand=" + getAvailable();
        return wrap(s);
     }
 
