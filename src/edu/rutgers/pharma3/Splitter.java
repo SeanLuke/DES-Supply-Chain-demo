@@ -10,12 +10,8 @@ import java.util.*;
   sending a specified percent of its input into each receiver.
 **/
 
-public class Splitter extends If
-			      //Provider implements Receiver
-{
-    //    private static final long serialVersionUID = 1;
-
-
+public class Splitter extends If {
+  
     /** Local copy of super.receivers (Receivers registered with the provider) */
     ArrayList<Receiver> myReceivers = new ArrayList<Receiver>();
   
@@ -23,9 +19,6 @@ public class Splitter extends If
 	be sent to the j-th receiver */
     ArrayList<Double> fractions = new ArrayList<Double>();
     	
-    //    public Resource getTypicalReceived() { return typical; }
-    //	public boolean hideTypicalReceived() { return true; }
-
     void throwDoNotUse()        {
         throw new RuntimeException("Splitters do not respond to addReceiver(Receiver).  Instead, use addReceiver(Receiver, fraction).");
     }
@@ -48,35 +41,51 @@ public class Splitter extends If
         return result;
     }
 
+    Vector<Double> givenToEach = new Vector<Double>();
+
     public boolean removeReceiver(Receiver receiver)        {
 	int j = myReceivers.indexOf(receiver);
 	if (j<0)  return false;
 	fractions.remove(j);
 	myReceivers.remove(j);
+	if (givenToEach.size()>j) givenToEach.remove(j);
         return super.removeReceiver(receiver);
     }
 
-    Vector<Double> givenToEach = new Vector<Double>();
 
     double totalAcecepted=0;
 
+    private double lastAmt = 0;
+    private int chosenJ = -1;
     
-    /**
-       Accepts the resource, which must be a composite Entity, and offers the resources in its
-       storage to downstream receivers.
-    **/
+    /** This wrapper is used so that we can adjust "givenToEach" amounts
+	after we know that offerReceiever() has been successful
+	(i.e. the receiver has accepted the resource)
+     */
+    protected boolean offerReceiver(Receiver receiver, double atMost) {
+	// This method gets called by Provider.offerReceiver(...)
+	// with an argument that has been computed by Splitter.selectReceiver(),
+	// and that  Splitter.selectReceiver() call is supposed to have
+	// set lastAmt and chosenJ. Or at least that's the idea!
+	boolean z = super.offerReceiver(receiver, atMost);
+	//System.out.println("Splitter: offerReceiver done; chosenJ="+ chosenJ +", for amt=" + lastAmt);
+	if (z) {
+	    totalAcecepted+= lastAmt;
+	    double x = givenToEach.get(chosenJ) + lastAmt;
+	    givenToEach.set(chosenJ, x);
+	}
+	return z;
+    }
+
+
     
+    /** Decides to which receiver this batch of resource should be given.
+	This method is called by Provider.offerReceivers(ArrayList<Receiver>),
+	and the receiver selected by this method is used as an argument in 
+	Provider.offerReceiver(Receiver, double);
+     */    
     public Receiver selectReceiver(ArrayList<Receiver> receivers, Resource amount) {
  
-	//    public boolean accept(Provider provider, Resource amount, double atLeast, double atMost)        {       
-
-	//    	if (getRefusesOffers()) { return false; }
-	//        if (!typical.isSameType(amount)) throwUnequalTypeException(amount);
-
-	//        if (isOffering()) throwCyclicOffers();  // cycle
-        
-	//        if (!(atLeast >= 0 && atMost >= atLeast))throwInvalidAtLeastAtMost(atLeast, atMost);
-
 	if (receivers.size()!=myReceivers.size()) throw new IllegalArgumentException("Receivers array size mismatch");
 	int k=0;
 	for(Receiver r: receivers) {
@@ -98,12 +107,10 @@ public class Splitter extends If
 	if (receivers.size()!= fractions.size()) throw new AssertionError("receivers.size()!=fractions.size()");
 	if (sumF == 0) throw new IllegalArgumentException("All fractions are zero!");
 
+	// set lastAmt for later use (if accept() succeeds)
+	double amt = lastAmt = amount.getAmount();
 
-	double amt = amount.getAmount();
-	totalAcecepted+= amt;
-
-
-	int chosenJ = -1;
+	chosenJ = -1;
 	double minR = 0;
 	
 	for(int j=0; j< givenToEach.size(); j++) {
@@ -114,13 +121,8 @@ public class Splitter extends If
 		minR = r;
 	    }
 	}
+	//System.out.println("Chose j="+ chosenJ +", for amt=" + lastAmt);
 	Receiver recv = receivers.get(chosenJ);
-	
-	boolean z = true; //recv.accept(this, amount, atLeast, atMost);
-	if (z) {
-	    double x = givenToEach.get(chosenJ) + amt;
-	    givenToEach.set(chosenJ, x);
-	}
 	return recv;
     }
         
@@ -151,6 +153,7 @@ public class Splitter extends If
 	return s;
     }
 
+ 
 
 }
 
