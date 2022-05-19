@@ -10,8 +10,10 @@ import java.util.*;
   sending a specified percent of its input into each receiver.
 **/
 
-public class Splitter extends Provider implements Receiver    {
-    private static final long serialVersionUID = 1;
+public class Splitter extends If
+			      //Provider implements Receiver
+{
+    //    private static final long serialVersionUID = 1;
 
 
     /** Local copy of super.receivers (Receivers registered with the provider) */
@@ -20,9 +22,9 @@ public class Splitter extends Provider implements Receiver    {
     /** fractions[j] specifies the fraction of the input that will
 	be sent to the j-th receiver */
     ArrayList<Double> fractions = new ArrayList<Double>();
-	
-    public Resource getTypicalReceived() { return typical; }
-	public boolean hideTypicalReceived() { return true; }
+    	
+    //    public Resource getTypicalReceived() { return typical; }
+    //	public boolean hideTypicalReceived() { return true; }
 
     void throwDoNotUse()        {
         throw new RuntimeException("Splitters do not respond to addReceiver(Receiver).  Instead, use addReceiver(Receiver, fraction).");
@@ -63,15 +65,24 @@ public class Splitter extends Provider implements Receiver    {
        Accepts the resource, which must be a composite Entity, and offers the resources in its
        storage to downstream receivers.
     **/
-    public boolean accept(Provider provider, Resource amount, double atLeast, double atMost)        {       
-    	if (getRefusesOffers()) { return false; }
-        if (!typical.isSameType(amount)) throwUnequalTypeException(amount);
+    
+    public Receiver selectReceiver(ArrayList<Receiver> receivers, Resource amount) {
+ 
+	//    public boolean accept(Provider provider, Resource amount, double atLeast, double atMost)        {       
 
-        if (isOffering()) throwCyclicOffers();  // cycle
+	//    	if (getRefusesOffers()) { return false; }
+	//        if (!typical.isSameType(amount)) throwUnequalTypeException(amount);
+
+	//        if (isOffering()) throwCyclicOffers();  // cycle
         
-        if (!(atLeast >= 0 && atMost >= atLeast))
-        	throwInvalidAtLeastAtMost(atLeast, atMost);
+	//        if (!(atLeast >= 0 && atMost >= atLeast))throwInvalidAtLeastAtMost(atLeast, atMost);
 
+	if (receivers.size()!=myReceivers.size()) throw new IllegalArgumentException("Receivers array size mismatch");
+	int k=0;
+	for(Receiver r: receivers) {
+	    if (r!=myReceivers.get(k))  throw new IllegalArgumentException("Receivers array  mismatch in position " +k);
+	    k++;
+	}
 
 	
 	if (givenToEach.size() < fractions.size()) {
@@ -83,8 +94,8 @@ public class Splitter extends Provider implements Receiver    {
 	int sumF=0;
 	for(Double x: fractions)	    sumF += x;
 
-	if (myReceivers.size()==0) throw new IllegalArgumentException("No receivers!");
-	if (myReceivers.size()!= fractions.size()) throw new AssertionError("receivers.size()!=fractions.size()");
+	if (receivers.size()==0) throw new IllegalArgumentException("No receivers!");
+	if (receivers.size()!= fractions.size()) throw new AssertionError("receivers.size()!=fractions.size()");
 	if (sumF == 0) throw new IllegalArgumentException("All fractions are zero!");
 
 
@@ -103,13 +114,14 @@ public class Splitter extends Provider implements Receiver    {
 		minR = r;
 	    }
 	}
-	Receiver recv = myReceivers.get(chosenJ);
-	boolean z = recv.accept(this, amount, atLeast, atMost);
+	Receiver recv = receivers.get(chosenJ);
+	
+	boolean z = true; //recv.accept(this, amount, atLeast, atMost);
 	if (z) {
 	    double x = givenToEach.get(chosenJ) + amt;
 	    givenToEach.set(chosenJ, x);
 	}
-	return z;
+	return recv;
     }
         
     public String toString()
@@ -123,9 +135,9 @@ public class Splitter extends Provider implements Receiver    {
         // do nothing
         }
         
-    boolean refusesOffers = false;
-	public void setRefusesOffers(boolean value) { refusesOffers = value; }
-    public boolean getRefusesOffers() { return refusesOffers; }
+    //    boolean refusesOffers = false;
+    //	public void setRefusesOffers(boolean value) { refusesOffers = value; }
+    //    public boolean getRefusesOffers() { return refusesOffers; }
 
 
     public String report() {
