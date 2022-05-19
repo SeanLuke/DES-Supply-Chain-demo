@@ -58,7 +58,8 @@ public class Splitter extends If {
     private double lastAmt = 0;
     private int chosenJ = -1;
     
-    /** This wrapper is used so that we can adjust "givenToEach" amounts
+    /** This is a wrapper around Filter.offerReceiver(Receiver receiver, double atMost),
+	as "If" has no method of this name. Is used so that we can adjust "givenToEach" amounts
 	after we know that offerReceiever() has been successful
 	(i.e. the receiver has accepted the resource)
      */
@@ -70,6 +71,10 @@ public class Splitter extends If {
 	boolean z = super.offerReceiver(receiver, atMost);
 	//System.out.println("Splitter: offerReceiver done; chosenJ="+ chosenJ +", for amt=" + lastAmt);
 	if (z) {
+	    // FIXME: should use receiver.getLastAcceptedOffers().get(0) instead
+             
+
+	    
 	    totalAcecepted+= lastAmt;
 	    double x = givenToEach.get(chosenJ) + lastAmt;
 	    givenToEach.set(chosenJ, x);
@@ -82,7 +87,9 @@ public class Splitter extends If {
     /** Decides to which receiver this batch of resource should be given.
 	This method is called by Provider.offerReceivers(ArrayList<Receiver>),
 	and the receiver selected by this method is used as an argument in 
-	Provider.offerReceiver(Receiver, double);
+	Provider.offerReceiver(Receiver, double).
+
+	@param receivers  This should be exactly the array from Provider.receivers, or this method will break.
      */    
     public Receiver selectReceiver(ArrayList<Receiver> receivers, Resource amount) {
  
@@ -107,8 +114,11 @@ public class Splitter extends If {
 	if (receivers.size()!= fractions.size()) throw new AssertionError("receivers.size()!=fractions.size()");
 	if (sumF == 0) throw new IllegalArgumentException("All fractions are zero!");
 
-	// set lastAmt for later use (if accept() succeeds)
-	double amt = lastAmt = amount.getAmount();
+	// How much "stuff" are we offering?
+	// Here we set lastAmt for later use in offerReceiver (if accept() succeeds)
+	double amt = lastAmt =
+	    (amount instanceof Batch)? ((Batch)amount).getContentAmount() :
+	    amount.getAmount();
 
 	chosenJ = -1;
 	double minR = 0;
