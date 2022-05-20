@@ -62,11 +62,14 @@ public class Splitter extends If {
 	if (d==null) throw new  IllegalArgumentException("Unknown receiver: " + receiver);
 	double givenAmt=0;
 
+	/*
 	if (originalResource==null) { // this is how they handle entities...
 	    givenAmt = (lastBatch==null)? 1: lastBatch.getContentAmount();
 	} else if (originalResource  instanceof CountableResource) {
 	    givenAmt = originalResource.getAmount() -  revisedResource.getAmount();
-	} else if (originalResource instanceof Batch) {
+	} else
+	*/
+	if (originalResource instanceof Batch) {
 	    givenAmt = ((Batch)originalResource).getContentAmount();
 	} else { // Entity. We know that one was accepted
 	    givenAmt = 1;// originalResource.getAmount();
@@ -76,7 +79,7 @@ public class Splitter extends If {
 	d.given  += givenAmt;
     }
 
-    private Batch lastBatch = null;
+    //private Batch lastBatch = null;
     
     /** Decides to which receiver this batch of resource should be given.
 	This method is called by Provider.offerReceivers(ArrayList<Receiver>),
@@ -103,7 +106,7 @@ public class Splitter extends If {
 	    (amount instanceof Batch)? ((Batch)amount).getContentAmount() :
 	    amount.getAmount();
 
-	lastBatch = (amount instanceof Batch)? (Batch)amount : null;
+	//lastBatch = (amount instanceof Batch)? (Batch)amount : null;
 	
 	Receiver chosenR = null;
 	double minZ = 0;
