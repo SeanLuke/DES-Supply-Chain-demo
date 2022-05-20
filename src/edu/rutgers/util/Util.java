@@ -292,5 +292,8 @@ The Java programming language guarantees that the operands of operators appear t
 	String q[] = s.split("\\.");
 	return q[q.length-1];
     }
-    
+
+    public static String ifmt(double x) {
+	return (long)x==x ? ""+ (long)x : "" + x;
+    }
 }

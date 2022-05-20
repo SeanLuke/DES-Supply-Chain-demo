@@ -5,6 +5,8 @@ import sim.des.*;
 import sim.engine.*;
 import java.util.*;
 
+import  edu.rutgers.util.Util;
+
 /**
   A splitter divides its input into several streams, 
   sending a specified percent of its input into each receiver.
@@ -51,26 +53,30 @@ public class Splitter extends If {
 
 
     double totalAccepted=0;
-
+    int cnt1=0, cnt2=0;
 
     /** This is called after a successful accept() by a downstream receiver */
-    public void offerSuccessful(Receiver receiver, Resource originalResource, Resource revisedResource) {
+    public void selectedOfferAccepted(Receiver receiver, Resource originalResource, Resource revisedResource) {
+	cnt2++;
 	RData d = data.get(receiver);
 	if (d==null) throw new  IllegalArgumentException("Unknown receiver: " + receiver);
 	double givenAmt=0;
-	if (originalResource  instanceof CountableResource) {
+
+	if (originalResource==null) { // this is how they handle entities...
+	    givenAmt = (lastBatch==null)? 1: lastBatch.getContentAmount();
+	} else if (originalResource  instanceof CountableResource) {
 	    givenAmt = originalResource.getAmount() -  revisedResource.getAmount();
 	} else if (originalResource instanceof Batch) {
 	    givenAmt = ((Batch)originalResource).getContentAmount();
 	} else { // Entity. We know that one was accepted
-	    givenAmt = originalResource.getAmount();
-	    if (givenAmt!=1) throw new  IllegalArgumentException("We thought Entity.getAmount() always returns 1...");
+	    givenAmt = 1;// originalResource.getAmount();
+	    //if (givenAmt!=1) throw new  IllegalArgumentException("We thought Entity.getAmount() always returns 1...");
 	}	
 	totalAccepted += givenAmt;
 	d.given  += givenAmt;
     }
 
-
+    private Batch lastBatch = null;
     
     /** Decides to which receiver this batch of resource should be given.
 	This method is called by Provider.offerReceivers(ArrayList<Receiver>),
@@ -80,6 +86,7 @@ public class Splitter extends If {
 	@param receivers  This should be exactly the array from Provider.receivers, or this method will break.
      */    
     public Receiver selectReceiver(ArrayList<Receiver> receivers, Resource amount) {
+	cnt1 ++;
 	if (receivers.size()==0) throw new IllegalArgumentException("No receivers!");
 	
 	int sumF=0;
@@ -90,15 +97,14 @@ public class Splitter extends If {
 	}
 	if (sumF == 0) throw new IllegalArgumentException("All fractions are zero!");
 	
-	    //	if (receivers.size()!= fractions.size()) throw new AssertionError("receivers.size()!=fractions.size()");
-
 
 	// How much "stuff" are we offering?
-	// Here we set lastAmt for later use in offerReceiver (if accept() succeeds)
 	double amt = 
 	    (amount instanceof Batch)? ((Batch)amount).getContentAmount() :
 	    amount.getAmount();
 
+	lastBatch = (amount instanceof Batch)? (Batch)amount : null;
+	
 	Receiver chosenR = null;
 	double minZ = 0;
 
@@ -111,7 +117,7 @@ public class Splitter extends If {
 		minZ = z;
 	    }
 	}
-	System.out.println("Chose: " +chosenR);
+	//System.out.println("Chose: " +chosenR);
 	if (chosenR==null)  throw new IllegalArgumentException("Something wrong: chose null out of "+ receivers.size()+" receivers!");
 	return chosenR;
     }
@@ -127,11 +133,17 @@ public class Splitter extends If {
 //}
         
     public String report() {
-	String s = "Split "+	totalAccepted+" units: ";
+
+
+	Vector<String> q=new Vector<>();
 	Vector<String> v=new Vector<>();
 	for(Receiver r: data.keySet()) {
-	    v.add("To " + r.getName() + ", " + data.get(r).given);
+	    RData d = data.get(r);
+	    q.add(Util.ifmt(d.fraction));
+	    v.add("To " + r.getName() + ", " +Util.ifmt(d.given));
 	}
+	String s = "Split ("+String.join(":", q)+") "+Util.ifmt(totalAccepted)+" units: ";
+
 	s += String.join("; ", v);
 	
 	return s;
