@@ -1,12 +1,11 @@
 package  edu.rutgers.pharma3;
 
-import java.util.*;
+import java.util.Vector;
 import java.text.*;
 
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
 import sim.des.*;
 
 import edu.rutgers.util.*;
@@ -31,9 +30,9 @@ object to which this supplier should push QA'ed material.
  receiever. </ol>
 
  */
-public class MaterialSupplier extends Sink 
+public class MaterialSupplier //extends Sink 
     implements  //Receiver,
-			       Reporting
+			    Named,   Reporting
 {
 
     private double outstandingOrderAmount=0;
@@ -49,8 +48,6 @@ public class MaterialSupplier extends Sink
     public double getEverOrdered() { return everOrdered; }
     //public double getBadResource() { return badResource; }
     //public double getReleasedGoodResource() { return releasedGoodResource; }
-
-
  
  
     /** Production delay */
@@ -59,6 +56,9 @@ public class MaterialSupplier extends Sink
     private final Delay transDelay;
     private final QaDelay qaDelay;
 
+    private final sim.des.Queue needProd, needTrans, needQa;
+
+        
     /** Similar to "typical", but with the storage array */
     private final Resource prototype;
     Resource getPrototype() { return prototype; }
@@ -77,29 +77,53 @@ public class MaterialSupplier extends Sink
 	return new   MaterialSupplier( state, para, proto);
     }
 	
+    protected SimState state;
+
+    /** Creates a Queue in front of the Delay, and links it up
+	appropriately
+     */
+    private sim.des.Queue controlInput(Delay delay, double cap) {
+	sim.des.Queue need = new sim.des.Queue(state, prototype);
+	need.setOffersImmediately(true);
+	delay.setCapacity(cap);
+
+	need.addReceiver(delay);
+	delay.setSlackProvider(need);
+	
+	return need;
+    }
     
     /** @param resource The product supplied by this supplier. Either a "prototype" Batch, or a CountableResource.
      */
-    private MaterialSupplier(SimState state, ParaSet para,
+    private MaterialSupplier(SimState _state, ParaSet para,
 			     Resource resource	     ) 	throws IllegalInputException {
-	super(state, resource);
+	//super(state, resource);
+	state = _state;
 	prototype = resource;
 
 	setName(para.name);
 
+	standardBatchSize = para.getDouble("batch");
+
+	double cap = (prototype instanceof Batch) ? 1:    standardBatchSize;	
+
 	prodDelay = new Delay(state, resource);
-	transDelay = new Delay(state, resource);
 	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
+	needProd = controlInput(prodDelay, cap);
+	
+	
+	transDelay = new Delay(state, resource);
 	transDelay.setDelayDistribution(para.getDistribution("transDelay",state.random));
+	needTrans = controlInput(transDelay, cap);
 	
 	qaDelay = QaDelay.mkQaDelay( para, state, resource);
-	qaDelay.setWhomToWakeUp(this);
-	
+	needQa = controlInput(qaDelay, cap);
+		
+	//--- link them all
+	prodDelay.addReceiver( needTrans );
+	transDelay.addReceiver( needQa );
+	//-- the output for qaDelay will be added by setQaReceiver
 
-	prodDelay.addReceiver( this );
-	transDelay.addReceiver( this );
-
-	standardBatchSize = para.getDouble("batch");
 	
     }
 
@@ -129,127 +153,84 @@ public class MaterialSupplier extends Sink
     void receiveOrder(double amt) {
 	outstandingOrderAmount += amt;
 	everOrdered += amt;
-	startProductionIfCan();
+	startAllProduction();
     }
 
-    /** Initiate the production process on a new batch, if the prod
-	system is not busy.
+    /** Initiate the production process on as many batches as needed.
 	FIXME: we always use the standard batch size, and don't use 
 	the last short batch, in order to simplify Production.
     */
-    private boolean startProductionIfCan() {
-	if (prodDelay.getDelayed()>0) return false;
-	if (outstandingOrderAmount<=0) return false;
-	//double x = Math.min(outstandingOrderAmount ,  standardBatchSize);
+    private boolean startAllProduction() {
+	int bcnt = 0;
 	double x = standardBatchSize;
-	Resource batch = (prototype instanceof Batch) ? ((Batch)prototype).mkNewLot(x, state.schedule.getTime()) :
+	double t = state.schedule.getTime();
+	while (outstandingOrderAmount>0) {
+	//double x = Math.min(outstandingOrderAmount ,  standardBatchSize);
+
+	    Resource batch = (prototype instanceof Batch) ? ((Batch)prototype).mkNewLot(x, t) :
 	    new CountableResource((CountableResource)prototype, x);
 
-	Provider provider = null;
-	double t = state.schedule.getTime();
-	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " putting batch of "+x+" into prodDelay");
-	double a =batch.getAmount();
-	boolean z = prodDelay.accept( provider, batch, a, a);
-	if (!z) throw new AssertionError("prodDelay is supposed to accept everything, but it didn't!");
-	double y = (batch instanceof Batch)? ((Batch)batch).getContentAmount() : ((CountableResource)batch).getAmount();
-	outstandingOrderAmount -= y;
+	    Provider provider = null;
+	    if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " putting batch of "+x+" into needProd, bcnt=" + bcnt +", outstandingOrderAmount=" + outstandingOrderAmount);
 
-	startedProdBatches++;
-	return true;
+	    double a =batch.getAmount();
+
+	    double y = (batch instanceof Batch)? ((Batch)batch).getContentAmount() : ((CountableResource)batch).getAmount();
+
+	    boolean z = needProd.accept( provider, batch, a, a);
+
+	    if (!z) throw new AssertionError("needProd is supposed to accept everything, but it didn't!");
+
+	    outstandingOrderAmount -= y;
+
+	    startedProdBatches++;
+	    bcnt ++;
+	}
+	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " has put "+bcnt + " batches to needProd");
+	needProd.step(state); // causes offerReceivers() to the prodDelay
+	return (bcnt>0);
     }
-
-    /** Starts the QA on the next batch that needs QA, if the QA 
-	system is not busy. */
-    private boolean startQaIfCan() {
-	if (qaDelay.getDelayed()>0) return false;
-	int n = 0;
-	if (needQa.size()==0) return false;
-	Resource batch = needQa.firstElement();
-	needQa.removeElementAt(0);
-	Provider provider = null;
-	double t = state.schedule.getTime();
-	double a =batch.getAmount();
-	boolean z = qaDelay.accept( provider, batch, a, a);
-	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " putting batch into qaDelay, z="+z +". qaDelay has " + qaDelay.getDelayed());
-	return z;
-    }
-
-
-    /** Into this vector we put batches that have arrived from the
-	transportation delay, until they can be put into the QA
-	delay. */
-    private Vector<Resource> needQa = new Vector<>();
-
-    /** This is invoked in 3 different situations:
-	when a ship comes in (stuff comes out of the 
-	transportation delay), and the product goes thru QA.
-	Removes some portion of the material as faulty, and send
-	the rest to the designated receiver. 
-	@param provider The Delay object representing the transportation delay
-    */ 
-    public boolean accept​(Provider provider, Resource resource, double atLeast, double atMost) {
-
-	//Batch batch  = (Batch) resource;
-	//CountableResource cr = batch.getContent();	
-	double amt = (resource instanceof Batch)? ((Batch)resource).getContentAmount() : ((CountableResource)resource).getAmount();
-
-	double t = state.schedule.getTime();
-	boolean result=true;
-	// atLeast=atMost = just a param for accept(); same as atLeast
-	double lam = resource.getAmount();
-	
-	if (provider == prodDelay) {
-	    // put the batch into the transDelay now
-	    transDelay.accept(provider, resource, atLeast,  atMost);
-	} else if (provider == transDelay) {
-	    needQa.add(resource);	    
-       
-	} else throw new IllegalArgumentException("Unknown provider: " + provider);
-	// schedule step() to be invoked very soon, but after the return of this method	
-	state.schedule.scheduleOnce(t+ 1e-5, this);
-	return result;
-    }
-
-    /** This functionality is taken outisde of accept() in order to
-	avoid "cyclic offers" in the Delay objects.  (That is, the
-	MaterialSupply.accept() triggered by the Delay must return
-	before the next batch can be put into that Delay). This method is
-	scheduled in accept() whenever a batch comes out of prodDelay
-	or qaDelay, indicating that we may be able to put the next
-	batch into those delays.
-     */
-    public void step​(sim.engine.SimState state) {	
-	//double t = state.schedule.getTime();
-	// Start production on the next batch, if needed
-	startProductionIfCan();
-	startQaIfCan();
-    }
-
     
     public String report() {
+
+	String ba = (prototype instanceof Batch) ? " ba" : "";
+	
 	String s =// "[" + cname()
 	    //+ "."+getName()+ "("+getTypical().getName()+")" +
 	    "Ever ordered="+everOrdered+
-	    "; ever started production="+	startedProdBatches+
-	    " ba. Of this, still in factory=" +  (long)prodDelay.getDelayed() +
-	    " ba, on truck " + (long)transDelay.getDelayed() +
-	    " ba, wait for QA " + needQa.size() +
-	    " ba, in QA " + (long)qaDelay.getDelayed();
+	    "; ever started production="+	startedProdBatches+ " ba" +
+	    ". Of this, "+
+	    " still in factory=" + Util.ifmt(needProd.getAvailable()) + "+" + Util.ifmt(prodDelay.getDelayed()) + ba +
+	    ", on truck " +  Util.ifmt(needTrans.getAvailable()) + "+" + Util.ifmt(transDelay.getDelayed()) + ba + 
+	    ", in QA " +  Util.ifmt(needQa.getAvailable()) +  "+" +  Util.ifmt(qaDelay.getDelayed());
 	if (transDelay.getAvailable()>0) s += "+" +  (long)transDelay.getAvailable();
-	s += " ba. ";
-	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+" ba)" +
+	s += ba + ". ";
+	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+ ba + " ba)" +
 	    ", QA released=" + qaDelay.releasedGoodResource + " ("+qaDelay.releasedBatches+" ba)";
 
-	long missing = startedProdBatches - ((long)prodDelay.getDelayed() +
-					     (long)transDelay.getDelayed() +
-					     needQa.size() +
-					     (long)qaDelay.getDelayed() +
-					     qaDelay.badBatches+ qaDelay.releasedBatches);
+	long missing = startedProdBatches -
+	    (long)(needProd.getAvailable() +
+		   prodDelay.getDelayed() +
+		   needTrans.getAvailable() +
+		   transDelay.getDelayed() +
+		   needQa.getAvailable() +
+		   qaDelay.getDelayed() +
+		   qaDelay.badBatches+ qaDelay.releasedBatches);
 	if ( prototype instanceof Batch &&     missing!=0) s += ". Missing " + missing + " ba";
 
 	
 	return wrap(s);
     } 
 
+
+      String name;
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+  
+    /** For the "Named" interface. Maybe it should set the counters to 0... */
+    public void reset(SimState state) {}
+ 
+   /** Does nothing. */
+    public void step(SimState state){}
 
 }
