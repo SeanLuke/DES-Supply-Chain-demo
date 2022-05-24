@@ -69,11 +69,11 @@
     <classpath refid="classpath"/>
     <!-- compilerarg value="-Xlint"/ -->
   </javac>
-  <!-- copy todir="${classes}">
+  <copy todir="${classes}">
     <fileset dir="${src}">
       <include name="**/*.png"/>
     </fileset>
-  </copy -->
+  </copy>
 </target>
 
 
