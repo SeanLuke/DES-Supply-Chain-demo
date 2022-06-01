@@ -8,6 +8,7 @@ import sim.util.*;
 import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
+import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
 
@@ -133,9 +134,34 @@ public class PharmaCompany extends Sink // Delay
 	state.schedule.scheduleRepeating(cmoDrugProduction);
 	state.schedule.scheduleRepeating(cmoPackaging);
 
-	state.schedule.scheduleRepeating(distro);
+	state.schedule.scheduleRepeating(distro);	
+    }
+
+
+    // (x,y)
+    void depict(DES2D field) {
+	
+	rawMatSupplier.depict(field, 20, 20);
+	excipientFacility.depict(field,  20, 220);
+	pacMatFacility.depict(field,  20, 420);
+
+	field.add(rawMatSplitter, 300, 20);
+
 
 	
+	apiProduction.depict(field, 500, 20);
+	drugProduction.depict(field, 500, 120);
+	packaging.depict(field, 500, 220);
+
+	field.add(apiSplitter, 800, 20);
+
+	
+	cmoApiProduction.depict(field, 500, 350);
+	cmoDrugProduction.depict(field, 500, 450);
+	cmoPackaging.depict(field, 500, 550);
+
+	field.add(cmoApiSplitter, 800, 350);
+
     }
 
     /** Overriding accept(), so that we can process the receipt of an order.
@@ -187,5 +213,7 @@ public class PharmaCompany extends Sink // Delay
 	v.add( 	distro.report());
 	//v.add( 	dongle.report());
 	return String.join("\n", v);
-    } 
+    }
+
+    
 }

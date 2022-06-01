@@ -7,6 +7,7 @@ import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
+import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
 
@@ -127,6 +128,20 @@ public class MaterialSupplier //extends Sink
 	
     }
 
+    void depict(DES2D field, int x0, int y0) {
+	int dx = 50, dy=40;
+	int x=x0, y=y0;
+	field.add(needProd, x, y);
+	field.add(prodDelay, x += dx, y += dy);
+	field.add(needTrans,  x += dx, y += dy);
+	field.add(transDelay, x += dx, y += dy);
+	field.add(needQa,  x += dx, y += dy);
+	field.add(qaDelay, x += dx, y += dy);
+    }
+
+  
+
+    
     final double standardBatchSize;
 
     /** The place to which good stuff goes after QA, e.g. a manufacturing

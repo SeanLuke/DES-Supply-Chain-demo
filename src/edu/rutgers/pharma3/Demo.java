@@ -13,11 +13,31 @@ import ec.util.MersenneTwisterFast;
 
 import edu.rutgers.util.*;
 
+
+import sim.portrayal.grid.*;
+
+import sim.portrayal.network.*;
+import sim.portrayal.continuous.*;
+import sim.display.*;
+import sim.portrayal.simple.*;
+import sim.portrayal.*;
+import javax.swing.*;
+import java.awt.Color;
+import java.awt.*;
+import sim.field.network.*;
+import sim.des.portrayal.*;
+
+
+
+
 /** The main class for a  simple pharmaceutical supply chain simulation demo */
 public class Demo extends SimState {
 
     static boolean verbose=false;
-   
+
+    public DES2D field = new DES2D(200, 200);
+ 
+    
     void add(Steppable z) {
 	IterativeRepeat ir =	schedule.scheduleRepeating(z);
     }
@@ -51,6 +71,9 @@ public class Demo extends SimState {
 	    
 	    hospitalPool.setOrderDestination(pharmaCompany);
 	    //if (2*2  !=4) throw new IllegalInputException("test");
+
+	    depict();
+      
 	    
     	} catch( IllegalInputException ex) {
 	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
@@ -60,7 +83,22 @@ public class Demo extends SimState {
 	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
 	doReport("Start");
     }
-   
+
+    /** Set up our network for display purposes 
+     */
+    void depict() {
+        field = new DES2D(1000, 700);
+
+        //field.add(pharmaCompany, 200, 20);
+        //field.add(hospitalPool, 400, 20);
+
+
+	pharmaCompany.depict(field);
+	    
+        // Connect all objects with edges	
+        field.connectAll();
+    }
+    
     public void	finish() {
 	doReport("Finish");
     }

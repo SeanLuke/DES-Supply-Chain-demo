@@ -8,6 +8,7 @@ import sim.util.*;
 import sim.util.distribution.*;
 //import sim.field.continuous.*;
 import sim.des.*;
+import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
 
@@ -173,10 +174,29 @@ public class Production // extends sim.des.Queue
 	sink = new MSink[inputStore.length];
 	for(int j=0; j<sink.length; j++) {
 	    sink[j] = new MSink(state,inputStore[j].getTypical());
+	    // this is just for the purpose of the graphical display
+	    inputStore[j].addReceiver(sink[j]);
 	}
 	 
     }
 
+    void depict(DES2D field, int x0, int y0) {
+	int dx = 50, dy=40;
+	int x=x0, y=y0;
+
+
+	for(int j=0; j<sink.length; j++) {
+	    field.add(inputStore[j], x0, y0 + j*dy);
+	    field.add(sink[j], x0+dx-10, y0);
+	}
+	x += dx;
+
+	
+	field.add(prodDelay, x, y);
+	field.add(qaDelay, x +=dx, y+=dy);
+
+   }
+    
     /** Sets the destination for the product that has passed the QA. This
 	should be called after the constructor has returned, and before
 	the simulation starts.
