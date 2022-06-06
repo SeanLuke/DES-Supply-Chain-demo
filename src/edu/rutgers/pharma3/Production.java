@@ -32,8 +32,8 @@ import edu.rutgers.util.*;
 
 
   */
-public class Production // extends sim.des.Queue
-    implements Reporting,	       Steppable, Named
+public class Production extends sim.des.Macro
+    implements Reporting,	       Steppable //, Named
 {
 
     /** A Queue for storing an input ingredient, with a facility
@@ -153,6 +153,8 @@ public class Production // extends sim.des.Queue
 	for(int j=0; j<inputStore.length; j++) {
 	    inputStore[j] = new InputStore(state,inResources[j]);
 	    //inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
+	    if (this instanceof Macro)  addReceiver(inputStore[j], false);
+ 
 	}
 	
 	inBatchSizes = para.getDoubles("inBatch");
@@ -162,7 +164,8 @@ public class Production // extends sim.des.Queue
 	batchesPerDay = (int)para.getLong("batchesPerDay");
 
 	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
-	
+	if (this instanceof Macro)  addProvider(qaDelay, false);
+ 	
 	prodDelay = new ProdDelay(state,outResource);
 	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));				       
 	prodDelay.addReceiver(qaDelay);
@@ -181,6 +184,13 @@ public class Production // extends sim.des.Queue
     }
 
     void depict(DES2D field, int x0, int y0) {
+
+
+	if (this instanceof Macro) {
+	    field.add(this, x0, y0);
+	    return;
+	}
+	
 	int dx = 50, dy=40;
 	int x=x0, y=y0;
 
@@ -312,8 +322,8 @@ public class Production // extends sim.des.Queue
 
     }
 
-    String name;
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }    
-    public void reset(SimState state)     	{ }  //{ 	clear();    	}
+    //String name;
+    //    public String getName() { return name; }
+    //    public void setName(String name) { this.name = name; }    
+    //    public void reset(SimState state)     	{ }  //{ 	clear();    	}
 }

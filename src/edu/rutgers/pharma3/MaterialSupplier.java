@@ -31,9 +31,10 @@ object to which this supplier should push QA'ed material.
  receiever. </ol>
 
  */
-public class MaterialSupplier //extends Sink 
+public class MaterialSupplier extends Macro
     implements  //Receiver,
-			    Named,   Reporting
+			    //			    Named,
+			    Reporting
 {
 
     private double outstandingOrderAmount=0;
@@ -125,10 +126,20 @@ public class MaterialSupplier //extends Sink
 	transDelay.addReceiver( needQa );
 	//-- the output for qaDelay will be added by setQaReceiver
 
+	if (this instanceof Macro)  addProvider(qaDelay, false);
+ 
 	
     }
 
     void depict(DES2D field, int x0, int y0) {
+
+
+	if (this instanceof Macro) {
+	    field.add(this, x0, y0);
+	    return;
+	}
+
+	
 	int dx = 50, dy=40;
 	int x=x0, y=y0;
 	field.add(needProd, x, y);
@@ -238,12 +249,12 @@ public class MaterialSupplier //extends Sink
     } 
 
 
-      String name;
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    //String name;
+    //    public String getName() { return name; }
+    //public void setName(String name) { this.name = name; }
   
     /** For the "Named" interface. Maybe it should set the counters to 0... */
-    public void reset(SimState state) {}
+    //public void reset(SimState state) {}
  
    /** Does nothing. */
     public void step(SimState state){}

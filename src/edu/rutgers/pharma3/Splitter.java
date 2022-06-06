@@ -32,6 +32,7 @@ public class Splitter extends If {
 
     public Splitter(SimState state, Entity typical)        {
         super(state, typical);
+	setName("Split");
     }
                   
     public boolean addReceiver(Receiver receiver) {
@@ -43,6 +44,7 @@ public class Splitter extends If {
 	if (data.containsKey(receiver))  throw new IllegalArgumentException("Duplicate addReceiver())");
 	if (fraction < 0) throw new IllegalArgumentException("Fractions must be non-negatitve; given " + fraction);
 	data.put(receiver, new RData(fraction));
+	setName("Splitter("+showRatios()+")");
 	return super.addReceiver(receiver);
     }
 
@@ -134,18 +136,33 @@ public class Splitter extends If {
     //public void step(SimState state)        {
         // do nothing
 //}
-        
-    public String report() {
 
-
+    private String showRatios() {
 	Vector<String> q=new Vector<>();
+
+	double maxF = 0;
+	for(Receiver r: data.keySet()) {
+	    RData d = data.get(r);
+	    maxF = Math.max(maxF, d.fraction);
+	}
+
+	double m = (maxF>1)? 1: 100;
+	
+	for(Receiver r: data.keySet()) {
+	    RData d = data.get(r);
+	    q.add(Util.ifmt(d.fraction * m));
+	}
+	return String.join(":", q);	
+    }
+
+    
+    public String report() {
 	Vector<String> v=new Vector<>();
 	for(Receiver r: data.keySet()) {
 	    RData d = data.get(r);
-	    q.add(Util.ifmt(d.fraction));
 	    v.add("To " + r.getName() + ", " +Util.ifmt(d.given));
 	}
-	String s = "Split ("+String.join(":", q)+") "+Util.ifmt(totalAccepted)+" units: ";
+	String s = "Split ("+showRatios()+") "+Util.ifmt(totalAccepted)+" units: ";
 
 	s += String.join("; ", v);
 	
