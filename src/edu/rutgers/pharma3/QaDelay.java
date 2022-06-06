@@ -137,6 +137,7 @@ public class QaDelay extends Delay {
 		faulty = Math.round( amt * r);
 		e.getContent().decrease(faulty);
 		z = super.offerReceiver(receiver, e);
+		// FIXME: do I need to manually remove e from entities?
 	    }
 	    badResource +=  faulty;
 	    if (faulty>0) 	    badBatches++;

@@ -60,6 +60,23 @@ public class Production extends sim.des.Macro
 	    } else throw new IllegalArgumentException("Wrong input resource type");
 	}
 
+	/** Purely for debugging */
+	/*
+	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
+	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":
+		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":
+		"an entity";
+	    boolean z = super.accept(provider,  amount, atLeast,  atMost);
+	    System.out.println("DEBUG: " + getName() + ", " +
+			       (z? "accepted ": "rejected ") + 
+			       given +	       			       "; has " +
+			       (entities==null ? ""+getAvailable() + " units": ""+entities.size() + " ba") +
+			       ";  totalReceivedResource=" +  getTotalReceivedResource()		       );
+	    return z;
+	}
+	*/
+
+	
     }
 
 	
@@ -152,6 +169,7 @@ public class Production extends sim.des.Macro
 	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
 	    inputStore[j] = new InputStore(state,inResources[j]);
+	    inputStore[j].setOffersImmediately(false); // the stuff sits here until taken
 	    //inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
 	    if (this instanceof Macro)  addReceiver(inputStore[j], false);
  

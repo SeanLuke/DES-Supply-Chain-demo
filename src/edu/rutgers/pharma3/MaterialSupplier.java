@@ -231,7 +231,7 @@ public class MaterialSupplier extends Macro
 	    ", in QA " +  Util.ifmt(needQa.getAvailable()) +  "+" +  Util.ifmt(qaDelay.getDelayed());
 	if (transDelay.getAvailable()>0) s += "+" +  (long)transDelay.getAvailable();
 	s += ba + ". ";
-	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+ ba + " ba)" +
+	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+ " ba)" +
 	    ", QA released=" + qaDelay.releasedGoodResource + " ("+qaDelay.releasedBatches+" ba)";
 
 	long missing = startedProdBatches -

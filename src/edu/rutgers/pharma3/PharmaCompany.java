@@ -167,7 +167,7 @@ public class PharmaCompany extends Sink // Delay
     /** Overriding accept(), so that we can process the receipt of an order.
 	FIXME: the assumption is made that to produce 1 unit of drug, one needs 1 unit of each 
 	input. This can be changed if needed.
-	@param amount An "order paper" (CountableResource)
+	@param amount An "order paper" (CountableResource). Amount in units.
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 	//double s0=getAvailable();

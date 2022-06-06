@@ -25,6 +25,7 @@ public class Distributor extends sim.des.Queue
 		Batch resource) throws IllegalInputException {
 	super(state, resource);	
 	setName(name);
+	setOffersImmediately(false); // shipping to be done only on the proper schedule
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 
@@ -38,7 +39,8 @@ public class Distributor extends sim.des.Queue
 
     //Receiver rcv;
 
-    double needsToShip=0, everShipped=0;
+    /** In units */
+    private double needsToShip=0, everShipped=0;
     public double getNeedsToShip() { return needsToShip; }
     public double getEverShipped() { return everShipped; }
 
@@ -47,7 +49,9 @@ public class Distributor extends sim.des.Queue
 	shipOutDelay.addReceiver(rcv);
     }
 
-    /** Adds x to the total amount of stuff that we need to ship eventually */
+    /** Adds x to the total amount of stuff that we need to ship eventually.
+	@param x In units
+     */
     void addToPlan(double x)
     {
 	needsToShip += x;	
@@ -83,8 +87,13 @@ public class Distributor extends sim.des.Queue
 	if ( (month> lastMonthShippedAt) && stillNeeded>0) {
 
 	    double shippedToday = 0;
-	    while(getAvailable()>0 && shippedToday<stillNeeded && offerReceiver( shipOutDelay, 1)) {
-		shippedToday =  sumLastOfferContentAmounts();		
+	    while(getAvailable()>0 && shippedToday<stillNeeded) {
+
+		Entity e = entities.getFirst();
+		if (!offerReceiver( shipOutDelay, e)) break;		
+		shippedToday += ((Batch)e).getContentAmount();
+		// FIXME: maybe wont be needed later on (Qu. 30)
+		entities.remove(e);
 	    }
 
 	    stillNeeded -= shippedToday;
@@ -102,7 +111,12 @@ public class Distributor extends sim.des.Queue
     }
 
    public String report() {
-       String s = "Shipping plan=" + needsToShip +", has shipped=" + everShipped + ", in " + loadsShipped+ " loads. Of this, " +
+
+       
+       
+       String s =
+	   "TotalReceivedResource=" +  getTotalReceivedResource() + " ba. " +
+	   "Shipping plan=" + needsToShip +" u, has shipped=" + everShipped + " u, in " + loadsShipped+ " loads. Of this, " +
 	   (long)shipOutDelay.getDelayed() + " ba is still being shipped. Remains on hand=" + getAvailable() + " ba";
        return wrap(s);
     }
