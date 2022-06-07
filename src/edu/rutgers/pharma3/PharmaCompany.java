@@ -150,6 +150,7 @@ public class PharmaCompany extends Sink // Delay
 
 	
 	apiProduction.depict(field, 400, 20);
+ 
 	field.add(apiSplitter, 500, 50);
 
 	drugProduction.depict(field, 600, 120);
@@ -165,7 +166,7 @@ public class PharmaCompany extends Sink // Delay
 	cmoDrugProduction.depict(field, 600, 450);
 	cmoPackaging.depict(field, 800, 550);
 
-
+	field.add(distro, 900, 300);
 
     }
 

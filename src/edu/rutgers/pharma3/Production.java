@@ -206,6 +206,8 @@ public class Production extends sim.des.Macro
 
 	if (this instanceof Macro) {
 	    field.add(this, x0, y0);
+	    this.setImage("images/factory.png", true);
+
 	    return;
 	}
 	
