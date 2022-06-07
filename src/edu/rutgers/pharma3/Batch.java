@@ -41,11 +41,12 @@ class Batch extends Entity {
 
 
     public String toString() {
-	String s = "Batch(" + getName() + ", storage=" + getStorage();
+	String s =  getName(); // + ", storage=" + getStorage();
 	if (getStorage()!=null) {
-	    for(Resource r: getStorage()) s += ", " + r;
+	    for(Resource r: getStorage()) {
+		s +=  " (" + r.getType() + ") " + (long)r.getAmount();	      
+	    }
 	}
-	s += ")";
 	return s;
 
     }

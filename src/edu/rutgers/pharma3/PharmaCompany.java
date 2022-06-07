@@ -145,22 +145,27 @@ public class PharmaCompany extends Sink // Delay
 	excipientFacility.depict(field,  20, 220);
 	pacMatFacility.depict(field,  20, 420);
 
-	field.add(rawMatSplitter, 300, 20);
+	field.add(rawMatSplitter, 200, 50);
 
 
 	
-	apiProduction.depict(field, 500, 20);
-	drugProduction.depict(field, 500, 120);
-	packaging.depict(field, 500, 220);
+	apiProduction.depict(field, 400, 20);
+	field.add(apiSplitter, 500, 50);
 
-	field.add(apiSplitter, 800, 20);
+	drugProduction.depict(field, 600, 120);
+	packaging.depict(field, 800, 220);
+
+	field.add(drugSplitter, 700, 150);
+
 
 	
-	cmoApiProduction.depict(field, 500, 350);
-	cmoDrugProduction.depict(field, 500, 450);
-	cmoPackaging.depict(field, 500, 550);
+	cmoApiProduction.depict(field, 400, 350);
+	field.add(cmoApiSplitter, 500, 380);
+	
+	cmoDrugProduction.depict(field, 600, 450);
+	cmoPackaging.depict(field, 800, 550);
 
-	field.add(cmoApiSplitter, 800, 350);
+
 
     }
 
