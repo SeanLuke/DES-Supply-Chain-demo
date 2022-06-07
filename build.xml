@@ -72,6 +72,7 @@
   <copy todir="${classes}">
     <fileset dir="${src}">
       <include name="**/*.png"/>
+      <include name="**/*.svg"/>
     </fileset>
   </copy>
 </target>

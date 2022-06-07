@@ -131,11 +131,13 @@ public class MaterialSupplier extends Macro
 	
     }
 
+    /** SVG won't work; only PNG is OK */
     void depict(DES2D field, int x0, int y0) {
 
 
 	if (this instanceof Macro) {
 	    field.add(this, x0, y0);
+	    //this.setImage("images/square.svg", true);	    
 	    return;
 	}
 
