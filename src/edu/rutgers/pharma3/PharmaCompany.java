@@ -18,7 +18,7 @@ import edu.rutgers.util.*;
 
     The PharmaCompany is a "Sink" for orders.
  */
-public class PharmaCompany extends Sink // Delay
+public class PharmaCompany extends Sink 
     implements //Receiver, Named,
  Reporting {
 
@@ -38,7 +38,7 @@ public class PharmaCompany extends Sink // Delay
     public MaterialSupplier getExcipientFacility() { return excipientFacility; }
     public MaterialSupplier getPacMatFacility() { return pacMatFacility; }
 
-    private Delay orderDelay;
+    //    private Delay orderDelay;
     Production apiProduction, drugProduction, packaging;
     Production cmoApiProduction, cmoDrugProduction, cmoPackaging;
 
@@ -51,7 +51,6 @@ public class PharmaCompany extends Sink // Delay
 
     Splitter rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter;
 
-    //final Batch pacDrugBatch;
     
     //    MSink dongle; 
     PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException {
@@ -61,9 +60,9 @@ public class PharmaCompany extends Sink // Delay
 
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	
-	orderDelay = new Delay( state, drugOrderResource);
-	orderDelay.setDelayDistribution(para.getDistribution("orderDelay",state.random));
-	orderDelay.addReceiver(this);
+	//	orderDelay = new Delay( state, drugOrderResource);
+	//	orderDelay.setDelayDistribution(para.getDistribution("orderDelay",state.random));
+	//	orderDelay.addReceiver(this);
 
 
 	// pacMatBatch = new Batch(pacMaterial)

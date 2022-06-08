@@ -75,11 +75,23 @@ Warning: the above may take forever, as GitHub will tend to give you megabutyes 
 	<pre>
 cd ~/mason/work
 ant
+	</pre>
+
+<p>This command will compile the source code and build the file <tt>~/mason/work/lib/demo.jar</tt>	
+
+<p>Apache Ant is the tool that takes its commands from build.xml. If you don't want to use Ant, you can just compile the Java code from <tt>src</tt> using the <tt>javac</tt> command, and making use of the JAR files in the <tt>~/mason/lib</tt> directory.
 </pre>
 
-<p>Apache Ant is the tool that takes its commands from build.xml. If you don't want to use Ant, you can just compile the Java code from <tt>src</tt> using the <tt>javac</tt> command, and making use of the JAR files in the ../lib directory.
+<h2>Javadoc documentation</h2>
+
+      <p>Most of the documentation for the Java classes of this application is in Javadoc format. It can be built with Apache Ant as well:
+
+	<pre>
+cd ~/mason/work
+ant javadoc
 </pre>
 
+<p>The above command will build the documentation in 	 <tt>~/mason/work/web/api</tt>	
 
 	       <h2>Run - text output only</h2>
 
@@ -124,7 +136,9 @@ The <tt>-until 365</tt> is a standard MASON option, which will cause the applica
 <p>
   The first column contains the name of the element of the network to which the property applies. The second column, the name of the specific property. The third column (and any subsequent) columns contain the value of the property.
 
-<p>Normally, there is just one value column in each row. However, some types of properties need several columns to be described. For example, the following line
+<p>When the config file is read in, an instance of the class <tt>edu.rutgers.util.ParaSet</tt> is used to represent all parameters pertaining to a particular <tt>elementName</tt>.
+
+<p>Normally, there is just one value column in each row of the config file. However, some types of properties need several columns to be described. For example, the following line
   <pre>
 Production,faulty,Uniform,0.1,0.2
     </pre>
@@ -336,31 +350,66 @@ Split (90:10) 14940000000 units: To Input(Batch of RawMaterial), 13450000000; To
 
   <h2>Explanation of the model</h2>
 
-<p align="center"><strong>This section has not been updated since pharma2 (December 2021). It will be reworked for pharma3, which is a much more complicated model.</strong></p>
-
-  
   <p>While the PowerPoint slide and the subsequent email discussion with Viswanath, Aman, Ben, and others provided me with a lot of information about the models, I still needed to make a lot of "reasonable choices" on how exactly its elements operate.
 
     <p>The computational model currenty just models just a single type of medication. This should be fine if the underlying business model treats each product independently of each other, as we can simply run multiple instances of the computational model, one per medication. In real life, however, there likely are depedencies or common factors of various kinds, e.g. fingible storage space or production capacity, shared components (the same API can be used in pills or in liquid drugs), the same disruptions can disrupt the supply chains for multuple products etc.
 
-<p>All Java classes mentioned below are in the package edu.rutgers.pharma2 (and NOT in edu.rutgers.pharma, which represents an entirely different business model, provided by Abhisekh at GMU).
+<p>All Java classes mentioned below are in the package edu.rutgers.pharma3 (and NOT in edu.rutgers.pharma, which represents an entirely different business model, provided by Abhisekh at GMU; nor are they in edu.rutgers.pharma2, which represents an earlier, simpler, Rutgers model).
       
-  <h3>Main application class (Demo.java)</h3>
+  <h3>Resources</h3>
 
-<P>The main class. Starts and schedules HospitalPool and PharamCompany.</p>
+<p>In the previous model (pharma2) all resources were viewed as fungible (a tablet of aspirin being as good as any other tablet), and were modeled by DES <tt>CountableResource</tt> class. In this model (pharma3) we take into account the fact that in reality some products come in identifiable lots; this makes it possible to associate  an expiration date with each lot. Additionally, since each lot has an identifiable provenance, one can model use cases which, for example, involve discovering <em>post factum</em> that a particular factory had an outbreak of a bacterial contamination, not detected by the QA at the time, and now a certain series of lots need to be discarded.
 
+<p>Accordingly, we created class <tt>Batch</tt>, based on DES's <tt>Entity</tt>.For any product that comes in identifiable lots (e.g., "bulk drug"), a <em>pro forma</em> (prototype) Batch instance is created with
+  <pre>
+   Batch(CountableResource typicalUnderlying, double _shelfLife);
+  </pre>
+  or
+  <pre>
+    Batch.mkPrototype(CountableResource typicalUnderlying, ParaSet para);
+</pre>    
+
+<p>
+  After that, Batch instances representing actual lots of that product can be created based on the  <em>pro forma</em> Batch with
+<pre>
+  Batch.mkNewLot(double size, double now);
+</pre>
+
+<p>Each Batch object contains a <tt>lotNo</tt> variable, which can be used to look up any relevant lot details using the class <tt>Lot</tt>.
+
+<p>In our application pharma3, the raw material, the excipient, the API, the bulk drug, and the packaged drug are all modeled with the Batch class, each one with an appropriate CountableResource as the underlying resource class. The packaging material is modeled with CountableResource, becuase the empty glass bottles or blister packs are viewed as fully fungible, and don't have expiration dates of their own.
+
+  <h4>Different handling of Batch and CountableResource resources</h4>
+
+<p>In many of our classes modeling various supply chain steps, the Batch resources are handled differently from the "fungible" (CountableResource) ones.
+
+<p>In paricular, the QA process on the Batch results in the discaring (or "reworking") of an entire batch with a certain probability; in contrast, when a certain amount (a batch, lower-case) of a fungible resource goes through QA, we pick a "failed percentage number" from a certain distribution, and discard a certain percentage of the batch. This is meant to represent different modes of testing of different products: e.g., if you taste the contents of a barrel of beer or milk, you dump the entire barrel if you think the beer or milk is bad, while for something like glass bottles you can test each bottle individually with an optical system, and discard just the cracked bottles.
+
+<p>Obviously, in real life, testing modes may not precisely map to our Batch/funguble resources; so, if necessary, the choice of the testing mode may eventually be "divorced" from the resource Batch/fungibility property.
+  
 <h3>Units</h3>
 
-<p>All order sizes and product amounts in the model are in millions, so 1.9e3 actually represents 1.9 billion of doses of medication.
+<p>In pharma3, all order sizes and product amounts in the model are in single units, so we indeed have values running into billions.
 
 <p>All time values are in days.
+  
+  <h3>Main application class (Demo.java)</h3>
+
+<P>The main class. Starts and schedules the HospitalPool and PharamCompany instances.</p>
+
+<h3>Splitters</h3>
+
+    <p>A <tt>Splitter</tt> extends the DES <tt>If</tt> class. It serves to take input from one supplier, and send it to multiple receivers. A splitter is configured by specifying (with Splitter.addReceiver(...)) what percentage of the input goes to which output.
+
+    <p>When a batch of resource comes to a splitter, the splitter decides where to send it (attempting to approximate the target ratios as close as possible), and immediately sends to the batch to the chosen receiver.
+
 
 <h3>The Pharmacy/Hospital Pool (HospitalPool.java)</h3>
 
 <p>Configuration parameters:
   <pre>
 HospitalPool,intervalBetweenOrders,30
-HospitalPool,orderSize,1.9e3
+HospitalPool,order,Triangular,1209021340,1209030000,1209038660
  </pre>
 
 
@@ -368,39 +417,40 @@ HospitalPool,orderSize,1.9e3
 
 <p>At this point, this amount can be only added to (by push actions from Distributor); it is never reduced, as we do not model consumption (which itself could be driven by epidemic outbreaks etc, for example).
   
-<p>Every now and then, at a fixed interval (intervalBetweenOrders=30) the HospitalPool  sends an order of a fixed size (orderSize=1.9e3) to PharmaCompany.
+<p>Every now and then, at a fixed interval (intervalBetweenOrders=30) the HospitalPool  sends an order of a size drawn from a specified distribution to PharmaCompany.
 
 
   <h3>The Pharma Company (PharmaCompany.java)</h3>
 
-<p>This is the main class for a series of production elements, whose internal objects cover everything from supply pools to the distribution center.
+<p>This is the main class for the modeling of the focal company and the CMO company.
 
 <p>Config:<pre>
-    PharmaCompany,orderDelay,Normal,1.14,0.1
-  </pre>
+<!-- PharmaCompany,orderDelay,Uniform,1,1 -->
+PharmaCompany,expiration,3650
+</pre>
 
 <p>The PharamaCompany class is Sink, which represents the functionality of receiving orders from the outside world.
 
+  <p>The <tt>expiration</tt> parameter specifies the shelf life, in days, of the product it produces, which is the packaged drug.
+
+  
 <P>Internally, it contains the following elements:
   <uL>
-<li>Delay orderDelay; -- handles the order processig delay
-<li>MMaterialSupplier rawMatSupplier, pacMatFacility, excipientFacility; -- each of these represents an external supplier of an input material, and a quality testing (QA) step
-<li> Production apiProduction, drugProduction, packaging; -- each of these elements represents a production stage, plus the subsequent QA step
+<!-- <li>Delay orderDelay; -- handles the order processig delay  -->
+<li>MaterialSupplier rawMatSupplier, pacMatFacility, excipientFacility; -- each of these represents an external supplier of an input material, and a quality testing (QA) step.
+<li> Production apiProduction, drugProduction, packaging; -- each of these elements represents an in-house production stage, plus the subsequent QA step.
+<li> Production cmoApiProduction, cmoDrugProduction, cmoPackaging; -- each of these elements represents a production stage, plus the subsequent QA step.
+<li>Splitter  rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter; -- each of this represents the splitting of output after some step, as per the PowerPoint diagram.
+  
 <li>   Distributor distro; -- represents the Distribiution element.
   </ul>
 
-<p>When an order comes in from the outside world (HospitalPool) it is put into a Delay (with the delay distribition orderDelay=Normal(1.14,0.1).  (In actual fact, the simulator has day-by-day stepping, so this means that for any single order the delay is usually 1, or, rarely 2 days. We could of course switch to scheduling  in real-valued time, but I don't see a great benefit here).
+<p>The PharmaCompany class schedules the Production and Distribution objects, but not any other objects.
 
-<p>Once an order comes out of the delay ("ripens", MASON DES parlance), the PharmaCompany object carries out the following actions:
+<p>PharmaCompany does not actually have a <tt>step()</tt> method. Instead, its actions are triggered by the accept() method, which is activated when an order from HospitalPool is received. At this point, the PharmaCompany object carries out the following actions:
 
   <ui>
-    <li>Places an appropriately sized order for the raw material with the Raw Material supplier. At present, the raw material order size is directly based on the size of the drug order. (We have 1:1 ratio of units, i.e. one unit of raw material is needed to make one unit of drug, absent any losses). In a later version, this can be enhanced in several ways:
-      <ul>
-	<li>taking into account likely losses (discard of faulty products by QA, at all QA stages), so that we won't be likely to run out of the materials beforer fully fulfilling the order;
-	<li>taking into account any finished product that was over-produced previously (i.e. not "spoken for" by any earlier incoming order), so that the size of the current production batch can be reduced as compared to the current incoming prder;
-	<li>taking into account any raw material or intermediate-stage products (such as the API) that we already happen to have on hand and that's not "spoken for" by the previous incoming orders.
-      </ul>
-    <li>Places similar orders with the excipient facility and the packaging material suppier.
+    <li>Places an appropriately sized order for the raw material with the MaterialSupplier objects of each kind. At present, the raw material order size is directly based on the size of the drug order. (We have 1:1 ratio of units, i.e. one unit of raw material is needed to make one unit of drug, absent any losses).
     <li>Sends an instant message to Distributor (the Distribution center) appropriately adjusting the total amount of finished product that we have been asked to ship out to HospitalPool.
 </p>
 
@@ -408,60 +458,47 @@ HospitalPool,orderSize,1.9e3
 
 <p>We have 3 instances of this java class in the PharamCompany object. They represent, respectively, the Raw Material Supplier Pool, the Excipients Facility, and the Packaging Material Facility, each with its own QA testing step.
 
-<p>Config:
+<p>Config (for one of them):
   <pre>
-RawMaterialSupplier,delay,Triangular,30,60,90
-RawMaterialSupplier,faulty,Uniform,0.02,0.10
-
-PacMatSupplier,delay,Triangular,30,60,90
-PacMatSupplier,faulty,Uniform,0.02,0.10
-
-ExcipientSupplier,delay,Triangular,30,60,90
-ExcipientSupplier,faulty,Uniform,0.02,0.10
+RawMaterialSupplier,batch,5e5
+RawMaterialSupplier,prodDelay,Uniform,0.0031,0.0217
+RawMaterialSupplier,transDelay,Uniform,0.0031,0.0217
+RawMaterialSupplier,qaDelay,Uniform,0.003,0.02
+RawMaterialSupplier,faulty,0.05
+RawMaterialSupplier,expiration,3650  
 </pre>
 </p>
 
-<p>Each of these objects has a delay parameter (representing e.g. shipping time), and faulty-portion distribution parameter.
 
-  <p>The PharmaCompany object, soon after creating each MaterialSupplier element, links it to a Receiver, which is one of the input buffers of one of the Production elements (discussed below).
+<p>A MaterialSupply includes, internally, a production, transportation, and QA stages, each implemented as a Delay of some kind. Each of them simulates a facility that is capable of processing only one batch of resource at a time. The throughput is controlled by setting the capacity of each delay to 1, and creating a Queue in front of each delay (e.g. <tt>Queue needProd</tt> before <tt>prodDelay</tt>.
 
-<p>At the QA stage, a random number is drawn from the  faulty-portion distribution, and is used as the fraction of the product lot (which usually corresponds to the monthly order) that needs to be discarded as faulty. The rest of the lot iss released to the Receiver (a Production step) linked to this supplier element.
+  <p>For each of the delay objects a parameter exists in the config file representing the distribution from which the delay time is drawn.
 
+  <p>The PharmaCompany object, soon after creating each MaterialSupplier element, links its last stage (the QaDelay) to a Receiver, which is one of the input buffers of one of the Production elements (discussed below).
+
+<p>At the QA stage, different process is used for fungibles (CountableResource, such as the packing material) and for identifiable lots (Batch instances). For the former, a random number is drawn from the  faulty-portion distribution, and is used as the fraction of the product lot (which usually corresponds to the monthly order) that needs to be discarded as faulty. The rest of the batch is released to the Receiver (a Production step) linked to this supplier element. For the latter, the entire lot is accepted or discarded.
+
+  
   <h3>Production.java (API Production +  API Testing; Drug Production + Drug Testing; Packaging + Packaging Testing)</h3>
 
-<p>The PharmaCompany object has  3 instance of the Production class as well. Each one represents one production stage plus the subesequent inspection stage.
+<p>The PharmaCompany object has  6 instance of the Production class: 3 for the focal company, and 3 for the CMO. Each one represents one production stage plus the subesequent inspection stage.
 
-<p>Config:
-  <pre> 
-ApiProduction,inBatch,100
-ApiProduction,batch,100
-ApiProduction,batchesPerDay,4
-ApiProduction,faulty,Binomial,1,0.1
-#--- What fraction of faulty product can be sent back to reprocessing, rather
-#--- then discarded?
-ApiProduction,rework,0.25
-ApiProduction,prodDelay,Uniform,2,30
-ApiProduction,qaDelay,Uniform,1,1
-
-DrugProduction,inBatch,100,100
-DrugProduction,batch,100
-DrugProduction,batchesPerDay,4
-DrugProduction,faulty,Binomial,1,0.1
-DrugProduction,prodDelay,Triangular,40,80,100
-DrugProduction,qaDelay,Uniform,1,1
-
-
-Packaging,inBatch,100,100
-Packaging,batch,100
-Packaging,batchesPerDay,4
-Packaging,faulty,Binomial,1,0.05
-Packaging,prodDelay,Triangular,10,15,25
-Packaging,qaDelay,Uniform,1,1
+<p>Config (for one of the Production objects):
+  <pre>
+ApiProduction,inBatch,5e5
+ApiProduction,batch,5e5
+ApiProduction,batchesPerDay,69
+#-- faulty + rework
+ApiProduction,faulty,0.01
+ApiProduction,rework,0.01
+ApiProduction,prodDelay,Uniform,0.1,0.2
+ApiProduction,qaDelay,Uniform,0.1,0.2
+ApiProduction,expiration,2555
   </pre>
 
 <p>A Production element itself is a Steppable (so that it can be scheduled), and internally contains an array of Queue objects, representing the input buffers for the input ingredients:
 <pre>
-   sim.des.Queue[] inputStore;
+   InputStore[] inputStore;
 </pre>
 and  two delay objects, representing the production step and the QA step:
 <pre>
@@ -469,11 +506,14 @@ and  two delay objects, representing the production step and the QA step:
    QaDelay qaDelay;
 </pre>
 
-<p>During the initialization, the input of the input buffers is linked to the output of the QA stages of the appropriate suppliers, so that they can push the materials to these buffers as the pass the QA.
+<p>During the initialization, the input of the input buffers is linked to the output of the QA stages of the appropriate suppliers (sometimes, through a Splitter), so that they can push the materials to these buffers as the pass the QA.
 
-<p>Conceptually, each production element carries out its production in batches of a fixed size (e.g. <tt>ApiProduction,batch,100</tt>). No more than a certain number of batches being started on each day (e.g. <tt>ApiProduction,batchesPerDay,4</tt>), which simulates the throughput the of production line. In our model the throughput is constant (e.g. up to 4 batches per day), simulating the fixed  amount of the equipment on the shop floor and the fixed  availability of labor. In real life, of course, those can vary, due to breakdowns of the equipment, workers falling sick, failing a drug or sobriety test, leaving the employment, or going on strike; modeling of such disruptions can be added at a later time.
+<p>Conceptually, each production element carries out its production in batches of a fixed size (e.g. <tt>ApiProduction,batch,5e5</tt>). For <tt>Batch</tt> inputs, and for outputs (all of which are of a <tt>Batch</tt> type), a batch corresponds to a  <tt>Batch</tt> instance; for "fungible" inputs (the only such input is packing material), a batch is simple a certain amount of CountableResource.
 
-<p>To manufacture a batch of product, a certain amount of each involved input is needed. E.g., for drug production we have <tt>DrugProduction,inBatch,100,100</tt>, meaning that to make a batch (100 units) of the drug, one needs 100 units of the API and 100 units of the excipient. (The application knows which number stands for which input because of the parameters to the constructor of the relevant production object). Accordingly, at each time step (each simulated day), the Production object checks if the input buffers conatins a sufficient amounts of all necessary ingredients to start 1 or several batches, and if such ingredients are available, starts the max possible number of batches (limited by  <tt>batchesPerDay</tt>, of course). Programmatically, this is done by putting the appropriate amount of the resource into the ProdDelay.
+<p>Although the PowerPoint document calls for what we can call a "throttled delay" implementation (same as what's done in MaterialSupplier, i.e. a production line that works on 1 batch of product at a time), our Production class at this point does not implement this approach. Instead, a simpler technique is used to limit capacity: that of starting no more than a certain number of batches per day. 
+(E.g. <tt>ApiProduction,batchesPerDay,69</tt>).
+
+<p>To manufacture a batch of product, a certain amount of each involved input is needed. E.g., for drug production we have <tt>DrugProduction,inBatch,5e5,5e5</tt>, meaning that to make a batch (500,000 units) of the drug, one needs 500,000 units of the API and 500,000 units of the excipient. (The application knows which number stands for which input because of the parameters to the constructor of the relevant production object). Accordingly, at each time step (each simulated day), the Production object checks if the input buffers conatins a sufficient amounts of all necessary ingredients to start 1 or several batches, and if such ingredients are available, starts the max possible number of batches (limited by  <tt>batchesPerDay</tt>, of course). Programmatically, this is done by putting the appropriate amount of the resource into the ProdDelay.
 
 <p>The output of the ProdDelay is linked to the input of the QaDelay. The QaDelay operates on the "entire batch" principle, i.e. each produced batch is tested and, with certain probability, is discarded, sent back to the production stage for reword (i.e. re-queued in the ProdDelay), or released to the next stage. 
 
