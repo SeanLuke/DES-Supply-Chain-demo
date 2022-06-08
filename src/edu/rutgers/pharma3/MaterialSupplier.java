@@ -134,22 +134,22 @@ public class MaterialSupplier extends Macro
     /** SVG won't work; only PNG is OK */
     void depict(DES2D field, int x0, int y0) {
 
+	field.add(this, x0, y0);
+	//this.setImage("images/square.svg", true);	    
 
-	if (this instanceof Macro) {
-	    field.add(this, x0, y0);
-	    //this.setImage("images/square.svg", true);	    
-	    return;
-	}
 
-	
+	DES2D macroField = new DES2D(300, 250);
 	int dx = 50, dy=40;
-	int x=x0, y=y0;
-	field.add(needProd, x, y);
-	field.add(prodDelay, x += dx, y += dy);
-	field.add(needTrans,  x += dx, y += dy);
-	field.add(transDelay, x += dx, y += dy);
-	field.add(needQa,  x += dx, y += dy);
-	field.add(qaDelay, x += dx, y += dy);
+	int x=20, y=20;
+	macroField.add(needProd, x, y);
+	macroField.add(prodDelay, x += dx, y += dy);
+	macroField.add(needTrans,  x += dx, y += dy);
+	macroField.add(transDelay, x += dx, y += dy);
+	macroField.add(needQa,  x += dx, y += dy);
+	macroField.add(qaDelay, x += dx, y += dy);
+	this.setField(macroField);
+        macroField.connectAll();
+
     }
 
   

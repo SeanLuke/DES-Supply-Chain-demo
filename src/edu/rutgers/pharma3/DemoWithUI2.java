@@ -18,6 +18,7 @@ import java.awt.*;
 import sim.field.network.*;
 import sim.des.portrayal.*;
 
+import sim.des.*;
 
 import edu.rutgers.util.*;
 
@@ -26,7 +27,12 @@ public class DemoWithUI2 extends GUIState    {
 
     public Display2D display;
     public JFrame displayFrame;
-	
+
+
+    // We make an array the size of ALL the macros in our simulation
+    MacroDisplay[] displays=null;// = new MacroDisplay[8];
+  
+    
     ContinuousPortrayal2D layoutPortrayal = new ContinuousPortrayal2D();
     NetworkPortrayal2D graphPortrayal = new NetworkPortrayal2D();
 
@@ -40,18 +46,21 @@ public class DemoWithUI2 extends GUIState    {
 
     public void start()        {
         super.start();
+	System.out.println("UI2.start");
         setupPortrayals();
     }
 
     public void load(SimState state)        {
         super.load(state);
+	System.out.println("UI2.load");
         setupPortrayals();
     }
 
 
     public void setupPortrayals()        {
 	Demo example = (Demo) state;      
-        
+	System.out.println("UI2.setupPortrayal");
+	
         layoutPortrayal.setField(example.field.getNodes());
         graphPortrayal.setField(example.field);
         SimpleEdgePortrayal2D edge = new DelayedEdgePortrayal(); //new ResourceEdgePortrayal(1.0);
@@ -67,11 +76,24 @@ public class DemoWithUI2 extends GUIState    {
         display.reset();
         display.setBackdrop(Color.white);
         display.repaint();
+
+	if (displays==null) {
+	    System.out.println("UI2.setupPortrayal: init displays");
+	    Macro[] macros = example.listMacros();
+	    displays = new MacroDisplay[macros.length];
+	    System.out.println("UI2.setupPortrayal: creating "+ displays.length + " displays");
+	    for(int j=0; j<macros.length; j++) {	
+		displays[j] = new MacroDisplay(this, 600, 600, j);
+		displays[j].attachMacro(macros[j], new DelayedEdgePortrayal());
+	    }
+	}	    
+
     }
 
    public void init(Controller c)        {
         super.init(c);
-
+	System.out.println("UI2.Init");
+	
         DESPortrayalParameters.setImageClass(DemoWithUI2.class);
 
         // make the displayer
@@ -85,6 +107,21 @@ public class DemoWithUI2 extends GUIState    {
         displayFrame.setTitle("Pharma 3");
         c.registerFrame(displayFrame);   // register the frame so it appears in the "Display" list
         displayFrame.setVisible(true);
+
+	//System.out.println("UI2.init");
+
+	/*
+	Demo example = (Demo) state;      
+	Macro[] macros = example.listMacros();
+	displays = new MacroDisplay[macros.length];
+	System.out.println("Init, #macros=" + macros.length);
+	
+	for(int j=0; j<macros.length; j++) {	
+	    displays[j] = new MacroDisplay(this, 600, 600, j);
+	    displays[j].attachMacro(macros[j], new DelayedEdgePortrayal());
+	}
+	*/
+  	
    }
 
     public void quit()        {

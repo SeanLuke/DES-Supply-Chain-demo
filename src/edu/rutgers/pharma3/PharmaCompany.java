@@ -221,5 +221,19 @@ public class PharmaCompany extends Sink // Delay
 	return String.join("\n", v);
     }
 
+    /** The list of Macro objects, for help in the GUI */
+    Macro[] listMacros() {
+	return new Macro[] {
+	    rawMatSupplier,
+	    excipientFacility,
+	    pacMatFacility,
+	    apiProduction,
+	    drugProduction,
+	    packaging,
+	    cmoApiProduction,
+	    cmoDrugProduction,
+	    cmoPackaging
+	};
+    }
     
 }

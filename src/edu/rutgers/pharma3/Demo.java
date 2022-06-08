@@ -28,8 +28,6 @@ import sim.field.network.*;
 import sim.des.portrayal.*;
 
 
-
-
 /** The main class for a  simple pharmaceutical supply chain simulation demo */
 public class Demo extends SimState {
 
@@ -44,6 +42,7 @@ public class Demo extends SimState {
     
     public Demo(long seed)    {
 	super(seed);
+	System.out.println("Demo()");
     }
     
     HospitalPool hospitalPool;
@@ -51,10 +50,16 @@ public class Demo extends SimState {
     public HospitalPool getHospitalPool() {	return hospitalPool;    }    
     public PharmaCompany getPharmaCompany() {	return pharmaCompany;    }
 
+    /** The list of Macro objects, for help in the GUI */
+    Macro[] listMacros() {
+	return pharmaCompany.listMacros(); 
+    }
+    
     /** Here, the supply network elements are added to the Demo object */
     public void start(){
 	super.start();
-
+	System.out.println("Demo.start");
+	
 	try {
 
 	    CountableResource drug = new CountableResource("packagedDrug", 0);

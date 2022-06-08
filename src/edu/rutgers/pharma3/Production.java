@@ -203,27 +203,25 @@ public class Production extends sim.des.Macro
 
     void depict(DES2D field, int x0, int y0) {
 
+	field.add(this, x0, y0);
+	this.setImage("images/factory.png", true);
 
-	if (this instanceof Macro) {
-	    field.add(this, x0, y0);
-	    this.setImage("images/factory.png", true);
-
-	    return;
-	}
-	
+	DES2D macroField = new DES2D(300, 250);
+	    
 	int dx = 50, dy=40;
+	x0 = y0 = 20;
 	int x=x0, y=y0;
-
-
+	
 	for(int j=0; j<sink.length; j++) {
-	    field.add(inputStore[j], x0, y0 + j*dy);
-	    field.add(sink[j], x0+dx-10, y0);
+	    macroField.add(inputStore[j], x0, y0 + j*dy);
+	    macroField.add(sink[j], x0+dx-10, y0);
 	}
 	x += dx;
-
 	
-	field.add(prodDelay, x, y);
-	field.add(qaDelay, x +=dx, y+=dy);
+	macroField.add(prodDelay, x, y);
+	macroField.add(qaDelay, x +=dx, y+=dy);
+	this.setField(macroField);
+        macroField.connectAll();
 
    }
     
