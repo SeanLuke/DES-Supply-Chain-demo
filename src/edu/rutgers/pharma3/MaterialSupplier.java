@@ -137,7 +137,7 @@ public class MaterialSupplier extends Macro
 	field.add(this, x0, y0);
 	//this.setImage("images/square.svg", true);	    
 
-
+	// lay out the flowchart pop up window 
 	DES2D macroField = new DES2D(300, 250);
 	int dx = 50, dy=40;
 	int x=20, y=20;
@@ -147,8 +147,8 @@ public class MaterialSupplier extends Macro
 	macroField.add(transDelay, x += dx, y += dy);
 	macroField.add(needQa,  x += dx, y += dy);
 	macroField.add(qaDelay, x += dx, y += dy);
-	this.setField(macroField);
         macroField.connectAll();
+	setField(macroField);
 
     }
 

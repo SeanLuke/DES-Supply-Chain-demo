@@ -33,7 +33,7 @@ import edu.rutgers.util.*;
 
   */
 public class Production extends sim.des.Macro
-    implements Reporting,	       Steppable //, Named
+    implements Reporting,  Steppable
 {
 
     /** A Queue for storing an input ingredient, with a facility
@@ -44,7 +44,10 @@ public class Production extends sim.des.Macro
 	InputStore(SimState _state,
 		   Resource resource) {
 	    super(_state, resource);
-	    setName(Production.this.getName() + "/Input store for " + resource.getName());
+	    String name;
+	    //name = Production.this.getName() + "/Input store for " + resource.getName();
+	    name = "Input("+resource.getName()+")";
+	    setName(name);
 	    expiredDump = new Sink(state, resource);
 	}
 
@@ -204,7 +207,7 @@ public class Production extends sim.des.Macro
     void depict(DES2D field, int x0, int y0) {
 
 	field.add(this, x0, y0);
-	this.setImage("images/factory.png", true);
+	setImage("images/factory.png", true);
 
 	DES2D macroField = new DES2D(300, 250);
 	    
@@ -220,8 +223,8 @@ public class Production extends sim.des.Macro
 	
 	macroField.add(prodDelay, x, y);
 	macroField.add(qaDelay, x +=dx, y+=dy);
-	this.setField(macroField);
         macroField.connectAll();
+	setField(macroField);
 
    }
     
