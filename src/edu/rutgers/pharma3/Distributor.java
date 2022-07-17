@@ -1,7 +1,8 @@
 package  edu.rutgers.pharma3;
 
 import java.util.*;
-import java.text.*;
+import java.io.*;
+
 
 import sim.engine.*;
 import sim.util.*;
@@ -13,16 +14,18 @@ import edu.rutgers.util.*;
 
 /** The main Queue is the storage facility; additionally a Delay is used to ship things out */
 public class Distributor extends sim.des.Queue
-    implements Reporting //,	       Steppable, Named
+    implements Reporting,	Named
 {
 
     int interval;
     double batchSize;
     
     Delay shipOutDelay;
+
+    private Charter charter;
     
     Distributor(SimState state, String name, Config config,
-		Batch resource) throws IllegalInputException {
+		Batch resource) throws IllegalInputException, IOException {
 	super(state, resource);	
 	setName(name);
 	setOffersImmediately(false); // shipping to be done only on the proper schedule
@@ -35,6 +38,8 @@ public class Distributor extends sim.des.Queue
 	shipOutDelay = new Delay( state,  resource);
 	shipOutDelay.setDelayDistribution(para.getDistribution("shipOutDelay",state.random));				       
 
+	
+	charter=new Charter(state.schedule, this);
     }
 
     //Receiver rcv;
@@ -74,10 +79,13 @@ public class Distributor extends sim.des.Queue
 	}
 	return sum;	
     }
-	
+
+ 
+
     /** Ships product out on a certain schedule */
     public void step​(sim.engine.SimState state) {
-
+	double shippedToday = 0;
+	    
 	double t = state.schedule.getTime();
 	double month = Math.floor(t/interval);
 
@@ -86,7 +94,6 @@ public class Distributor extends sim.des.Queue
 	
 	if ( (month> lastMonthShippedAt) && stillNeeded>0) {
 
-	    double shippedToday = 0;
 	    while(getAvailable()>0 && shippedToday<stillNeeded) {
 
 		Entity e = entities.getFirst();
@@ -108,12 +115,12 @@ public class Distributor extends sim.des.Queue
 		loadsShipped++;
 	    }
 	}
+	charter.print(shippedToday);
     }
 
+    
    public String report() {
-
-       
-       
+             
        String s =
 	   "TotalReceivedResource=" +  getTotalReceivedResource() + " ba. " +
 	   "Shipping plan=" + needsToShip +" u, has shipped=" + everShipped + " u, in " + loadsShipped+ " loads. Of this, " +

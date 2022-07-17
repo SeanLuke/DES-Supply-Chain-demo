@@ -1,7 +1,7 @@
 package  edu.rutgers.pharma3;
 
 import java.util.*;
-import java.text.*;
+import java.io.*;
 
 import sim.engine.*;
 import sim.util.*;
@@ -53,7 +53,7 @@ public class PharmaCompany extends Sink
 
     
     //    MSink dongle; 
-    PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException {
+    PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
 	super(state, drugOrderResource);
 	setName(name);
 	ParaSet para = config.get(name);
@@ -133,7 +133,13 @@ public class PharmaCompany extends Sink
 	state.schedule.scheduleRepeating(cmoDrugProduction);
 	state.schedule.scheduleRepeating(cmoPackaging);
 
-	state.schedule.scheduleRepeating(distro);	
+	state.schedule.scheduleRepeating(distro);
+
+	// the suppliers are scheduled just to enable charting
+	state.schedule.scheduleRepeating(rawMatSupplier );
+	state.schedule.scheduleRepeating(pacMatFacility);
+	state.schedule.scheduleRepeating(excipientFacility);
+	
     }
 
 

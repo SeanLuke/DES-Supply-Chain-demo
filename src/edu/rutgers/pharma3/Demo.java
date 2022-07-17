@@ -59,9 +59,14 @@ public class Demo extends SimState {
     public void start(){
 	super.start();
 	System.out.println("Demo.start");
-	
+     
 	try {
+	    // The chart directory
+	    File logDir = new File("charts");
+	    if (!logDir.exists()) logDir.mkdirs();
+	    Charter.setDir(logDir);
 
+	    
 	    CountableResource drug = new CountableResource("packagedDrug", 0);
 
 	    String pcName = "PharmaCompany", hosName="HospitalPool";
@@ -82,6 +87,11 @@ public class Demo extends SimState {
 	    
     	} catch( IllegalInputException ex) {
 	    System.out.println("Unable to create a model due to a problem with the configuration parameters:\n" + ex);
+	    ex.printStackTrace(System.err);
+	    System.exit(1);
+	} catch(Exception ex) {
+	    System.out.println("Exception:\n" + ex);
+	    ex.printStackTrace(System.err);
 	    System.exit(1);
 	}
 	final int CENSUS_INTERVAL=60;
@@ -106,6 +116,8 @@ public class Demo extends SimState {
     
     public void	finish() {
 	doReport("Finish");
+	System.out.println("Closing logs");
+	Charter.closeAll();
     }
 
     static class Reporter implements Steppable {

@@ -1,7 +1,7 @@
 package  edu.rutgers.pharma3;
 
 import java.util.Vector;
-import java.text.*;
+import java.io.*;
 
 import sim.engine.*;
 import sim.util.*;
@@ -33,7 +33,7 @@ object to which this supplier should push QA'ed material.
  */
 public class MaterialSupplier extends Macro
     implements  //Receiver,
-			    //			    Named,
+			    Named,
 			    Reporting
 {
 
@@ -70,7 +70,7 @@ public class MaterialSupplier extends Macro
 	@param needLots If true, the supplier will supply lots 
      */
     static MaterialSupplier mkMaterialSupplier(SimState state, String name, Config config, 
-					CountableResource resource, boolean needLots) 	throws IllegalInputException {
+					       CountableResource resource, boolean needLots) 	throws IllegalInputException, IOException {
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	Resource proto = 
@@ -94,11 +94,15 @@ public class MaterialSupplier extends Macro
 	
 	return need;
     }
+
+    private Charter charter;
+ 
+
     
     /** @param resource The product supplied by this supplier. Either a "prototype" Batch, or a CountableResource.
      */
     private MaterialSupplier(SimState _state, ParaSet para,
-			     Resource resource	     ) 	throws IllegalInputException {
+			     Resource resource	     ) 	throws IllegalInputException, IOException {
 	//super(state, resource);
 	state = _state;
 	prototype = resource;
@@ -128,7 +132,8 @@ public class MaterialSupplier extends Macro
 
 	if (this instanceof Macro)  addProvider(qaDelay, false);
  
-	
+	charter=new Charter(state.schedule, this);
+ 	
     }
 
     /** SVG won't work; only PNG is OK */
@@ -257,8 +262,19 @@ public class MaterialSupplier extends Macro
   
     /** For the "Named" interface. Maybe it should set the counters to 0... */
     //public void reset(SimState state) {}
- 
-   /** Does nothing. */
-    public void step(SimState state){}
+
+    /** Good resource released by QA today. Used in charting */
+    private double releasedAsOfYesterday=0;
+    
+    /** Does nothing other than logging. */
+    public void step(SimState state) {
+	double releasedAsOfToday = qaDelay.getReleasedGoodResource();
+	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
+	releasedAsOfYesterday = releasedAsOfToday;
+	charter.print(releasedToday);
+    }
+
+  
+
 
 }

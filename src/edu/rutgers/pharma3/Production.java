@@ -1,7 +1,7 @@
 package  edu.rutgers.pharma3;
 
 import java.util.*;
-import java.text.*;
+import java.io.*;
 
 import sim.engine.*;
 import sim.util.*;
@@ -33,7 +33,7 @@ import edu.rutgers.util.*;
 
   */
 public class Production extends sim.des.Macro
-    implements Reporting,  Steppable
+    implements Reporting,  Named
 {
 
     /** A Queue for storing an input ingredient, with a facility
@@ -90,6 +90,9 @@ public class Production extends sim.des.Macro
     */
     InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
+
+    private Charter charter;
+ 
     
     public static class ProdDelay extends Delay implements Reporting {
 	/** Total batches started */
@@ -159,7 +162,7 @@ public class Production extends sim.des.Macro
 
     Production(SimState state, String name, Config config,
 	       Resource[] inResources,
-	       Batch _outResource ) throws IllegalInputException
+	       Batch _outResource ) throws IllegalInputException, IOException
     {
 	//super(state, outResource);
 	outResource = _outResource;
@@ -201,6 +204,9 @@ public class Production extends sim.des.Macro
 	    // this is just for the purpose of the graphical display
 	    inputStore[j].addReceiver(sink[j]);
 	}
+
+	charter=new Charter(state.schedule, this);
+ 	
 	 
     }
 
@@ -252,8 +258,15 @@ public class Production extends sim.des.Macro
     double everStarted = 0;
 
     public double getEverStarted() { return everStarted; }
+
+    /** Good resource released by QA today. Used in charting */
+    private double releasedAsOfYesterday=0;
+ 
     
     public void step​(SimState state) {
+
+	try {
+	
 	// FIXME: should stop working if the production plan has been fulfilled
 	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
 	//if (haveNow  + outBatchSize < getCapacity() &&
@@ -295,7 +308,16 @@ public class Production extends sim.des.Macro
 		
 	//  the Queue.step() call resource offers to registered receivers
 	//super.step(state);
+
+	} finally {
+	    double releasedAsOfToday = qaDelay.getReleasedGoodResource();
+	    double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
+	    releasedAsOfYesterday = releasedAsOfToday;
+	    charter.print(releasedToday);
+	}
+	
     }
+
 
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
@@ -342,6 +364,7 @@ public class Production extends sim.des.Macro
 	return s;
 
     }
+  
 
     //String name;
     //    public String getName() { return name; }
