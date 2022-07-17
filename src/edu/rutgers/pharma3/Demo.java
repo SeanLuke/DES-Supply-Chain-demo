@@ -63,7 +63,6 @@ public class Demo extends SimState {
 	try {
 	    // The chart directory
 	    File logDir = new File("charts");
-	    if (!logDir.exists()) logDir.mkdirs();
 	    Charter.setDir(logDir);
 
 	    

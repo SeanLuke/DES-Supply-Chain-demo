@@ -15,32 +15,36 @@ import edu.rutgers.util.*;
     A Charter object can be created in the constructor of a Named object. A call to Charter.print() then should be placed in that object's step() method (or somewhere, if you want to write data lines on some other schedule). Each print() call will write a line of data.
  */
 class Charter {
-    PrintWriter w=null;
-    Schedule sch;
-    Named c;
-
-    /** This is used so that we can close all files at  the end of simulation */
-    static Set<Charter> allCharters = new HashSet<>();
+    private PrintWriter w=null;
+    /** The object which will print its data thru this Charter */
+    private Named c;
+    /** This thing will give us time stamps */
+    private Schedule sch;
     
-    static File dir = new File(".");
+    /** This is used so that we can close all files at  the end of simulation */
+    private static Set<Charter> allCharters = new HashSet<>();
+    
+    private static File dir = new File(".");
 
-    static void setDir(File _dir) {
+    public static void setDir(File _dir) {
 	dir = _dir;
     }
     
-    Charter(Schedule schedule,
+    public Charter(Schedule schedule,
 	    Named _c) throws IOException {
 	c = _c;
 	
 	sch = schedule;
-       	
+
+	if (!dir.exists()) dir.mkdirs();
+
 	File f = new File(dir, c.getName() + ".csv");
 	w = new PrintWriter(new FileWriter(f));
 	allCharters.add(this);
     }
 
     /** This should be called from c.step() */
-    void print(double value) {
+    public void print(double value) {
 	w.println( ""+sch.getTime()+ ","+ value); // c.getValue());
 	//w.flush();
     }
