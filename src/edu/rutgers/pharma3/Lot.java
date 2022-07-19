@@ -41,9 +41,9 @@ public class Lot {
 	allLots.put( new Long(lotNo), x);
     }
 
+    /** Has this lot expired as of now? */
     boolean hasExpired(double now) {
 	return now >=  expirationDate;
     }
 
-    
 }

@@ -22,6 +22,10 @@ public class Distributor extends sim.des.Queue
     
     Delay shipOutDelay;
 
+
+    Sink expiredProductSink;
+    
+    
     private Charter charter;
     
     Distributor(SimState state, String name, Config config,
@@ -38,7 +42,7 @@ public class Distributor extends sim.des.Queue
 	shipOutDelay = new Delay( state,  resource);
 	shipOutDelay.setDelayDistribution(para.getDistribution("shipOutDelay",state.random));				       
 
-	
+	expiredProductSink = new Sink(state,  resource);
 	charter=new Charter(state.schedule, this);
     }
 
@@ -49,6 +53,12 @@ public class Distributor extends sim.des.Queue
     public double getNeedsToShip() { return needsToShip; }
     public double getEverShipped() { return everShipped; }
 
+    /** The amount of product that has been discarded because we discovered
+	that it was too close to expiration */
+    private double discardedExpired = 0;
+    private double discardedExpiredBatches = 0;
+
+    
     /** To whom are we shipping */
     void setDeliveryReceiver(Receiver rcv) {
 	shipOutDelay.addReceiver(rcv);
@@ -95,12 +105,26 @@ public class Distributor extends sim.des.Queue
 	if ( (month> lastMonthShippedAt) && stillNeeded>0) {
 
 	    while(getAvailable()>0 && shippedToday<stillNeeded) {
+		
+		Batch b = (Batch)entities.getFirst();
 
-		Entity e = entities.getFirst();
-		if (!offerReceiver( shipOutDelay, e)) break;		
-		shippedToday += ((Batch)e).getContentAmount();
+		//System.out.println("willExpire="+b.willExpireSoon(t, 365)+"; gA=" + getAvailable());
+		
+		if (b.willExpireSoon(t, 365)) {
+		    //System.out.println("expired batch; gA=" + getAvailable());
+		    if (!offerReceiver( expiredProductSink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		    discardedExpired += b.getContentAmount();
+		    discardedExpiredBatches ++;
+		    //System.out.println("discarded="+discardedExpired+"; gA=" + getAvailable());
+		    entities.remove(b);
+		    continue;
+		}
+
+		
+		if (!offerReceiver( shipOutDelay, b)) break;		
+		shippedToday += b.getContentAmount();
 		// FIXME: maybe wont be needed later on (Qu. 30)
-		entities.remove(e);
+		entities.remove(b);
 	    }
 
 	    stillNeeded -= shippedToday;
@@ -125,6 +149,9 @@ public class Distributor extends sim.des.Queue
 	   "TotalReceivedResource=" +  getTotalReceivedResource() + " ba. " +
 	   "Shipping plan=" + needsToShip +" u, has shipped=" + everShipped + " u, in " + loadsShipped+ " loads. Of this, " +
 	   (long)shipOutDelay.getDelayed() + " ba is still being shipped. Remains on hand=" + getAvailable() + " ba";
+
+       if (discardedExpiredBatches>0) s += ", discarded as expired=" + discardedExpiredBatches +  " ba";
+       
        return wrap(s);
     }
 

@@ -138,7 +138,12 @@ class Batch extends Entity {
 	return Lot.get(lotNo).hasExpired(now);
     }
 
- 
+    /** Will this lot expire within a specified number of days from now? */
+    boolean willExpireSoon(double now, double within) {
+	return  hasExpired(now+within);
+    }
+
+
 		
 }
     
