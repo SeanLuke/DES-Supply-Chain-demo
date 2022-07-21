@@ -52,11 +52,28 @@ public class Production extends sim.des.Macro
 	}
 
 
+	double discardedExpired=0;
+	int discardedExpiredBatches=0;
+		
 	/** Do we have enough input materials of this kind to make a batch? 
 	    FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
 	*/
 	private boolean hasEnough(double inBatchSize) {
 	    if (getTypical() instanceof Batch) {
+		double t = state.schedule.getTime();
+
+		// Discard any expired batches
+		Batch b; 
+		while (getAvailable()>0 &&
+		       (b=(Batch)entities.getFirst()).willExpireSoon(t, 0)) {
+
+		    // System.out.println(getName() + ", has expired batch; created=" + b.getLot().manufacturingDate +", expires at="+b.getLot().expirationDate+"; now=" +t);
+		    if (!offerReceiver( expiredDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		    entities.remove(b);
+		    discardedExpired += b.getContentAmount();
+		    discardedExpiredBatches ++;		    
+		}
+		
 		return (getAvailable()>0);
 	    } else if (getTypical()  instanceof CountableResource) {
 		return getAvailable()>=inBatchSize;
@@ -322,10 +339,12 @@ public class Production extends sim.des.Macro
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
 	int j=0;
-	for(sim.des.Queue input: inputStore) {	    
+	for(InputStore input: inputStore) {	    
 	    String s = input.getTypical().getName() +":" +  input.getAvailable();
 	    s += " batches";
 	    //if (showBatchSize) s += "/" + inBatchSizes[j];
+	    if (input.discardedExpiredBatches>0) s += ". (Discarded expired=" + input.discardedExpired + " u = " + input.discardedExpiredBatches + " ba)";
+	    
 	    v.add(s);
 	    j++;
 	}

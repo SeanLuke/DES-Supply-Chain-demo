@@ -143,6 +143,9 @@ class Batch extends Entity {
   
     }
     
+    Lot getLot() {
+	return Lot.get(lotNo);
+    }
 
     boolean hasExpired(double now) {
 	return Lot.get(lotNo).hasExpired(now);
