@@ -67,7 +67,15 @@ public class MaterialSupplier extends Macro
 
     /** Creates a MaterialSupplier that will supply either a specified
 	CountableResource or "batched resource" based on that resource.
-	@param needLots If true, the supplier will supply lots 
+
+	@param name The name to be given to this supplier unit. It is used for reporting, and for looking up parameters in the config file.
+
+	@param config ... in which the parameters will be looked up.
+
+	@param a CountableResource describing the product to be produced by this supplier. If needLots is true, this will be packaged into a Batch resource (an Entity), so that individual lot numbers and expiration dates could be handled; if false, we will simply generate this CountableResource.
+
+	@param needLots If true, the supplier will supply lots (Batch objects), so that an expiration date can be attached to each one. If false, the supplier will supply a CountableResource (modeling an absoulutely fungible product, with no expiration date).
+      
      */
     static MaterialSupplier mkMaterialSupplier(SimState state, String name, Config config, 
 					       CountableResource resource, boolean needLots) 	throws IllegalInputException, IOException {
@@ -81,8 +89,17 @@ public class MaterialSupplier extends Macro
 	
     protected SimState state;
 
-    /** Creates a Queue in front of the Delay, and links it up
-	appropriately
+    /** Creates a Queue to be attached in front of the Delay, and
+	links it up appropriately. This is done so that we can model a
+	production facility (or a transportation service, etc) which can
+	handle no more than a given number of batches at any given
+	time.
+	
+	@param delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
+	
+	@param cap The max number of batches that the production unit (the Delay object) can physically handle simultaneously. (Usually, 1).
+
+	@return A Queue object into which one can put any number of "raw" batches, where they will sit and wait for the production facility to grab them whenever it's ready. 
      */
     private sim.des.Queue controlInput(Delay delay, double cap) {
 	sim.des.Queue need = new sim.des.Queue(state, prototype);
@@ -95,9 +112,9 @@ public class MaterialSupplier extends Macro
 	return need;
     }
 
+    /** The tool to write a CSV file with data that can later be charted by an external program */	
     private Charter charter;
  
-
     
     /** @param resource The product supplied by this supplier. Either a "prototype" Batch, or a CountableResource.
      */
@@ -136,7 +153,13 @@ public class MaterialSupplier extends Macro
  	
     }
 
-    /** SVG won't work; only PNG is OK */
+    /** Lays out icons for the GUI display of a product flow chart.
+
+	(SVG won't work; only PNG is OK).
+
+	@param x0 X offset for the top left corner
+	@param y0 Y offset for the top left corner
+ */
     void depict(DES2D field, int x0, int y0) {
 
 	field.add(this, x0, y0);
@@ -157,8 +180,7 @@ public class MaterialSupplier extends Macro
 
     }
 
-  
-
+ 
     
     final double standardBatchSize;
 

@@ -29,16 +29,22 @@ public class PharmaCompany extends Sink
 	pacMaterial = new CountableResource("PackagingMaterial",0),
 	excipient = new CountableResource("Excipient",0);
 
+    /** Resources produced inside the supply chain */
     static CountableResource api = new CountableResource("API",0);
     static CountableResource bulkDrug = new CountableResource("bulkDrug",0);
     //static CountableResource pacDrug = new CountableResource("packagedDrug",0);
 
+
+    /** Supply chain units that model external suppliers of the input
+	materials */
     MaterialSupplier rawMatSupplier, pacMatFacility, excipientFacility;
     public MaterialSupplier getRawMatSupplier() { return rawMatSupplier; }
     public MaterialSupplier getExcipientFacility() { return excipientFacility; }
     public MaterialSupplier getPacMatFacility() { return pacMatFacility; }
 
     //    private Delay orderDelay;
+
+    /** Production units wihin our supply chain */
     Production apiProduction, drugProduction, packaging;
     Production cmoApiProduction, cmoDrugProduction, cmoPackaging;
 
@@ -49,10 +55,16 @@ public class PharmaCompany extends Sink
     Distributor distro;
     public Distributor getDistributor() {return distro;    }
 
+    /** Splitters are elements used to "split" the output of one unit to two
+	destinations.
+     */	
     Splitter rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter;
 
-    
+    /** This was used during development instead of not-yet-built
+	parts of the supply chain model */
     //    MSink dongle; 
+
+
     PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
 	super(state, drugOrderResource);
 	setName(name);
@@ -69,7 +81,7 @@ public class PharmaCompany extends Sink
 	rawMatSupplier = MaterialSupplier.mkMaterialSupplier(state, "RawMaterialSupplier", config, rawMaterial, true);
 	Batch rawMatBatch = (Batch)rawMatSupplier.getPrototype();
 	
-	pacMatFacility =  MaterialSupplier.mkMaterialSupplier(state, "PacMatSupplier", config,pacMaterial, false);
+	pacMatFacility =  MaterialSupplier.mkMaterialSupplier(state, "PacMatSupplier", config, pacMaterial, false);
 	
 	excipientFacility = MaterialSupplier.mkMaterialSupplier(state, "ExcipientSupplier", config, excipient, true);
 	Batch excipientBatch = (Batch)excipientFacility.getPrototype();
@@ -87,7 +99,6 @@ public class PharmaCompany extends Sink
 					new Batch[]{ apiBatch, excipientBatch}, bulkDrugBatch);
 	cmoDrugProduction = new Production(state, "CmoDrugProduction",  config,
 					new Batch[]{ apiBatch}, bulkDrugBatch);
-
 
 	packaging = new Production(state, "Packaging",  config,
 				   new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);

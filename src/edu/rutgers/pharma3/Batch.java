@@ -25,20 +25,21 @@ import edu.rutgers.util.*;
 */
 class Batch extends Entity {
 
-    static long lotNoGen = 0;
+    /** Used to generate unique sequential lot numbers */
+    private static long lotNoGen = 0;
 
+    /** Generates a unique lot number, which then can be assigned to a new lot */
     static long nextLotNo() {
 	return ++lotNoGen;
 	
     }
 
-    /** How soon after being created will this product expire. This is 
-	measured in the same units as used in the simulation Scheduler,
-	i.e. days. The value of Double.POSITIVE_INFINITY means "never expires"
+    /** How soon after being created will the product in this lot
+	expire? This is measured in the same units as used in the
+	simulation Scheduler, i.e. days. The value of
+	Double.POSITIVE_INFINITY means "never expires"
     */
     double shelfLife;
-
-
 
     public String toString() {
 	String s =  getName(); // + ", storage=" + getStorage();
@@ -53,16 +54,24 @@ class Batch extends Entity {
     
     long lotNo;
     /** Creates "typicals" (prototype batches), rather than actual batches */
-    Batch(CountableResource typicalUnderlying, double _shelfLife) {
+    private Batch(CountableResource typicalUnderlying, Double _shelfLife) {
 	super(  "Batch of " + typicalUnderlying.getName());
-	shelfLife = _shelfLife;
+	shelfLife = (_shelfLife==null)? Double.POSITIVE_INFINITY :_shelfLife;
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created: " +this);
     }
 
-    /**
-       @param para A ParaSet that has a parameter named "expiration", to get
-       the shelf life from.
+    /** Creates a "typical", i.e. a prototype batch object for a
+	particular product. Such object does not represent a specific
+	"real" batch, but is used as a pattern based on which real
+	batches of the same product will be created.
+
+	@param typicalUnderlying A CountableResource describing the
+	product (e.g. a particular chemical) which is "packaged" in
+	batches of this kind.
+
+	@param para A ParaSet that has a parameter named "expiration", to get
+	the shelf life from.
      */
     static Batch mkPrototype(CountableResource typicalUnderlying, ParaSet para)
 	throws IllegalInputException     {
@@ -72,7 +81,8 @@ class Batch extends Entity {
     /** Creates a new batch of underlying resource, with
 	a specified lot number.
 	@param prototype A "prototype" batch, from which we
-	copy the name and the type of underlying resource
+	copy the name and type of underlying resource, as well
+	as its shelf life.
 	@param _lotNo
 	@param amount The amount of underlying resource
     */
