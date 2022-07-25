@@ -104,6 +104,21 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	
     }
 
+
+  public Boolean getBoolean(String key, Boolean defVal) throws IllegalInputException {
+	Vector<String> v = get(key);
+	if (v==null)  return defVal;
+	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
+	String s = v.get(0);
+	try {
+	    return new Boolean(s);
+	} catch(Exception ex) {
+	    throwII(key, "Cannot parse as a boolean: " + s);
+	    return null; // never reached
+	}	
+    }
+
+    
     /** Creates a random distribution described by the parameters
 	in the specified line of this para set */
     public AbstractDistribution getDistribution(String key,

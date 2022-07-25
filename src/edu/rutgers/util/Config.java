@@ -6,12 +6,18 @@ import java.util.*;
 import ec.util.MersenneTwisterFast;
 import sim.util.distribution.*;
 
+/** The top-level structure for all configuration parameters read from a config
+    file. 
+*/
 public class Config extends HashMap<String,ParaSet> {
+    /** Just for information purposes */
+    public File readFrom = null;
     
     /** Reads a CSV file into a table of ParaSet objects, one object per 
 	supply chain element. */
     public static Config readConfig(File f) throws IOException, IllegalInputException  {
 	Config h = new Config();
+	h.readFrom = f;
 	//HashMap<String,ParaSet> h = new HashMap<>();
 	//	    File f= new File(base, "colors.csv");
 	if (!f.exists()) throw new IOException("File does not exist: " + f);

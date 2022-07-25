@@ -11,14 +11,37 @@
 # All product amounts (including batch sizes) are in  doses
 #----------------------------------------------------------------------
 
+
+#----------------------------------------------------------------------
+#--- Properties of inputs (ingredients we use)
+#----------------------------------------------------------------------
+
+RawMaterial,expiration,3650
+Excipient,expiration,1095
+PackagingMaterial,expiration,+Infinity
+
+
+#----------------------------------------------------------------------
+#--- Properties of products we produce
+#----------------------------------------------------------------------
+Api,expiration,2555
+BulkDrug,expiration,1095
+PackagedDrug,inheritsExpiration,true
+
+
+#-----------------------------------------------------------------------
+#-- Top-level units
+#-----------------------------------------------------------------------
 HospitalPool,intervalBetweenOrders,30
 #HospitalPool,orderSize,1.9e3
 #HospitalPool,order,Normal,1146404953,2887
 HospitalPool,order,Triangular,1209021340,1209030000,1209038660
 
 PharmaCompany,orderDelay,Uniform,1,1
-PharmaCompany,expiration,3650
 
+#----------------------------------------------------------------------
+#--- Properties of supplier units 
+#----------------------------------------------------------------------
 RawMaterialSupplier,batch,1e7
 RawMaterialSupplier,prodDelay,Uniform,0.0031,0.0217
 #RawMaterialSupplier,prodDelay,Uniform,0.003,0.01
@@ -26,7 +49,8 @@ RawMaterialSupplier,transDelay,Uniform,0.0031,0.0217
 #RawMaterialSupplier,qaDelay,Uniform,0.0031,0.0217
 RawMaterialSupplier,qaDelay,Uniform,0.003,0.02
 RawMaterialSupplier,faulty,0.05
-RawMaterialSupplier,expiration,3650
+
+
 
 PacMatSupplier,batch,1e7
 PacMatSupplier,prodDelay,Uniform,0.0031,0.0217
@@ -34,15 +58,15 @@ PacMatSupplier,transDelay,Uniform,0.0031,0.0217
 PacMatSupplier,qaDelay,Uniform,0.0031,0.0217
 PacMatSupplier,faulty,Triangular,0.0,0.02,0.04
 
-
 ExcipientSupplier,batch,1e7
 ExcipientSupplier,prodDelay,Uniform,0.0031,0.0217
 ExcipientSupplier,transDelay,Uniform,0.0031,0.0217
 ExcipientSupplier,qaDelay,Uniform,0.0031,0.0217
 ExcipientSupplier,faulty,0.03
-ExcipientSupplier,expiration,1095
 
-
+#----------------------------------------------------------------------
+#--- Production units
+#----------------------------------------------------------------------
 ApiProduction,inBatch,1e7
 ApiProduction,batch,1e7
 ApiProduction,batchesPerDay,69
@@ -51,7 +75,7 @@ ApiProduction,faulty,0.01
 ApiProduction,rework,0.01
 ApiProduction,prodDelay,Uniform,0.1,0.2
 ApiProduction,qaDelay,Uniform,0.1,0.2
-ApiProduction,expiration,2555
+
 
 CmoApiProduction,inBatch,1e7
 CmoApiProduction,batch,1e7
@@ -61,8 +85,6 @@ CmoApiProduction,faulty,0.01
 CmoApiProduction,rework,0.01
 CmoApiProduction,prodDelay,Uniform,0.1,0.2
 CmoApiProduction,qaDelay,Uniform,0.1,0.2
-CmoApiProduction,expiration,2555
-
 
 DrugProduction,inBatch,1e7,1e7
 DrugProduction,batch,1e7
@@ -70,7 +92,6 @@ DrugProduction,batchesPerDay,51
 DrugProduction,faulty,0.01
 DrugProduction,prodDelay,Uniform,0.1,0.2
 DrugProduction,qaDelay,Uniform,0.1,0.2
-DrugProduction,expiration,1095
 
 CmoDrugProduction,inBatch,1e7
 CmoDrugProduction,batch,1e7
@@ -78,7 +99,6 @@ CmoDrugProduction,batchesPerDay,22
 CmoDrugProduction,faulty,0.01
 CmoDrugProduction,prodDelay,Uniform,0.1,0.2
 CmoDrugProduction,qaDelay,Uniform,0.1,0.2
-CmoDrugProduction,expiration,1095
 
 
 Packaging,inBatch,1e7,1e7

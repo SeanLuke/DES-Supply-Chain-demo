@@ -72,7 +72,7 @@ public class MaterialSupplier0 extends Sink
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	Resource proto = 
-	    needLots?  Batch.mkPrototype(resource, para):
+	    needLots?  Batch.mkPrototype(resource, config):
 	    resource;
 	return new   MaterialSupplier0( state, para, proto);
     }

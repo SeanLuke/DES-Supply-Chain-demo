@@ -54,6 +54,8 @@ public class Demo extends SimState {
     Macro[] listMacros() {
 	return pharmaCompany.listMacros(); 
     }
+
+    public String version = "2.000";
     
     /** Here, the supply network elements are added to the Demo object */
     public void start(){
@@ -66,10 +68,10 @@ public class Demo extends SimState {
 	    Charter.setDir(logDir);
 
 	    
-	    CountableResource drug = new CountableResource("packagedDrug", 0);
+	    CountableResource drug = new CountableResource("PackagedDrug", 0);
 
 	    String pcName = "PharmaCompany", hosName="HospitalPool";
-	    Batch pacDrugBatch = Batch.mkPrototype( drug, config.get(pcName));
+	    Batch pacDrugBatch = Batch.mkPrototype(drug, config);
 	    
 	    //System.out.println("Demo: drugBatch = " + drugBatch  );
 	    
@@ -95,6 +97,7 @@ public class Demo extends SimState {
 	}
 	final int CENSUS_INTERVAL=60;
 	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
+	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
 	doReport("Start");
     }
 

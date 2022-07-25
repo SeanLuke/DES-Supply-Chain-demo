@@ -381,11 +381,11 @@ Split (90:10) 14940000000 units: To Input(Batch of RawMaterial), 13450000000; To
 
   <h4>Different handling of Batch and CountableResource resources</h4>
 
-<p>In many of our classes modeling various supply chain steps, the Batch resources are handled differently from the "fungible" (CountableResource) ones.
+<p>In many of our classes modeling various supply chain steps, the <tt>Batch</tt> resources are handled differently from the "fungible" (<tt>CountableResource</tt>) ones.
 
 <p>In paricular, the QA process on the Batch results in the discaring (or "reworking") of an entire batch with a certain probability; in contrast, when a certain amount (a batch, lower-case) of a fungible resource goes through QA, we pick a "failed percentage number" from a certain distribution, and discard a certain percentage of the batch. This is meant to represent different modes of testing of different products: e.g., if you taste the contents of a barrel of beer or milk, you dump the entire barrel if you think the beer or milk is bad, while for something like glass bottles you can test each bottle individually with an optical system, and discard just the cracked bottles.
 
-<p>Obviously, in real life, testing modes may not precisely map to our Batch/funguble resources; so, if necessary, the choice of the testing mode may eventually be "divorced" from the resource Batch/fungibility property.
+<p>Obviously, in real life, testing modes may not precisely map to our Batch/fungible resources; so, if necessary, the choice of the testing mode may eventually be "divorced" from the resource Batch/fungibility property.
   
 <h3>Units</h3>
 
@@ -537,6 +537,18 @@ Distributor,shipOutDelay,Uniform,1,2
 <p>Our  Distributor object works as follows. It continuously keeps track of how much product needs to be eventually sent to the HospitalPool (as instructed by the PharmaCompany object upon receipt of orders), and how much it has already sent. It can do sending only on specified days (say, once a month), and only in batches of fixed size. (This can simulate e.g. a company that uses a regularly sailing container ship or container train to send products from Tel Aviv to Elizabeth, NJ, or from Wuhan to Disuburg), and which prefers to send full container loads whenever possible. Accordingly, every now and then (with the interval set by Distributor,interval,30), it checks the "need to ship eventually" amount vs. "ever shipped", to determine the "still to be shipped" amount, i.e. to see if the company still has not fulfillied the shipment plan. If the  "still to be shipped" amount is non-zero (i.e the plan has not been fully fulfilled yet), the Distributor checks if the amount of product on hand is enough to fill 1 or more full batches, and if so, ships the max possible number of full batches. Additionally, if the "still to be shipped" includes an "odd lot" (a partial batch), and the Distributor has enough product to supply that odd lot, it does so as well. (In other words, if the company has been ordered 3.5 container-loads of aspirin, then we have to send a half-full container at some point; but we'll only do it after the 3 full containers have been sent).
 
 <p>The "sending" is accomplished programmatically by putting resource into a Delay object (with the parameters Distributor,shipOutDelay,Uniform,1,2); the output of the Delay is connected to the input of the HospitalPool (which is a Queue), so that once the product comes out of the Delay, it incrments the amount of product in the HospitalPool.
+
+<h3>Handling product expiration</h3>
+
+<p>While the PDF file describing the Rutgers model mentions expiration dates of some commondities, it provides no further details on how product expiration is to be handled. This section provides a brief explanation on how this is done in our application.
+
+<p>All products that can expire are handled as <tt>Batch</tt> objects (encapsulating an underlying <tt>CountableResource</tt>). Each Batch is linked (via a unique lot number) to a  <tt>Lot</tt> object which stores the manufacturing date and expiration dates.
+
+<p>In the Distribution center, when lots are taken from storage to be sent to the Hospital/Pharmacy Pool, the expirarion date of each Batch is checked. The policy is not to send out products with less than 1 year (365 days) left until its expiration dates; so every batch that's within 1 year from the expiration date is removed from the Queue and  discarded.
+
+<p>In the Production class (modeling a production unit), a similar process takes place in each input buffer queue (Production.InputStore) object that represents storage of an input ingredient that has an expiration date. However, here only the lots expired as of the current date are discarded; there is no requirement that the lot had any extra time of shelf life left in it.
+
+<p>The ....
 	
   </body>
 </html>

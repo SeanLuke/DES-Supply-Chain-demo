@@ -6,7 +6,6 @@ import java.io.*;
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
 import sim.des.*;
 import sim.des.portrayal.*;
 
@@ -30,10 +29,8 @@ public class PharmaCompany extends Sink
 	excipient = new CountableResource("Excipient",0);
 
     /** Resources produced inside the supply chain */
-    static CountableResource api = new CountableResource("API",0);
-    static CountableResource bulkDrug = new CountableResource("bulkDrug",0);
-    //static CountableResource pacDrug = new CountableResource("packagedDrug",0);
-
+    static CountableResource api = new CountableResource("Api",0);
+    static CountableResource bulkDrug = new CountableResource("BulkDrug",0);
 
     /** Supply chain units that model external suppliers of the input
 	materials */
@@ -77,17 +74,19 @@ public class PharmaCompany extends Sink
 	//	orderDelay.addReceiver(this);
 
 
-	// pacMatBatch = new Batch(pacMaterial)
+	// Raw material comes in lots, as it has expiration dates
 	rawMatSupplier = MaterialSupplier.mkMaterialSupplier(state, "RawMaterialSupplier", config, rawMaterial, true);
 	Batch rawMatBatch = (Batch)rawMatSupplier.getPrototype();
-	
+
+	// Packaging material is fungible (no expiration); thus, no lots
 	pacMatFacility =  MaterialSupplier.mkMaterialSupplier(state, "PacMatSupplier", config, pacMaterial, false);
 	
+	// Excipient comes in lots, as it has expiration dates
 	excipientFacility = MaterialSupplier.mkMaterialSupplier(state, "ExcipientSupplier", config, excipient, true);
 	Batch excipientBatch = (Batch)excipientFacility.getPrototype();
 	
-	Batch apiBatch = Batch.mkPrototype(api, config.get( "ApiProduction")),
-	    bulkDrugBatch = Batch.mkPrototype(bulkDrug, config.get( "DrugProduction"));
+	Batch apiBatch = Batch.mkPrototype(api, config),
+	    bulkDrugBatch= Batch.mkPrototype(bulkDrug, config);
 
 
 	apiProduction = new Production(state, "ApiProduction",  config,

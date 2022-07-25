@@ -6,7 +6,6 @@ import java.io.*;
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
 import sim.des.*;
 import sim.des.portrayal.*;
 
@@ -41,6 +40,11 @@ public class Production extends sim.des.Macro
     class InputStore extends sim.des.Queue {
 	/** Used to discard expired lots */
 	Sink expiredDump;
+
+	/** Dummy receiver used for the consumption of this
+	    ingredient as it's used, with metering */
+	MSink sink;
+	
 	InputStore(SimState _state,
 		   Resource resource) {
 	    super(_state, resource);
@@ -48,14 +52,40 @@ public class Production extends sim.des.Macro
 	    //name = Production.this.getName() + "/Input store for " + resource.getName();
 	    name = "Input("+resource.getName()+")";
 	    setName(name);
+
+	    setOffersImmediately(false); // the stuff sits here until taken
+	    
 	    expiredDump = new Sink(state, resource);
+	
+	    sink = new MSink(state, getTypical());
+	    // this is just for the purpose of the graphical display
+	    addReceiver(sink);
+	    addReceiver(expiredDump);
+
 	}
 
 
 	double discardedExpired=0;
 	int discardedExpiredBatches=0;
-		
+
+	private Batch getFirst() {
+	    return (Batch)entities.getFirst();
+	}
+
+	private boolean remove(Batch b) {
+	    return entities.remove(b);
+	}
+
+	Batch consumeOneBatch() {
+	    Batch b=getFirst();			
+	    if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+	    remove(b);
+	    return b;
+	}
+	
 	/** Do we have enough input materials of this kind to make a batch? 
+	    While checking the amount, this method also discards expired lots.
+
 	    FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
 	*/
 	private boolean hasEnough(double inBatchSize) {
@@ -65,11 +95,11 @@ public class Production extends sim.des.Macro
 		// Discard any expired batches
 		Batch b; 
 		while (getAvailable()>0 &&
-		       (b=(Batch)entities.getFirst()).willExpireSoon(t, 0)) {
+		       (b=getFirst()).willExpireSoon(t, 0)) {
 
 		    // System.out.println(getName() + ", has expired batch; created=" + b.getLot().manufacturingDate +", expires at="+b.getLot().expirationDate+"; now=" +t);
 		    if (!offerReceiver( expiredDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-		    entities.remove(b);
+		    remove(b);
 		    discardedExpired += b.getContentAmount();
 		    discardedExpiredBatches ++;		    
 		}
@@ -162,8 +192,6 @@ public class Production extends sim.des.Macro
     //final PreprocStorage[] preprocStore;
     //final sim.des.Queue postprocStore;
 
-    /** Dummy receivers used for the consumption of ingredients, and metering */
-    final MSink[] sink;
 
     /** What is the "entry point" for input No. j? */
     Receiver getEntrance(int j) {
@@ -192,7 +220,6 @@ public class Production extends sim.des.Macro
 	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
 	    inputStore[j] = new InputStore(state,inResources[j]);
-	    inputStore[j].setOffersImmediately(false); // the stuff sits here until taken
 	    //inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
 	    if (this instanceof Macro)  addReceiver(inputStore[j], false);
  
@@ -214,19 +241,12 @@ public class Production extends sim.des.Macro
 	if (qaDelay.reworkProb >0) {
 	    qaDelay.setRework( prodDelay);
 	}
-	
-	sink = new MSink[inputStore.length];
-	for(int j=0; j<sink.length; j++) {
-	    sink[j] = new MSink(state,inputStore[j].getTypical());
-	    // this is just for the purpose of the graphical display
-	    inputStore[j].addReceiver(sink[j]);
-	}
 
 	charter=new Charter(state.schedule, this);
- 	
-	 
+ 		 
     }
 
+    /** Lay out the elements for display */
     void depict(DES2D field, int x0, int y0) {
 
 	field.add(this, x0, y0);
@@ -238,9 +258,11 @@ public class Production extends sim.des.Macro
 	x0 = y0 = 20;
 	int x=x0, y=y0;
 	
-	for(int j=0; j<sink.length; j++) {
+	for(int j=0; j<inputStore.length; j++) {
 	    macroField.add(inputStore[j], x0, y0 + j*dy);
-	    macroField.add(sink[j], x0+dx-10, y0);
+	    macroField.add(inputStore[j].sink, x0+dx-10, y0);
+	    // Let's not show this one, to avoid visual clutter
+	    //macroField.add(inputStore[j].expiredDump, x0+15, y0 + j*dy);
 	}
 	x += dx;
 	
@@ -276,55 +298,63 @@ public class Production extends sim.des.Macro
 
     public double getEverStarted() { return everStarted; }
 
-    /** Good resource released by QA today. Used in charting */
+    /** Good resource released by QA as of yesterday. Used to compute
+	the size of today's output, for use in charting */
     private double releasedAsOfYesterday=0;
- 
     
+
+    /** Produce as many batches as allowed by the production capacity (per day)
+	and available inputs.
+    */
     public void step​(SimState state) {
 
 	try {
 	
 	// FIXME: should stop working if the production plan has been fulfilled
 	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
-	//if (haveNow  + outBatchSize < getCapacity() &&
 
-	if (!hasEnoughInputs()) {
-	    if (Demo.verbose)  System.out.println("At t=" + state.schedule.getTime() + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " +
-			       reportInputs(true));
-	    return;
-	}
-	
-	for(int nb=0; nb<batchesPerDay && hasEnoughInputs(); nb++) {
-	    
-	    for(int j=0; j<inBatchSizes.length; j++) {
-
-		Provider p = inputStore[j];
-		boolean z;
-		//System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
-		if (p.getTypical() instanceof Batch) {
-		    z = p.provide(sink[j], 1);
-		} else if (p.getTypical() instanceof CountableResource) {
-		    z = p.provide(sink[j], inBatchSizes[j]);		    
-		} else throw new IllegalArgumentException("Wrong input resource type");
-		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
-		if (sink[j].lastConsumed != inBatchSizes[j]) {
-		    String msg = "Batch size mismatch on sink["+j+"]=" +
-			sink[j] +": have " + sink[j].lastConsumed+", expected " + inBatchSizes[j];
-		    throw new IllegalArgumentException(msg);
-		}
-	    		
+	    double now = state.schedule.getTime();
+	    if (!hasEnoughInputs()) {
+		if (Demo.verbose)  System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " +
+						      reportInputs(true));
+		return;
 	    }
-	    
-	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
-	    Batch onTheTruck = outResource.mkNewLot(outBatchSize, state.schedule.getTime());
-	    Provider provider = null;  // why do we need it?
-	    prodDelay.accept(provider, onTheTruck, 1, 1);
-	    batchesStarted++;
-	    everStarted += outBatchSize;
-	}
+
+	    for(int nb=0; nb<batchesPerDay && hasEnoughInputs(); nb++) {
+
+		Vector<Batch> usedBatches = new Vector<>();
 		
-	//  the Queue.step() call resource offers to registered receivers
-	//super.step(state);
+		for(int j=0; j<inBatchSizes.length; j++) {
+		    
+		    InputStore p = inputStore[j];
+		    //System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
+		    if (p.getTypical() instanceof Batch) {
+			//z = p.provide(p.sink, 1);
+			
+			usedBatches.add(p.consumeOneBatch());
+		       			
+		    } else if (p.getTypical() instanceof CountableResource) {
+			boolean z = p.provide(p.sink, inBatchSizes[j]);				    if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");    
+		    } else throw new IllegalArgumentException("Wrong input resource type");
+
+		    if (p.sink.lastConsumed != inBatchSizes[j]) {
+			String msg = "Batch size mismatch on sink["+j+"]=" +
+			    p.sink +": have " + p.sink.lastConsumed+", expected " + inBatchSizes[j];
+			throw new IllegalArgumentException(msg);
+		    }
+		    
+		}
+	    
+		if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+		Batch onTheTruck = outResource.mkNewLot(outBatchSize, now, usedBatches);
+		Provider provider = null;  // why do we need it?
+		prodDelay.accept(provider, onTheTruck, 1, 1);
+		batchesStarted++;
+		everStarted += outBatchSize;
+	    }
+		
+	    //  the Queue.step() call resource offers to registered receivers
+	    //super.step(state);
 
 	} finally {
 	    double releasedAsOfToday = qaDelay.getReleasedGoodResource();
@@ -335,7 +365,7 @@ public class Production extends sim.des.Macro
 	
     }
 
-
+    
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
 	int j=0;
