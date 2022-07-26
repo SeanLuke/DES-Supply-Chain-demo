@@ -540,15 +540,24 @@ Distributor,shipOutDelay,Uniform,1,2
 
 <h3>Handling product expiration</h3>
 
-<p>While the PDF file describing the Rutgers model mentions expiration dates of some commondities, it provides no further details on how product expiration is to be handled. This section provides a brief explanation on how this is done in our application.
+<p>While the PDF file describing the Rutgers model mentions expiration dates of some commonities, it provides no further details on how product expiration is to be handled. This section provides a brief explanation on how this is done in our application.
 
-<p>All products that can expire are handled as <tt>Batch</tt> objects (encapsulating an underlying <tt>CountableResource</tt>). Each Batch is linked (via a unique lot number) to a  <tt>Lot</tt> object which stores the manufacturing date and expiration dates.
+<p>All products that can expire are handled as <tt>Batch</tt> objects (encapsulating an underlying <tt>CountableResource</tt>). Each Batch is linked (via a unique lot number) to a  <tt>Lot</tt> object which stores the manufacturing date and expiration date.
 
+<h4>Creation of batches</h4>
+<p>Each prototype Batch object (on which all Batch objects representing a given commodity type are modeled) contains 2 fields describing the expiration-related properties of this commodity type:
+<pre>
+  boolean inheritsExpiration;
+  double shelfLife;
+</pre>
+If <tt>inheritsExpiration</tt> is false (which is the usual situation), then the expiration date of each newly created lot will be computed as <tt>manufacturingDate + shelfLife</tt>. The expiration dates of the materials used in the production of the lot don't matter; for example, if you bake a cake using milk or eggs with the expiration date of tomorrow, but this type of cake is supposed to have the shelf life of 10 days, then the expiration date of the newly baked cake will be set to 10 days from the date of baking. In the Pharma3 model this applies, fore example, for the manufacturing of API and the manufacturing of bulk drug.
+
+If <tt>inheritsExpiration</tt> is true, then the expiration date of each newly created lot will be set to the earliest of the expiration date of the lots of ingredients that are used to produce the new lot. For example, if a factory makes bagged trail mix using nuts, raisins, rice crackers, and plastic bags (for packaging), then the expiration date of each lot of trail mix will be the earliest of the expiration date of the lot of nuts, the lot of raisins, and the lot of crackers (assuming that the packaging material does not have an expiration date of its own). In the Pharma3 model, the product like this is packaged drug, since each lot of packaged drug simply inherits the expiration date of the bulk drug that was packaged.
+
+<h4>Discarding expired batches</h4>
 <p>In the Distribution center, when lots are taken from storage to be sent to the Hospital/Pharmacy Pool, the expirarion date of each Batch is checked. The policy is not to send out products with less than 1 year (365 days) left until its expiration dates; so every batch that's within 1 year from the expiration date is removed from the Queue and  discarded.
 
-<p>In the Production class (modeling a production unit), a similar process takes place in each input buffer queue (Production.InputStore) object that represents storage of an input ingredient that has an expiration date. However, here only the lots expired as of the current date are discarded; there is no requirement that the lot had any extra time of shelf life left in it.
-
-<p>The ....
+<p>In the Production class (modeling various production units), a similar process takes place in each input buffer queue (Production.InputStore) object that represents storage of an input ingredient that has an expiration date. However, here only the lots expired as of the current date are discarded; there is no requirement that the lot had any extra time of shelf life left in it.
 	
   </body>
 </html>
