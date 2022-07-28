@@ -55,7 +55,7 @@ public class Demo extends SimState {
 	return pharmaCompany.listMacros(); 
     }
 
-    public String version = "2.000";
+    public String version = "2.001";
     
     /** Here, the supply network elements are added to the Demo object */
     public void start(){

@@ -107,7 +107,7 @@ public class Production extends sim.des.Macro
 		return (getAvailable()>0);
 	    } else if (getTypical()  instanceof CountableResource) {
 		return getAvailable()>=inBatchSize;
-	    } else throw new IllegalArgumentException("Wrong input resource type");
+	    } else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
 	}
 
 	/** Purely for debugging */

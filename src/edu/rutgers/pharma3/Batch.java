@@ -6,7 +6,6 @@ import java.text.*;
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
 import sim.des.*;
 
 import edu.rutgers.util.*;
@@ -18,61 +17,96 @@ import edu.rutgers.util.*;
     name, expiration date, maybe some of the "life history"
     of the lot). 
     
-    A batch object can represent e.g. a pallet on which several
+    A Batch object can represent e.g. a pallet on which several
     boxes of a drug, all with the same lot number, are stored.  It
     is possible for multiple batches to refer to the same lot
     number, if a single lot has been split into several batches.
+
+    A Batch object can represent also a "prototype batch" (a model
+    used for creating real product lots) or a "real batch"
+    (representing an actual lot of the product. A prototype batch
+    stores a Batch.PrototypeInfo object in its Entity.info field, while
+    a real batch stores a LotInfo object in that field. The former 
+    contains information (rules) that is used in generating the latter.
+
 */
 class Batch extends Entity {
 
-    /** Used to generate unique sequential lot numbers */
-    private static long lotNoGen = 0;
+    /** A PrototypeInfo instance, stored in each prototype lot (but
+	not in actual lots) describes some properties of a
+	product. The data stored here areused to help properly set
+	parameters during the construction of actual lots.
+     */
+    static class PrototypeInfo {
 
-    /** Generates a unique lot number, which then can be assigned to a new lot */
-    static long nextLotNo() {
-	return ++lotNoGen;
-	
-    }
-
-    /** If true, the expiration date is set based on the earliest expiration
+	/** If true, the expiration date is set based on the earliest expiration
 	date of the inputs, rather than as the manufacturingDate + shelfLife.
 	This is suitable e.g. for production stages that simply repackage
 	an already-made product.
-    */
-    private boolean inheritsExpiration = false;
+	*/
+	private boolean inheritsExpiration = false;
 
-    public boolean getInheritsExpiration() {
-	return inheritsExpiration;
-    }
+	//public boolean getInheritsExpiration() {	return inheritsExpiration;    }
 
     
-    /** How soon after being created will the product in this lot
-	expire? This is measured in the same units as used in the
-	simulation Scheduler, i.e. days. The value of
-	Double.POSITIVE_INFINITY means "never expires". If
-	inheritsExpiration==true, this variable is ignored.
-    */
-    private double shelfLife;
+	/** How soon after being created will the product in this lot
+	    expire? This is measured in the same units as used in the
+	    simulation Scheduler, i.e. days. The value of
+	    Double.POSITIVE_INFINITY means "never expires". If
+	    inheritsExpiration==true, this variable is ignored.
+	*/
+	private double shelfLife;
+
+	PrototypeInfo(boolean _inheritsExpiration, Double _shelfLife) {
+	    inheritsExpiration = _inheritsExpiration;
+	    shelfLife = (_shelfLife==null)? Double.POSITIVE_INFINITY :_shelfLife;
+	    //System.out.println("Created PI = " +this);
+ 	    
+	}
+
+	LotInfo newLot(String name, double now, Vector<Batch> inputs) {
+	    double exp;
+
+	    if (inheritsExpiration) {
+		if (inputs==null) throw new IllegalArgumentException("To make a lot of " + name +", we need to know the inputs' expiration dates");
+		exp =  earliestExpirationDate(inputs);
+	    } else {
+		exp = now + shelfLife;
+	    }
+
+	    return  LotInfo.newLot(now, exp);
+	}
+
+	public String toString() {
+	    return "(Prototype lot, " +
+		(inheritsExpiration?" inherits exp": "shelf life=" + shelfLife) +
+		")";
+	}
+ 
+
+	
+    }
+  	
+    
 
     public String toString() {
 	String s =  getName(); // + ", storage=" + getStorage();
+	s += ", info="+getInfo();
+
 	if (getStorage()!=null) {
 	    for(Resource r: getStorage()) {
 		s +=  " (" + r.getType() + ") " + (long)r.getAmount();	      
 	    }
 	}
 	return s;
-
     }
     
-    long lotNo;
-    /** Creates "typicals" (prototype batches), rather than actual batches */
+    /** Creates a "typical" (prototype) batch, rather than an actual batches */
     private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration, Double _shelfLife) {
 	super(  "Batch of " + typicalUnderlying.getName());
-	inheritsExpiration = _inheritsExpiration;
-	shelfLife = (_shelfLife==null)? Double.POSITIVE_INFINITY :_shelfLife;
+	setInfo( new PrototypeInfo( _inheritsExpiration, _shelfLife));
 	setStorage( new Resource[] {typicalUnderlying});
-	//System.out.println("Created: " +this);
+	//System.out.println("Created Prototype Batch = " +this);
     }
 
     /** Creates a "typical", i.e. a prototype batch object for a
@@ -91,8 +125,7 @@ class Batch extends Entity {
 	the shelf life from.
      */
     static Batch mkPrototype(CountableResource typicalUnderlying,
-			     Config config  //,     ParaSet para
-			     )
+			     Config config 	     )
 	throws IllegalInputException     {
 	String uname = typicalUnderlying.getName();
 	ParaSet para = config.get(uname);
@@ -104,37 +137,46 @@ class Batch extends Entity {
     }
     
     /** Creates a new batch of underlying resource, with
-	a specified lot number.
+	a specified resource amount and a unique lot number.
 	@param prototype A "prototype" batch, from which we
 	copy the name and type of underlying resource, as well
 	as its shelf life.
-	@param _lotNo
+	@param lot contains the unique lot number, expiration date etc
 	@param amount The amount of underlying resource
     */
-    private Batch(Batch prototype, long _lotNo, double amount) {
-	super(prototype);
-	inheritsExpiration = prototype.inheritsExpiration;
-	shelfLife = prototype.shelfLife;
-	lotNo = _lotNo;
+    private Batch(Batch prototype, LotInfo lot, double amount) {
+	super(prototype); // this sets name and type
+	setInfo(lot);
 	CountableResource r0 = prototype.getContent();
 	CountableResource r = new CountableResource(r0, amount);
 	setStorage( new Resource[] {r});	    
 	//System.out.println("Created2: " + this);
     }
 
+    /** Duplicate the prototype. Just used for duplicate() */    
+    private Batch(Batch prototype) {
+	super(prototype); // this sets name and type
+    }
+    
+    
     /** Creates another batch with the same lot number and
 	a copy of the stored resource. Not sure why we'd need
 	this method, but let's have since all Resource classes
 	seem to do so.
     */
+    
     public Resource duplicate() {
-	Batch b = new Batch(this, lotNo, getContentAmount());
-	//System.out.println("Duplicated: " + b);
-	return b;
+	if (getInfo() instanceof LotInfo) {
+	    Batch b = new Batch(this, (LotInfo)getInfo(), getContentAmount());
+	    //System.out.println("Duplicated: " + b);
+	    return b;
+	} else { // prototype
+	    return new Batch(this);
+	}
     }
-
-    /** Creates a Batch of the same type as this Batch, with a new
-	lot number and a specified amount of resource stored in it.
+    
+    /** Creates a Batch of the same type as this Batch, with a new unique
+	lot number, appropriate expiration date, and a specified amount of resource stored in it.
 	@param now The "birthdate" (manufacturing date) of this lot
 	@param inputs If not null, contains the list of Batch inputs
 	that were used to make this lot. (Fungible, i.e. CountableResource,
@@ -143,20 +185,15 @@ class Batch extends Entity {
 	is used to set the expiration date of the new batch;
     */
     public Batch mkNewLot(double size, double now, Vector<Batch> inputs) {
-	Batch b = new Batch(this, nextLotNo(),  size);
-	double exp;
-
-	if (inheritsExpiration) {
-	    if (inputs==null) throw new IllegalArgumentException("To make a lot of " + getName() +", we need to know the inputs' expiration dates");
-	    exp =  earliestExpirationDate(inputs);
-	} else {
-	    exp = now + shelfLife;
-	}
-
-	Lot.registerLot(b.lotNo, now, exp);
+	Object info = getInfo(); 
+	if (info==null || !(info instanceof PrototypeInfo)) throw new IllegalArgumentException("Only can do mkNewLot on a prototype lot, and this one isn't. info=" + info +"; this=" + this);
+	
+	LotInfo lot =  ((PrototypeInfo)info).newLot(getName(), now, inputs);
+	Batch b = new Batch(this, lot,  size);
 	return	b;
     }
 
+    /** A convenience method, for resources that don't have inputs that we pay attention to */
     public Batch mkNewLot(double size, double now) {
 	return  mkNewLot( size, now, null);
     }
@@ -199,20 +236,20 @@ class Batch extends Entity {
   
     }
     
-    Lot getLot() {
-	return Lot.get(lotNo);
+    LotInfo getLot() {
+	Object info = getInfo();
+	if (info==null || !(info instanceof LotInfo)) throw new IllegalArgumentException("Cannot do getLot on what appears to be a prototype lot");
+	return (LotInfo)info;
     }
 
     boolean hasExpired(double now) {
-	return Lot.get(lotNo).hasExpired(now);
+	return getLot().hasExpired(now);
     }
 
     /** Will this lot expire within a specified number of days from now? */
     boolean willExpireSoon(double now, double within) {
 	return  hasExpired(now+within);
     }
-
-
 		
 }
     

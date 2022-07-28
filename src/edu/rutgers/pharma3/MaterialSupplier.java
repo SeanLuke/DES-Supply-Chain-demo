@@ -84,7 +84,7 @@ public class MaterialSupplier extends Macro
 	Resource proto = 
 	    needLots?  Batch.mkPrototype(resource, config):
 	    resource;
-	return new   MaterialSupplier( state, para, proto);
+	return new MaterialSupplier( state, para, proto);
     }
 	
     protected SimState state;
@@ -125,7 +125,9 @@ public class MaterialSupplier extends Macro
 	prototype = resource;
 
 	setName(para.name);
+	System.out.println("MS " + getName()+", proto=" +prototype);
 
+	
 	standardBatchSize = para.getDouble("batch");
 
 	double cap = (prototype instanceof Batch) ? 1:    standardBatchSize;	
