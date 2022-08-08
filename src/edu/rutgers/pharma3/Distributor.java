@@ -49,7 +49,7 @@ public class Distributor extends sim.des.Queue
     //Receiver rcv;
 
     /** In units */
-    private double needsToShip=0, everShipped=0;
+    private double needsToShip=0, everShipped=0, everShippedBatches=0;
     public double getNeedsToShip() { return needsToShip; }
     public double getEverShipped() { return everShipped; }
 
@@ -123,6 +123,7 @@ public class Distributor extends sim.des.Queue
 		
 		if (!offerReceiver( shipOutDelay, b)) break;		
 		shippedToday += b.getContentAmount();
+		everShippedBatches ++;
 		// FIXME: maybe wont be needed later on (Qu. 30)
 		entities.remove(b);
 	    }
@@ -147,8 +148,9 @@ public class Distributor extends sim.des.Queue
              
        String s =
 	   "TotalReceivedResource=" +  getTotalReceivedResource() + " ba. " +
-	   "Shipping plan=" + needsToShip +" u, has shipped=" + everShipped + " u, in " + loadsShipped+ " loads. Of this, " +
-	   (long)shipOutDelay.getDelayed() + " ba is still being shipped. Remains on hand=" + getAvailable() + " ba";
+	   "Shipping plan=" + needsToShip +" u, has shipped=" + everShipped +
+	   "u ("+(long)everShippedBatches+" ba) , in " + loadsShipped+ " loads. Of this, " +
+	   (long)shipOutDelay.getDelayed() + " ba is still in transit. Remains on hand=" + getAvailable() + " ba";
 
        if (discardedExpiredBatches>0) s += ", discarded as expired=" + discardedExpiredBatches +  " ba";
        

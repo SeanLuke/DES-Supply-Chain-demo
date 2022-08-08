@@ -146,25 +146,37 @@ public class QaDelay extends Delay {
 	    
 	} else {
 	    if (entities == null) throw new IllegalArgumentException("pharma3.QaDelay with faultyProb only works with Batches!");
-  
+
+	    Batch b = (Batch)entities.getFirst();
+	    double amt = b.getContentAmount();
+	    
 	    boolean willDiscard=false, willRework=false;
-	    if ( discardProb + reworkProb >0) {
-		boolean isBad = state.random.nextBoolean(discardProb + reworkProb);
+	    double dp = discardProb + b.getLot().increaseInFaultRate;
+
+	    if ( dp + reworkProb >0) {
+		boolean isBad = state.random.nextBoolean(dp + reworkProb);
 		if (isBad) {
-		    willRework = state.random.nextBoolean( reworkProb/(discardProb + reworkProb));
+		    willRework = state.random.nextBoolean( reworkProb/(dp + reworkProb));
 		    willDiscard = !willRework;
 		}
 	    }
-	    
+
 	    z =
-		willRework ? super.offerReceiver(sentBackTo, atMost):
-		willDiscard? super.offerReceiver(discardSink, atMost):
-		super.offerReceiver(receiver, atMost);
+		willRework ? super.offerReceiver(sentBackTo, b):
+		willDiscard? super.offerReceiver(discardSink, b):
+		super.offerReceiver(receiver, b);
+
+
+	    if (!z) throw new IllegalArgumentException("The expectation is that the receivers for QaDelay " + getName() + " never refuse a batch");
+	    
+	    //z =
+	    //willRework ? super.offerReceiver(sentBackTo, atMost):
+	    //	willDiscard? super.offerReceiver(discardSink, atMost):
+	    //	super.offerReceiver(receiver, atMost);
 		
-	    ArrayList<Resource> lao = getLastAcceptedOffers();
-	    if (lao==null || lao.size()!=1) throw new IllegalArgumentException("Unexpected result from shipOutDelay.getLastAcceptedOffers()");
-	    Batch batch = (Batch)lao.get(0);
-	    double amt = batch.getContentAmount();
+	    //ArrayList<Resource> lao = getLastAcceptedOffers();
+	    //if (lao==null || lao.size()!=1) throw new IllegalArgumentException("Unexpected result from shipOutDelay.getLastAcceptedOffers()");
+	    //Batch b = (Batch)lao.get(0);
 	    
 	    if (willRework) {
 		reworkResource += amt;

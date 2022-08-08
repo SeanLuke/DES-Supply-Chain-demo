@@ -10,6 +10,7 @@ import sim.des.*;
 import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
+import edu.rutgers.pharma3.Disruptions.Disruption;
 
 /** A Production plant receives QA-inspected ingredients pushed to it from upstream
     suppliers, puts them through production and QA delays, and pushes the output 
@@ -40,6 +41,8 @@ public class Production extends sim.des.Macro
     class InputStore extends sim.des.Queue {
 	/** Used to discard expired lots */
 	Sink expiredDump;
+	/** Simulates theft or destruction (disruption type A4 etc) */
+	Sink stolenDump;
 
 	/** Dummy receiver used for the consumption of this
 	    ingredient as it's used, with metering */
@@ -56,6 +59,7 @@ public class Production extends sim.des.Macro
 	    setOffersImmediately(false); // the stuff sits here until taken
 	    
 	    expiredDump = new Sink(state, resource);
+	    stolenDump = new Sink(state, resource);
 	
 	    sink = new MSink(state, getTypical());
 	    // this is just for the purpose of the graphical display
@@ -67,6 +71,8 @@ public class Production extends sim.des.Macro
 
 	double discardedExpired=0;
 	int discardedExpiredBatches=0;
+	double stolen=0;
+	int stolenBatches=0;
 
 	private Batch getFirst() {
 	    return (Batch)entities.getFirst();
@@ -110,6 +116,25 @@ public class Production extends sim.des.Macro
 	    } else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
 	}
 
+
+	/** Simulates theft or destruction of some of the product stored in 
+	    this input buffer.
+	   @param The amount of product (units) to destroy.
+	   @param return The amount actually destroyed
+	 */
+	private double deplete(double amt) {
+	    double destroyed = 0;
+	    while(destroyed<amt && getAvailable()>0) {
+		Batch b=getFirst();
+		if (!offerReceiver( stolenDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		remove(b);
+		destroyed += b.getContentAmount();
+		stolenBatches ++;
+	    }
+	    stolen += destroyed;
+	    return  destroyed;		
+	}
+	
 	/** Purely for debugging */
 	/*
 	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
@@ -188,28 +213,24 @@ public class Production extends sim.des.Macro
     /** The maximum number of batches that can be started each day */
     final int batchesPerDay;
 
-    /** Where inputs come from */
-    //final PreprocStorage[] preprocStore;
-    //final sim.des.Queue postprocStore;
-
-
     /** What is the "entry point" for input No. j? */
     Receiver getEntrance(int j) {
 	return inputStore[j];
     }
 
-
+    final Resource[] inResources;
     final Batch outResource; 
     
-    /** @param inResource Inputs (e.g. API and excipient). Each of them is either a Batch or CountableResource
+    /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
 	@param outResource batches of output (e.g. bulk drug)
      */
 
     Production(SimState state, String name, Config config,
-	       Resource[] inResources,
+	       Resource[] _inResources,
 	       Batch _outResource ) throws IllegalInputException, IOException
     {
 	//super(state, outResource);
+	inResources =  _inResources;
 	outResource = _outResource;
 	setName(name);
 	ParaSet para = config.get(name);
@@ -301,15 +322,48 @@ public class Production extends sim.des.Macro
     /** Good resource released by QA as of yesterday. Used to compute
 	the size of today's output, for use in charting */
     private double releasedAsOfYesterday=0;
-    
 
+
+    /** Checks if there are any "depletion" disruptions on any of our
+	input resources. This is only done in FC, not CMO, as per
+	Abhisekh's specs.
+    */
+    private void disruptInputs(SimState state) {
+	if (getName().startsWith("Cmo")) return;
+	for(int j=0; j<inBatchSizes.length; j++) {
+	    Resource r = inResources[j];
+	    String name = (r instanceof Batch)? ((Batch)r).getUnderlyingName(): r.getName();
+	    InputStore p = inputStore[j];
+
+	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion, name);
+	    if (vd.size()==1) {
+		double t = state.schedule.getTime();
+	    
+		// deplete inventory
+		double amt = vd.get(0).magnitude * 1e7;
+		p.deplete(amt);
+		
+	    
+	    } else if (vd.size()>1) {
+		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	    }
+
+
+	    
+	}
+	
+    }
+    
     /** Produce as many batches as allowed by the production capacity (per day)
 	and available inputs.
     */
     public void step​(SimState state) {
 
 	try {
-	
+
+	    disruptInputs( state);
+
+	    
 	// FIXME: should stop working if the production plan has been fulfilled
 	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
 
@@ -374,7 +428,7 @@ public class Production extends sim.des.Macro
 	    s += " batches";
 	    //if (showBatchSize) s += "/" + inBatchSizes[j];
 	    if (input.discardedExpiredBatches>0) s += ". (Discarded expired=" + input.discardedExpired + " u = " + input.discardedExpiredBatches + " ba)";
-	    
+	    if (input.stolenBatches>0) s += ". (Stolen=" + input.stolen+ " u = " + input.stolenBatches + " ba)";
 	    v.add(s);
 	    j++;
 	}

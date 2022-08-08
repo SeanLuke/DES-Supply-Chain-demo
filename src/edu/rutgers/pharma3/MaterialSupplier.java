@@ -10,6 +10,7 @@ import sim.des.*;
 import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
+import edu.rutgers.pharma3.Disruptions.Disruption;
 
 /** Models a facility that supplies a raw material, plus the pharma co's 
     quality testing stage that handles the material from this supplier.
@@ -50,16 +51,74 @@ public class MaterialSupplier extends Macro
     public double getEverOrdered() { return everOrdered; }
     //public double getBadResource() { return badResource; }
     //public double getReleasedGoodResource() { return releasedGoodResource; }
+
+
+    /* Like a regular delay, but can modify properties of lots it 
+       offers to the receiver on certain days. This abiliy is controlled
+       via the disruption schedule */
+    static class ProdDelay extends Delay {
+	private double faultRateIncrease = 0;
+	Double untilWhen = null;
+	void setFaultRateIncrease(double x, Double _untilWhen) {
+	    faultRateIncrease = x;
+	    untilWhen = _untilWhen;
+	}
+	public ProdDelay(SimState state, Resource typical) {
+	    super(state,typical);
+	}
  
+	/** Sometimes reduces the quality of the offered batch */
+	protected boolean offerReceiver(Receiver receiver, Entity entity) {
+	    if (untilWhen!=null) {
+		double t = state.schedule.getTime();
+		if (t >= untilWhen) untilWhen = null;
+	    }
+	    
+	    if (untilWhen!=null && (entity instanceof Batch)) {
+		Batch b  = (Batch)entity;
+		b.getLot().increaseInFaultRate = faultRateIncrease;
+	    }
+	    return super.offerReceiver( receiver, entity);
+	}
+    }
+
+    
  
     /** Production delay */
-    private final Delay prodDelay;
+    private final ProdDelay prodDelay;
     /** Transportation delay */
     private final Delay transDelay;
     private final QaDelay qaDelay;
 
     private final sim.des.Queue needProd, needTrans, needQa;
 
+    /** Accepts resources when it's enabled, and rejects otherwise. This can be 
+	used to imitate a temporary phenomenon, such as disappearance of loads
+	sent on certain days.
+     */
+    static class SometimesSink extends MSink {
+	/** If not null, will be accepting resource until this time
+	    point (not inclusive) */
+	Double onUntil = null;
+	void setOff() { onUntil=null; }
+	void setOn(double _onUntil) {
+	    if (onUntil==null || onUntil< _onUntil)  onUntil = _onUntil;
+	}
+	public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
+	    if (onUntil!=null) {
+		if (onUntil <= state.schedule.getTime()) onUntil=null;
+		else return super.accept(provider,  resource,  atLeast, atMost);
+	    }
+	    return false;
+	}
+	public SometimesSink(SimState state, Resource typical) {
+	    super(state,typical);
+	}
+    }
+    
+    /** Used for disappared (stolen) lots in one of the disruptions */
+    final SometimesSink stolenGoodsSink;
+    
         
     /** Similar to "typical", but with the storage array */
     private final Resource prototype;
@@ -114,14 +173,22 @@ public class MaterialSupplier extends Macro
 
     /** The tool to write a CSV file with data that can later be charted by an external program */	
     private Charter charter;
- 
+
+    private static boolean throttleTrans = false;
+
+    /** The standard one. This can be modified during disruptions */
+    final private  AbstractDistribution transDelayDistribution;
+
+
+    final ParaSet para;
     
     /** @param resource The product supplied by this supplier. Either a "prototype" Batch, or a CountableResource.
      */
-    private MaterialSupplier(SimState _state, ParaSet para,
+    private MaterialSupplier(SimState _state, ParaSet _para,
 			     Resource resource	     ) 	throws IllegalInputException, IOException {
 	//super(state, resource);
 	state = _state;
+	para = _para;
 	prototype = resource;
 
 	setName(para.name);
@@ -132,20 +199,22 @@ public class MaterialSupplier extends Macro
 
 	double cap = (prototype instanceof Batch) ? 1:    standardBatchSize;	
 
-	prodDelay = new Delay(state, resource);
+	prodDelay = new ProdDelay(state, resource);
 	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
 	needProd = controlInput(prodDelay, cap);
-	
-	
+
+	stolenGoodsSink = new SometimesSink(state, resource);
 	transDelay = new Delay(state, resource);
-	transDelay.setDelayDistribution(para.getDistribution("transDelay",state.random));
-	needTrans = controlInput(transDelay, cap);
+	transDelay.setDelayDistribution( transDelayDistribution = para.getDistribution("transDelay",state.random));
+	needTrans = throttleTrans? controlInput(transDelay, cap) : null;
 	
 	qaDelay = QaDelay.mkQaDelay( para, state, resource);
 	needQa = controlInput(qaDelay, cap);
 		
-	//--- link them all
-	prodDelay.addReceiver( needTrans );
+	//--- link them all	
+	prodDelay.setOfferPolicy(Provider.OFFER_POLICY_FORWARD);
+	prodDelay.addReceiver( stolenGoodsSink );
+	prodDelay.addReceiver( throttleTrans?needTrans: transDelay );
 	transDelay.addReceiver( needQa );
 	//-- the output for qaDelay will be added by setQaReceiver
 
@@ -173,7 +242,7 @@ public class MaterialSupplier extends Macro
 	int x=20, y=20;
 	macroField.add(needProd, x, y);
 	macroField.add(prodDelay, x += dx, y += dy);
-	macroField.add(needTrans,  x += dx, y += dy);
+	if (throttleTrans) macroField.add(needTrans,  x += dx, y += dy);
 	macroField.add(transDelay, x += dx, y += dy);
 	macroField.add(needQa,  x += dx, y += dy);
 	macroField.add(qaDelay, x += dx, y += dy);
@@ -213,7 +282,8 @@ public class MaterialSupplier extends Macro
 	startAllProduction();
     }
 
-    /** Initiate the production process on as many batches as needed.
+    /** Initiate the production process on as many batches as needed
+	to fulfill the (typically, once-a-month) order.
 	FIXME: we always use the standard batch size, and don't use 
 	the last short batch, in order to simplify Production.
     */
@@ -258,7 +328,10 @@ public class MaterialSupplier extends Macro
 	    "; ever started production="+	startedProdBatches+ " ba" +
 	    ". Of this, "+
 	    " still in factory=" + Util.ifmt(needProd.getAvailable()) + "+" + Util.ifmt(prodDelay.getDelayed()) + ba +
-	    ", on truck " +  Util.ifmt(needTrans.getAvailable()) + "+" + Util.ifmt(transDelay.getDelayed()) + ba + 
+	    ", on truck " +
+	    (throttleTrans? ""+Util.ifmt(needTrans.getAvailable()) + "+": "") +
+	    Util.ifmt(transDelay.getDelayed()) + ba +
+	    (stolenGoodsSink.everConsumed>0? ", stolen " + (long)stolenGoodsSink.everConsumedBatches: " ba") +
 	    ", in QA " +  Util.ifmt(needQa.getAvailable()) +  "+" +  Util.ifmt(qaDelay.getDelayed());
 	if (transDelay.getAvailable()>0) s += "+" +  (long)transDelay.getAvailable();
 	s += ba + ". ";
@@ -268,8 +341,9 @@ public class MaterialSupplier extends Macro
 	long missing = startedProdBatches -
 	    (long)(needProd.getAvailable() +
 		   prodDelay.getDelayed() +
-		   needTrans.getAvailable() +
+		   (needTrans!=null? needTrans.getAvailable():0) +
 		   transDelay.getDelayed() +
+		   stolenGoodsSink.everConsumedBatches +
 		   needQa.getAvailable() +
 		   qaDelay.getDelayed() +
 		   qaDelay.badBatches+ qaDelay.releasedBatches);
@@ -291,7 +365,52 @@ public class MaterialSupplier extends Macro
     private double releasedAsOfYesterday=0;
     
     /** Does nothing other than logging. */
-    public void step(SimState state) {
+    public void step(SimState state) throws IllegalArgumentException {
+
+	Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Delay, getName());
+	if (vd.size()==1) {
+	    // activate modified delay distribution
+	    try {
+		transDelay.setDelayDistribution( para.getDistribution("transDelay",state.random, vd.get(0).magnitude));
+	    } catch( IllegalInputException ex) {
+		throw new IllegalArgumentException(ex.getMessage());
+	    }
+	} else if (vd.size()>1) {
+	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	} else {
+	    // resume normal delay
+	    transDelay.setDelayDistribution(transDelayDistribution);
+	}
+
+	vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.ShipmentLoss, getName());
+	if (vd.size()==1) {
+	    double t = state.schedule.getTime();
+	    //System.out.println(getName() + ": shipments will be stolen from " + t + " to " + (t+vd.get(0).magnitude));
+	    
+	    // set up shipment loss, in effect for a specified number of days
+	    stolenGoodsSink.setOn(t+vd.get(0).magnitude);
+	} else if (vd.size()>1) {
+	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	}
+
+	vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Adulteration, getName());
+	if (vd.size()==1) {
+	    double t = state.schedule.getTime();
+
+	    
+	    // reduce quality of newly produced lots, in effect for 1 day
+	    prodDelay.setFaultRateIncrease(0.1 * vd.get(0).magnitude, t+1);
+	    
+	} else if (vd.size()>1) {
+	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	}
+
+	
+	//    double dp = discardProb + b.getLot().increaseInFaultRate;
+
+
+	
+	
 	double releasedAsOfToday = qaDelay.getReleasedGoodResource();
 	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	releasedAsOfYesterday = releasedAsOfToday;

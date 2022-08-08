@@ -12,7 +12,7 @@ import sim.des.*;
 import ec.util.MersenneTwisterFast;
 
 import edu.rutgers.util.*;
-
+import edu.rutgers.pharma3.Disruptions.Disruption;
 
 import sim.portrayal.grid.*;
 
@@ -28,21 +28,29 @@ import sim.field.network.*;
 import sim.des.portrayal.*;
 
 
+
+
 /** The main class for a  simple pharmaceutical supply chain simulation demo */
 public class Demo extends SimState {
 
     static boolean verbose=false;
 
     public DES2D field = new DES2D(200, 200);
- 
-    
+
+    Disruptions disruptions = null;
+    Vector<Disruption> hasDisruptionToday(Disruptions.Type type, String unit) {
+	if (disruptions == null) return new Vector<Disruption>();
+	double time = schedule.getTime();
+	return disruptions.hasToday(type, unit, time);
+    }
+
     void add(Steppable z) {
 	IterativeRepeat ir =	schedule.scheduleRepeating(z);
     }
     
     public Demo(long seed)    {
 	super(seed);
-	System.out.println("Demo()");
+	System.out.println("pharma3.Demo()");
     }
     
     HospitalPool hospitalPool;
@@ -61,6 +69,7 @@ public class Demo extends SimState {
     public void start(){
 	super.start();
 	System.out.println("Demo.start");
+	System.out.println("Disruptions=" + disruptions);
      
 	try {
 	    // The chart directory
@@ -151,13 +160,13 @@ public class Demo extends SimState {
 	config file
     */
     static Config config;
-
+    static Disruptions disruptions0;
 
     static String[] processArgv(String[] argv) throws IOException, IllegalInputException
     {
 
 	String confPath = "config/pharma3.csv";
-
+	String disruptPath = null;
 
 	Vector<String> va = new Vector<String>();
 	for(int j=0; j<argv.length; j++) {
@@ -166,6 +175,8 @@ public class Demo extends SimState {
 		verbose = true;
 	    } else if (a.equals("-config") && j+1<argv.length) {
 		confPath= argv[++j];
+	    } else if (a.equals("-disrupt") && j+1<argv.length) {
+		disruptPath= argv[++j];
 	    } else {
 		va.add(a);
 	    }
@@ -174,8 +185,30 @@ public class Demo extends SimState {
 	File f= new File(confPath);
 	config  = Config.readConfig(f);
 
+	if (disruptPath != null) {
+	    disruptions0 = Disruptions.readList(new File(disruptPath));
+	}
+
+	
 	return va.toArray(new String[0]);
 	
+    }
+
+
+    static class MakesDemo implements  MakesSimState {
+	public java.lang.Class	simulationClass() {
+	    return Demo.class;
+	}	    
+	public java.lang.reflect.Constructor[]	getConstructors() {
+	    return Demo.class.getConstructors();
+	}
+	public SimState	newInstance(long seed, java.lang.String[] args) {
+	    Demo demo = new Demo(seed);
+	    //demo.disruptions = new Disruptions();
+	    //demo.disruptions.add( Disruptions.Type.ShipmentLoss, "RawMaterialSupplier", 40, 30);
+	    demo.disruptions = disruptions0;
+	    return demo;
+	}
     }
     
     /** Extracts a few command-line options we understand, and leaves
@@ -185,7 +218,12 @@ public class Demo extends SimState {
 
 	argv = processArgv(argv);
 	
-	doLoop(Demo.class, argv);
+	//doLoop(Demo.class, argv);
+	doLoop(new MakesDemo(), argv);
+
+
+
+
 	
 	System.exit(0);
     }

@@ -6,7 +6,6 @@ import java.text.*;
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
-//import sim.field.continuous.*;
 import sim.des.*;
 
 /** A Metered Sink is a wrapper around Sink, designed to print some
@@ -14,8 +13,9 @@ import sim.des.*;
     it has consumed.
  */
 class MSink extends Sink implements Reporting {
-    /** How much stuff has this Sink consumed since it's been created? */    
+    /** How much stuff (units) has this Sink consumed since it's been created? */    
     double everConsumed = 0;
+    double everConsumedBatches = 0;
     /** Consumed in the most recent accept() call. (In terms of underlying CountableResource) */
     double lastConsumed = 0;
 	
@@ -45,6 +45,7 @@ class MSink extends Sink implements Reporting {
 
 	    z =super.accept( provider,  resource,  atLeast,  atMost);
 	    consumed = z? w : 0;
+	    everConsumedBatches ++;
 	} else throw new IllegalArgumentException("Resource class not supported: " + resource);
 	lastConsumed = consumed;
 	everConsumed += consumed;

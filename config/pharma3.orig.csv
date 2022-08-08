@@ -45,7 +45,8 @@ PharmaCompany,orderDelay,Uniform,1,1
 RawMaterialSupplier,batch,5e5
 RawMaterialSupplier,prodDelay,Uniform,0.0031,0.0217
 #RawMaterialSupplier,prodDelay,Uniform,0.003,0.01
-RawMaterialSupplier,transDelay,Uniform,0.0031,0.0217
+#RawMaterialSupplier,transDelay,Uniform,0.0031,0.0217
+RawMaterialSupplier,transDelay,Uniform,5,10
 #RawMaterialSupplier,qaDelay,Uniform,0.0031,0.0217
 RawMaterialSupplier,qaDelay,Uniform,0.003,0.02
 RawMaterialSupplier,faulty,0.05
@@ -54,13 +55,15 @@ RawMaterialSupplier,faulty,0.05
 
 PacMatSupplier,batch,5e5
 PacMatSupplier,prodDelay,Uniform,0.0031,0.0217
-PacMatSupplier,transDelay,Uniform,0.0031,0.0217
+#PacMatSupplier,transDelay,Uniform,0.0031,0.0217
+PacMatSupplier,transDelay,Uniform,5,10
 PacMatSupplier,qaDelay,Uniform,0.0031,0.0217
 PacMatSupplier,faulty,Triangular,0.0,0.02,0.04
 
 ExcipientSupplier,batch,5e5
 ExcipientSupplier,prodDelay,Uniform,0.0031,0.0217
-ExcipientSupplier,transDelay,Uniform,0.0031,0.0217
+#ExcipientSupplier,transDelay,Uniform,0.0031,0.0217
+ExcipientSupplier,transDelay,Uniform,5,10
 ExcipientSupplier,qaDelay,Uniform,0.0031,0.0217
 ExcipientSupplier,faulty,0.03
 

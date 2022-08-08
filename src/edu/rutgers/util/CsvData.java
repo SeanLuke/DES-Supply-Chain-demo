@@ -156,6 +156,9 @@ public class CsvData {
 	public Integer getColInt(int j) {
 	    return j<csv.length &&  (csv[j]!=null) && (csv[j].length()>0) ? new Integer(csv[j]): null;
 	}
+	public Double getColDouble(int j) {
+	    return j<csv.length &&  (csv[j]!=null) && (csv[j].length()>0) ? new Double(csv[j]): null;
+	}
 
 	/** Requires the equality of the strings in all fields */
 	public boolean equals(Object o) {

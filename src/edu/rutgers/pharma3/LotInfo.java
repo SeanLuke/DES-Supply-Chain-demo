@@ -37,13 +37,15 @@ public class LotInfo {
 	we store Double.POSITIVE_INFINITY here */
     final double expirationDate;
 
+    /** Some lots may have this value set to non-zero, e.g. as a result
+	of a disruption that causes a deterioration of product quality */
+    double increaseInFaultRate=0;
 
     public String toString() {
 	return "(Lot No. "+lotNo+", made@" + manufacturingDate +", expire@"+expirationDate+")";
     }
        
 	
-  
     private LotInfo(long _lotNo, double now, double _expirationDate) {
 	lotNo = _lotNo;
 	manufacturingDate = now;

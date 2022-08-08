@@ -100,6 +100,11 @@ class Batch extends Entity {
 	}
 	return s;
     }
+
+    /** Retrieves the name of the underlying resource */
+    String getUnderlyingName() {
+	return getStorage()[0].getName();
+    }
     
     /** Creates a "typical" (prototype) batch, rather than an actual batches */
     private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration, Double _shelfLife) {
@@ -250,6 +255,6 @@ class Batch extends Entity {
     boolean willExpireSoon(double now, double within) {
 	return  hasExpired(now+within);
     }
-		
+    
 }
     

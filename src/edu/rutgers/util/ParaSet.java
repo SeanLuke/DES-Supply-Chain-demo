@@ -120,29 +120,39 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 
     
     /** Creates a random distribution described by the parameters
-	in the specified line of this para set */
+	in the specified line of this para set.
+	@param Shift the distribution to the right by this much. Normally 0, this value can be non-zero when modeling disruptions.     
+    */
     public AbstractDistribution getDistribution(String key,
-						MersenneTwisterFast random) throws IllegalInputException {
+						MersenneTwisterFast random,
+						double offset
+						) throws IllegalInputException {
 	Vector<String> v = get(key);	
 	if (v==null)  throwII(key, "Missing");
 	if (v.size()<1) throwII(key, "No data in the row");
 	if (v.get(0).equals("Binomial")) {
+	    if (offset!=0) throw new IllegalInputException("Cannot apply non-zero offset ("+offset+") to a binomial distribution");
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
 	    return new Binomial((int)Math.round(p.get(0)),p.get(1), random);
 	} else if (v.get(0).equals("Uniform")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
-	    return new Uniform(p.get(0),p.get(1), random);
+	    return new Uniform(p.get(0)+offset, p.get(1)+offset, random);
 	} else if (v.get(0).equals("Normal")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
-	    return new Normal(p.get(0),p.get(1), random);
+	    return new Normal(p.get(0)+offset,p.get(1), random);
 	} else if (v.get(0).equals("Triangular")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 3);
-	    return new Triangular(p.get(0),p.get(1), p.get(2), random);
+	    return new Triangular(p.get(0)+offset,p.get(1)+offset, p.get(2)+offset, random);
 	} else {
 	    throwII(key, "Random distribution type not supported: " +v.get(0));
 	    return null;
 	}
     }
+
+      public AbstractDistribution getDistribution(String key,
+						  MersenneTwisterFast random) throws IllegalInputException {
+	  return  getDistribution(key, random, 0);
+      }
 
     private Vector<Double> parseDoubleParams(String key,Vector<String> v, int startPos, int n)  throws IllegalInputException{
 	if (v.size()!=startPos+n) throwII(key, "Expected exactly 3 data column");
