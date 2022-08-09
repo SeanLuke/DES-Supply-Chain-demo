@@ -166,36 +166,6 @@ public class Production extends sim.des.Macro
     private Charter charter;
  
     
-    public static class ProdDelay extends Delay implements Reporting {
-	/** Total batches started */
-	int batchCnt=0;
-	public int getBatchCnt() { return batchCnt; }
-	/** Total pills started */
-	double totalStarted=0;
-        public double getTotalStarted() { return totalStarted; }
-
-	ProdDelay(SimState state,       Batch resource) {
-	    super(state, resource);
-	}
-	public boolean accept(Provider provider, Resource batch, double atLeast, double atMost) {
-	    double amt = ((Batch)batch).getContentAmount();
-	    //if (Demo.verbose) System.out.println("ProdDelay accepts batch of " + amt);
-	    batchCnt++;
-	    totalStarted+=amt;
-	    return super.accept( provider, batch, atLeast, atMost);
-	}
-	public String hasBatches() {
-	    String s = "" + (long)getDelayed();
-	    if (getAvailable()>0) s += "+"+(long)getAvailable();
-	    return s;
-	}
-	       
-	public String report() {
-	    return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"]";
-	}
-	    
-    }
-    
     ProdDelay prodDelay;
     /** Models the delay taken by the QA testing at the output	*/
     QaDelay qaDelay;
@@ -330,6 +300,9 @@ public class Production extends sim.des.Macro
     */
     private void disruptInputs(SimState state) {
 	if (getName().startsWith("Cmo")) return;
+
+	double t = state.schedule.getTime();
+	
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    Resource r = inResources[j];
 	    String name = (r instanceof Batch)? ((Batch)r).getUnderlyingName(): r.getName();
@@ -337,42 +310,57 @@ public class Production extends sim.des.Macro
 
 	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion, name);
 	    if (vd.size()==1) {
-		double t = state.schedule.getTime();
-	    
 		// deplete inventory
 		double amt = vd.get(0).magnitude * 1e7;
-		p.deplete(amt);
-		
-	    
+		p.deplete(amt);			    
 	    } else if (vd.size()>1) {
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	    }
-
-
-	    
+    
 	}
 	
     }
+
+    Timer haltedUntil = new Timer();
+    
+    /** Checks if there is a "Halt" disruption in effect for this unit. */
+    private boolean isHalted(SimState state) {
+	Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Halt, getName());
+	double now = state.schedule.getTime();
+	for(Disruption d: vd) haltedUntil.enableUntil( now+d.magnitude );
+	return haltedUntil.isOn( now );
+    }
+
     
     /** Produce as many batches as allowed by the production capacity (per day)
-	and available inputs.
+	and available inputs. A disruption may reduce the production capacity temporarily.
     */
     public void step​(SimState state) {
 
 	try {
 
 	    disruptInputs( state);
+	    if (isHalted(state)) return;
+
+	    double now = state.schedule.getTime();
+	    
+	    for(Disruption d:  ((Demo)state).hasDisruptionToday(Disruptions.Type.Adulteration, getName())) {
+		
+		// reduce quality of newly produced lots, in effect for 1 day
+		prodDelay.setFaultRateIncrease(0.1 * d.magnitude, now+1);
+	    }
 
 	    
 	// FIXME: should stop working if the production plan has been fulfilled
 	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
 
-	    double now = state.schedule.getTime();
+
 	    if (!hasEnoughInputs()) {
 		if (Demo.verbose)  System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " +
 						      reportInputs(true));
 		return;
 	    }
+	    
 
 	    for(int nb=0; nb<batchesPerDay && hasEnoughInputs(); nb++) {
 

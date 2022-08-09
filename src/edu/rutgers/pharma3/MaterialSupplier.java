@@ -33,9 +33,7 @@ object to which this supplier should push QA'ed material.
 
  */
 public class MaterialSupplier extends Macro
-    implements  //Receiver,
-			    Named,
-			    Reporting
+    implements     Named,	    Reporting
 {
 
     private double outstandingOrderAmount=0;
@@ -56,25 +54,22 @@ public class MaterialSupplier extends Macro
     /* Like a regular delay, but can modify properties of lots it 
        offers to the receiver on certain days. This abiliy is controlled
        via the disruption schedule */
-    static class ProdDelay extends Delay {
+    static class xProdDelay extends Delay {
 	private double faultRateIncrease = 0;
-	Double untilWhen = null;
+	Timer untilWhen = new Timer();
 	void setFaultRateIncrease(double x, Double _untilWhen) {
 	    faultRateIncrease = x;
-	    untilWhen = _untilWhen;
+	    untilWhen.enableUntil(_untilWhen);
 	}
-	public ProdDelay(SimState state, Resource typical) {
+	public xProdDelay(SimState state, Resource typical) {
 	    super(state,typical);
 	}
  
 	/** Sometimes reduces the quality of the offered batch */
 	protected boolean offerReceiver(Receiver receiver, Entity entity) {
-	    if (untilWhen!=null) {
-		double t = state.schedule.getTime();
-		if (t >= untilWhen) untilWhen = null;
-	    }
+	    double t = state.schedule.getTime();
 	    
-	    if (untilWhen!=null && (entity instanceof Batch)) {
+	    if (untilWhen.isOn(t) && (entity instanceof Batch)) {
 		Batch b  = (Batch)entity;
 		b.getLot().increaseInFaultRate = faultRateIncrease;
 	    }
@@ -97,19 +92,13 @@ public class MaterialSupplier extends Macro
 	sent on certain days.
      */
     static class SometimesSink extends MSink {
-	/** If not null, will be accepting resource until this time
+	/** Will be accepting resource until this time
 	    point (not inclusive) */
-	Double onUntil = null;
-	void setOff() { onUntil=null; }
-	void setOn(double _onUntil) {
-	    if (onUntil==null || onUntil< _onUntil)  onUntil = _onUntil;
-	}
+	Timer onUntil = new Timer();
 	public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
-	    if (onUntil!=null) {
-		if (onUntil <= state.schedule.getTime()) onUntil=null;
-		else return super.accept(provider,  resource,  atLeast, atMost);
-	    }
-	    return false;
+	    return
+		onUntil.isOn(state.schedule.getTime()) &&
+		super.accept(provider,  resource,  atLeast, atMost);
 	}
 	public SometimesSink(SimState state, Resource typical) {
 	    super(state,typical);
@@ -388,7 +377,7 @@ public class MaterialSupplier extends Macro
 	    //System.out.println(getName() + ": shipments will be stolen from " + t + " to " + (t+vd.get(0).magnitude));
 	    
 	    // set up shipment loss, in effect for a specified number of days
-	    stolenGoodsSink.setOn(t+vd.get(0).magnitude);
+	    stolenGoodsSink.onUntil.enableUntil(t+vd.get(0).magnitude);
 	} else if (vd.size()>1) {
 	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	}
