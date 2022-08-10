@@ -136,20 +136,27 @@ public class Production extends sim.des.Macro
 	}
 	
 	/** Purely for debugging */
-	/*
 	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":
 		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":
 		"an entity";
 	    boolean z = super.accept(provider,  amount, atLeast,  atMost);
+
+	    if (!z) {
+	    
 	    System.out.println("DEBUG: " + getName() + ", " +
 			       (z? "accepted ": "rejected ") + 
 			       given +	       			       "; has " +
 			       (entities==null ? ""+getAvailable() + " units": ""+entities.size() + " ba") +
 			       ";  totalReceivedResource=" +  getTotalReceivedResource()		       );
+
+	    System.out.println("cap=" + getCapacity()+"; r/o="+ getRefusesOffers());
+
+	    }
+	    
 	    return z;
 	}
-	*/
+
 
 	
     }

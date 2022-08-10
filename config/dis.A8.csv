@@ -1,0 +1,5 @@
+#time,unit,type,amount
+30,ExcipientSupplier,ShipmentLoss,30
+70,ExcipientSupplier,ShipmentLoss,10
+
+

@@ -558,6 +558,10 @@ If <tt>inheritsExpiration</tt> is true, then the expiration date of each newly c
 <p>In the Distribution center, when lots are taken from storage to be sent to the Hospital/Pharmacy Pool, the expirarion date of each Batch is checked. The policy is not to send out products with less than 1 year (365 days) left until its expiration dates; so every batch that's within 1 year from the expiration date is removed from the Queue and  discarded.
 
 <p>In the Production class (modeling various production units), a similar process takes place in each input buffer queue (Production.InputStore) object that represents storage of an input ingredient that has an expiration date. However, here only the lots expired as of the current date are discarded; there is no requirement that the lot had any extra time of shelf life left in it.
-	
+
+  <h2>Disruptions</h2>
+
+  <p>See <a href="disrupt.html">Disruptions in Pharma3</a>
+  
   </body>
 </html>

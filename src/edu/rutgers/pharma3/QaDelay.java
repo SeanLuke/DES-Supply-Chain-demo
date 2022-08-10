@@ -47,6 +47,25 @@ public class QaDelay extends Delay {
  
     final MSink discardSink;
 
+
+    private Timer faultRateIncrease = new Timer();
+
+    /** This is used by a disruptor to reduce the quality of the
+	products produced by this unit over a certain time
+	interval. This only should be used for fungible products
+	(CountableResource); for Batch products, it's preferable to
+	use the similar method in ProdDelay, so that the "poor
+	quality" will be associated with the manufacturing date,
+	rathere than the QA date.
+    */
+     void setFaultRateIncrease(double x, Double _untilWhen) {
+	faultRateIncrease.setValueUntil(x,_untilWhen);
+    }
+ 
+  
+
+
+    
     /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
 	@param _faultyPortionDistribution If non-null, then _discardProb and double _reworkProb must be zero, and vice versa.
      */
@@ -126,23 +145,39 @@ public class QaDelay extends Delay {
 
 	    if (entities == null) {
 		CountableResource cr = (CountableResource) resource;
-		amt = Math.min( cr.getAmount(), atMost);
-		faulty = Math.round( amt * r);
+		amt = Math.min( cr.getAmount(), atMost);		
+		if (amt==0) return false; // this happens sometimes, triggered by SimpleDelay.step()
+
+		double t = state.schedule.getTime();
+		double rEffective = Math.min(r + faultRateIncrease.getValue(t), 1.0);
+
+		
+		faulty = Math.round( amt * rEffective);
 		// The faulty product is destroyed, so we decrease the resource now
 		cr.decrease(faulty);
 		z = super.offerReceiver(receiver, atMost-faulty);
 	    } else {
+		throw new IllegalArgumentException("pharma3.QaDelay with faultyPortionDistribution only works with fungibles, because we don't support variable-size batches!");
+		/*
 		Batch e = (Batch)entities.getFirst();
 		amt = e.getContentAmount();
 		faulty = Math.round( amt * r);
 		e.getContent().decrease(faulty);
 		z = super.offerReceiver(receiver, e);
+		*/
 		// FIXME: do I need to manually remove e from entities?
 	    }
+
+
+	    if (!z) throw new IllegalArgumentException("QaDelay cannot be used with a receiver ("+receiver.getName()+") that refuses offers.  amt="+amt+", atMost=" +atMost+", faulty="+faulty);
+	    
 	    badResource +=  faulty;
-	    if (faulty>0) 	    badBatches++;
 	    releasedGoodResource += (amt-faulty);
-	    releasedBatches ++;
+
+	    if (faulty>0) 	    badBatches++;
+	    if (faulty<amt)	    releasedBatches ++;
+
+	    //System.out.println("F=" + faulty +", G=" + (amt-faulty));
 	    
 	} else {
 	    if (entities == null) throw new IllegalArgumentException("pharma3.QaDelay with faultyProb only works with Batches!");
@@ -200,7 +235,7 @@ public class QaDelay extends Delay {
 
     }
 
-    int reworkBatches=0, badBatches=0,    releasedBatches=0;
+    long reworkBatches=0, badBatches=0,    releasedBatches=0;
  
 
     /** Still under processing + at the output */

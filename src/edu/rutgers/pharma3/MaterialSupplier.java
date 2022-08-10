@@ -50,34 +50,6 @@ public class MaterialSupplier extends Macro
     //public double getBadResource() { return badResource; }
     //public double getReleasedGoodResource() { return releasedGoodResource; }
 
-
-    /* Like a regular delay, but can modify properties of lots it 
-       offers to the receiver on certain days. This abiliy is controlled
-       via the disruption schedule */
-    static class xProdDelay extends Delay {
-	private double faultRateIncrease = 0;
-	Timer untilWhen = new Timer();
-	void setFaultRateIncrease(double x, Double _untilWhen) {
-	    faultRateIncrease = x;
-	    untilWhen.enableUntil(_untilWhen);
-	}
-	public xProdDelay(SimState state, Resource typical) {
-	    super(state,typical);
-	}
- 
-	/** Sometimes reduces the quality of the offered batch */
-	protected boolean offerReceiver(Receiver receiver, Entity entity) {
-	    double t = state.schedule.getTime();
-	    
-	    if (untilWhen.isOn(t) && (entity instanceof Batch)) {
-		Batch b  = (Batch)entity;
-		b.getLot().increaseInFaultRate = faultRateIncrease;
-	    }
-	    return super.offerReceiver( receiver, entity);
-	}
-    }
-
-    
  
     /** Production delay */
     private final ProdDelay prodDelay;
@@ -90,6 +62,8 @@ public class MaterialSupplier extends Macro
     /** Accepts resources when it's enabled, and rejects otherwise. This can be 
 	used to imitate a temporary phenomenon, such as disappearance of loads
 	sent on certain days.
+
+	FIXME: this could also have been implemented with Sink.setRefuseOffers()
      */
     static class SometimesSink extends MSink {
 	/** Will be accepting resource until this time
@@ -317,10 +291,10 @@ public class MaterialSupplier extends Macro
 	    "; ever started production="+	startedProdBatches+ " ba" +
 	    ". Of this, "+
 	    " still in factory=" + Util.ifmt(needProd.getAvailable()) + "+" + Util.ifmt(prodDelay.getDelayed()) + ba +
-	    ", on truck " +
+	    ", in transit " +
 	    (throttleTrans? ""+Util.ifmt(needTrans.getAvailable()) + "+": "") +
 	    Util.ifmt(transDelay.getDelayed()) + ba +
-	    (stolenGoodsSink.everConsumed>0? ", stolen " + (long)stolenGoodsSink.everConsumedBatches: " ba") +
+	    (stolenGoodsSink.everConsumed>0? ", stolen " + (long)stolenGoodsSink.everConsumedBatches  + " ba":"") +
 	    ", in QA " +  Util.ifmt(needQa.getAvailable()) +  "+" +  Util.ifmt(qaDelay.getDelayed());
 	if (transDelay.getAvailable()>0) s += "+" +  (long)transDelay.getAvailable();
 	s += ba + ". ";
@@ -387,8 +361,14 @@ public class MaterialSupplier extends Macro
 	    double t = state.schedule.getTime();
 
 	    
-	    // reduce quality of newly produced lots, in effect for 1 day
-	    prodDelay.setFaultRateIncrease(0.1 * vd.get(0).magnitude, t+1);
+	    if (prototype instanceof Batch) {
+		// reduce quality of newly produced lots, in effect for 1 day
+		prodDelay.setFaultRateIncrease(0.1 * vd.get(0).magnitude, t+1);
+	    } else {
+		// activate the increase at the QA stage instead
+		qaDelay.setFaultRateIncrease(0.1 * vd.get(0).magnitude, t+1);
+	    }
+
 	    
 	} else if (vd.size()>1) {
 	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));

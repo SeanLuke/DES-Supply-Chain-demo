@@ -1,0 +1,86 @@
+<html>
+  <head>
+    <title>Disruptions in Pharma 3</title>
+  </head>
+  <body>
+    <h1>Disruptions in Pharma 3</h1>
+
+<div align="center"><em>Updated: 2022-08-09, for Pharma3 ver. 2.002</em></div>
+
+<P>This document discusses the implementation of the disruptions in the 
+<a href="pharma3.html">Pharma3</a> application.
+
+<h2>The <tt>Disruptions</tt> data structure</h2>
+
+<p>The <tt>Disruptions</tt> data structure (<tt>edu.rutgers.pharma3.Disruptions</tt>) implements the "schedule of disruptions", i.e. the list of disruption events that need to be modeled during the simulation. It stores a vector of  <tt>Disruption</tt> elements, each of which represents a single disruptive event.
+
+
+<p>A <tt>Disruption</tt> is a structure with 4 elements:
+
+  <ul><li><tt>time</tt>: the time point when the disruption starts, on our standard simulation schale (days), same as <tt>A1</tt> in Abhisekh's spreadsheet. Typically, it's an integer value, i.e. refers to the beginning of a simulation day.
+
+    <li><tt>unit</tt>: a string referring either to the production unit affected, or (for depletions of material from input buffers) the name of the product involved. In the former case, The name is identical to what would be returned by <tt>Named.getName()</tt> of the unit, e.g. <tt>RawMaterialSupplier</tt>. In the latter case, it is the named of the underlying CountableResource (not of the Batch resource that may be constructed on top of it), as per <tt>Resource.getName()</tt>, e.g. <tt>Api</tt> or <tt>BulkDrug</tt>.
+
+    <li><tt>type</tt>: the type of the disruption, such as depletion, delay, adulteration etc.
+
+    <li><tt>magnitude</tt>: a real number describing the "magnitude" of the disruption. Its semantics depends on the type of the disruption.           
+  </ul>
+
+  <h3>Types of disruptions</h3>
+
+      <code>
+     enum Type {
+	Delay, 
+	ShipmentLoss,
+	Adulteration,
+	Depletion,
+	Halt,
+    };
+   </code>
+
+ <ul><li><tt>Delay</tt>: this is implemented, but not tested, because the current (Aug 2022) version of Abhisekh's 21-point scheme does not use it anymore. (At earlier version of the scheme, in July 2021, did). A disruption of this time would affect the transportation delay of batches shipped during this day, by making it longer by <tt>magnitude</tt> days.
+
+   <li><tt>Delay</tt>: causes the loss of all shipments sent by this production unit during this days and several subsequent days. The total number of days so affected is given by <tt>magnitude</tt>.
+
+   <li><tt>Adulteration</tt>: increases the probability that the products produced by a certain production unit will be faulty.      this works slightly differently for Batch products (those with expiration dates and identified lots) and "fungible" ones (the packing material only). For the Batch products, this disruption applies to the batches produced during the day of the disruption; which of these batches are actually defective, will be only discovered during the QA (which may be some days later, due to the transportation delay). OTOH, because for fungible products we don't store any lot information, their disruption results in a higher fault rate in the products pasing the QA (testing) on the disruption days. The former approach is probably more realistic (the disruption, after all, affects manufacturing, rather than testing); the latter literally follows Abhisekh's write-up.
+
+   <li><tt>Adulteration</tt>: destroys the specified amount (10^7 *  <tt>magnitude</tt>) of the specified (by <tt>unit</tt>) resource in the input buffer of an FC unit that uses thats resource. For example, if <tt>unit=RawMaterial</tt>, we'll destroy some raw material in the input buffer of the ApiProduction unit.
+
+     <br>(Note: at present, using the name of the resource in the <tt>unit</tt> field is a sufficiently good identifier of what we want to destroy and where, because each resourse is used by only one unit of the FC subchain, and we don't do any destructions within the CMO subchain. If we have a more complex model, where it is important to distinguish "destruction of product X in the input buffer of element A" from  "destruction of product X in the input buffer of element B", then we may need to use a different notation, say, "A.B" in the <tt>unit</tt> field).
+
+ </ul>
+
+ <h3>Creating a  <tt>Disruptions</tt> object</h3>
+
+<p>One can create a  <tt>Disruptions</tt> object in the Java API, by repeatedly use  <tt>Disruptions.add(...)</tt> method.
+
+<p>One can also initialize a <tt>Disruptions</tt> object from a CSV file that describes a "disruption schedule". The file should have 4 columns, corresponding to the 4 fields of a <tt>Disruption</tt> object. Each line of the file corresponds to a single disruption event, i.e. a <tt>Disruption</tt> object.  The file can contain an arbitrary number of lines, describing disruptions of arbitrary types affecting arbitrary supply chain elements to which they are applicable.
+
+  
+  <p><strong>For sample dsisruption schedule files, see <tt>config/dis.A2.csv</tt>, <tt>config/dis.A3.csv</tt>, etc.</strong> For simplicity, each of these files contains disruptions of just one type, affecting just one unit. The naming of these files 
+matches the naming of disruptions (A2 thru A21) in Abhisekh's CSV file.
+	 
+    <h2>How to run</h2>
+
+  <p>One can specify the disruption file on the command line, along with the main config file:
+
+    <code>
+      ./run3.sh -config config/pharma3.orig.csv -disrupt config/dis.A2.csv -until 100 > out.log
+    </code>
+
+    <h2>How this all works</h2>
+
+  <p>This is how the disruption simulation works in Pharma3 ver. 2.002. This probably will change somewhat in the future, for better integration with other Mason tools.
+
+    <uL>
+      <li>The main application class <tt>Demo extends SimState</tt> has a field <tt>Disruptions disruptions</tt>, which, if it is not null, contains the disruptions schedule to apply in the current run. This field can be initialized when a <tt>Demo</tt> object is created. In the above example, it is initialized based on a disruptions file.
+
+      <li>The <tt>Demo</tt> object is available to all classes implementing the supply chain components (it is passed in as the argument to their <tt>step()</tt> method). Accordingly, each component that may be affected by one of our supported disruptions would check, in its   <tt>step()</tt> method, whether a disruption of any of the applicable is scheduled for this component on the current simulation day. If it is, it will carry out appropriate actions, e.g. by setting flaggs that will modify the behavior of certain objects.
+
+      <li>The affected objects will modify their behavior as necessary, for a requested time period. For example, the ProdDelay class may produce "poor quality" lots for a specified number of days, i.e. lots marked with an <tt>increaseInFaultRate</tt> flag.
+
+    </ul>
+
+    
+  </body>
+</html>

@@ -1,0 +1,3 @@
+#time,unit,type,amount
+30,ApiProduction,Halt,5
+50,ApiProduction,Halt,10
