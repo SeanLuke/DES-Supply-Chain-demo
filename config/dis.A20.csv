@@ -1,0 +1,4 @@
+#time,unit,type,amount
+55,Distributor,Depletion,1e9
+85,Distributor,Depletion,60
+115,Distributor,Depletion,30

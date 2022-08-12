@@ -11,6 +11,7 @@ import sim.util.distribution.*;
 import sim.des.*;
 
 import edu.rutgers.util.*;
+import edu.rutgers.pharma3.Disruptions.Disruption;
 
 /** The main Queue is the storage facility; additionally a Delay is used to ship things out */
 public class Distributor extends sim.des.Queue
@@ -21,11 +22,9 @@ public class Distributor extends sim.des.Queue
     double batchSize;
     
     Delay shipOutDelay;
-
-
     Sink expiredProductSink;
-    
-    
+    Sink stolenProductSink;
+      
     private Charter charter;
     
     Distributor(SimState state, String name, Config config,
@@ -43,10 +42,9 @@ public class Distributor extends sim.des.Queue
 	shipOutDelay.setDelayDistribution(para.getDistribution("shipOutDelay",state.random));				       
 
 	expiredProductSink = new Sink(state,  resource);
+	stolenProductSink = new Sink(state,  resource);
 	charter=new Charter(state.schedule, this);
     }
-
-    //Receiver rcv;
 
     /** In units */
     private double needsToShip=0, everShipped=0, everShippedBatches=0;
@@ -57,6 +55,9 @@ public class Distributor extends sim.des.Queue
 	that it was too close to expiration */
     private double discardedExpired = 0;
     private double discardedExpiredBatches = 0;
+
+    private double stolen=0;
+    private int stolenBatches=0;
 
     
     /** To whom are we shipping */
@@ -94,6 +95,10 @@ public class Distributor extends sim.des.Queue
 
     /** Ships product out on a certain schedule */
     public void step​(sim.engine.SimState state) {
+
+	disrupt(state);
+
+	
 	double shippedToday = 0;
 	    
 	double t = state.schedule.getTime();
@@ -143,6 +148,45 @@ public class Distributor extends sim.des.Queue
 	charter.print(shippedToday);
     }
 
+
+    /** Simulates theft or destruction of some of the product stored in 
+	this input buffer.
+	@param The amount of product (units) to destroy.
+	@param return The amount actually destroyed
+    */
+    private synchronized double deplete(double amt) {
+	double destroyed = 0;
+	if (getTypical() instanceof Batch) {
+	    while(destroyed<amt && getAvailable()>0) {
+		Batch b=(Batch)entities.getFirst();
+		if (!offerReceiver( stolenProductSink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		entities.remove(b);
+		destroyed += b.getContentAmount();
+		stolenBatches ++;
+	    }
+	} else {
+	    if (getAvailable()>0) {
+		double ga0 = getAvailable();
+		offerReceiver(stolenProductSink, amt);
+		destroyed = ga0 - getAvailable();
+	    }
+	}
+	stolen += destroyed;
+	return  destroyed;		
+    }
+
+    
+    private void disrupt(SimState state) {
+	Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion,getName());
+	if (vd.size()==1) {
+	    // deplete inventory
+	    double amt = vd.get(0).magnitude * 1e7;
+	    deplete(amt);			    
+	} else if (vd.size()>1) {
+	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	}    	
+    }
+    
     
    public String report() {
              
@@ -153,6 +197,7 @@ public class Distributor extends sim.des.Queue
 	   (long)shipOutDelay.getDelayed() + " ba is still in transit. Remains on hand=" + getAvailable() + " ba";
 
        if (discardedExpiredBatches>0) s += ", discarded as expired=" + discardedExpiredBatches +  " ba";
+       if (stolen>0) s += ", stolen=" + stolenBatches +  " ba";
        
        return wrap(s);
     }

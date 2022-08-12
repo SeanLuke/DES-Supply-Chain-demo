@@ -122,14 +122,22 @@ public class Production extends sim.des.Macro
 	   @param The amount of product (units) to destroy.
 	   @param return The amount actually destroyed
 	 */
-	private double deplete(double amt) {
+	private synchronized double deplete(double amt) {
 	    double destroyed = 0;
-	    while(destroyed<amt && getAvailable()>0) {
-		Batch b=getFirst();
-		if (!offerReceiver( stolenDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-		remove(b);
-		destroyed += b.getContentAmount();
-		stolenBatches ++;
+	    if (getTypical() instanceof Batch) {
+		while(destroyed<amt && getAvailable()>0) {
+		    Batch b=getFirst();
+		    if (!offerReceiver( stolenDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		    remove(b);
+		    destroyed += b.getContentAmount();
+		    stolenBatches ++;
+		}
+	    } else {
+		if (getAvailable()>0) {
+		    double ga0 = getAvailable();
+		    offerReceiver(stolenDump, amt);
+		    destroyed = ga0 - getAvailable();
+		}
 	    }
 	    stolen += destroyed;
 	    return  destroyed;		
@@ -156,7 +164,18 @@ public class Production extends sim.des.Macro
 	    
 	    return z;
 	}
-
+	
+	String report(boolean showBatchSize)  {
+	    String s = getTypical().getName() +":" +
+		(getTypical() instanceof Batch? 
+		 getAvailable() + " ba" :
+		 getAvailable() + " u" );
+        
+	    //if (showBatchSize) s += "/" + inBatchSizes[j];
+	    if (discardedExpiredBatches>0) s += ". (Discarded expired=" + discardedExpired + " u = " + discardedExpiredBatches + " ba)";
+	    if (stolen>0) s += ". (Stolen=" + stolen+ " u = " + stolenBatches + " ba)";
+	    return s;
+	}
 
 	
     }
@@ -419,12 +438,7 @@ public class Production extends sim.des.Macro
 	Vector<String> v= new Vector<>();
 	int j=0;
 	for(InputStore input: inputStore) {	    
-	    String s = input.getTypical().getName() +":" +  input.getAvailable();
-	    s += " batches";
-	    //if (showBatchSize) s += "/" + inBatchSizes[j];
-	    if (input.discardedExpiredBatches>0) s += ". (Discarded expired=" + input.discardedExpired + " u = " + input.discardedExpiredBatches + " ba)";
-	    if (input.stolenBatches>0) s += ". (Stolen=" + input.stolen+ " u = " + input.stolenBatches + " ba)";
-	    v.add(s);
+	    v.add( input.report(showBatchSize));
 	    j++;
 	}
 	return "[" + String.join(", ",v) + "]";

@@ -95,7 +95,7 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
 	}
     }
     
-    /** This is called by the Delay when the truck arrives 
+    /** This is called from the Distribution when it sends products over
 	@param amount a Batch object
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {

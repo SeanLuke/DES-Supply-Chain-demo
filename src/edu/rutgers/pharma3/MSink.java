@@ -23,9 +23,9 @@ class MSink extends Sink implements Reporting {
 	super(state,typical);
     }
     public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
-	String name = "?";
+	String name = "Sink";
 	if (provider instanceof Named) {
-	    name = ((Named)provider).getName();
+	    name = "Sink for " + ((Named)provider).getName();
 	}
 
 	boolean z;
@@ -52,8 +52,11 @@ class MSink extends Sink implements Reporting {
 	return z;
     }
 
-    public String report() {
-	return "[Sink for " + getTypical() + " has consumed " + everConsumed + "]";
+    public String report() {	
+	String s  = "[" + getName() + " has consumed " + everConsumed + " u";
+	if (everConsumedBatches>0) s += " = " + 	everConsumedBatches + " ba";
+	s +=  "]";
+	return s;
     }
 
   

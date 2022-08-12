@@ -1,0 +1,4 @@
+#time,unit,type,amount
+20,PackagingMaterial,Depletion,1e9
+40,PackagingMaterial,Depletion,1e9
+60,PackagingMaterial,Depletion,1e9
