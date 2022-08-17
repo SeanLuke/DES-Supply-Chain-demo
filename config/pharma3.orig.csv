@@ -32,6 +32,8 @@ PackagedDrug,inheritsExpiration,true
 #-----------------------------------------------------------------------
 #-- Top-level units
 #-----------------------------------------------------------------------
+EndConsumer,dailyDemand,Triangular,37.688e6,37.690e6,37.692e6
+
 HospitalPool,intervalBetweenOrders,30
 #HospitalPool,orderSize,1.9e3
 #HospitalPool,order,Normal,1146404953,2887

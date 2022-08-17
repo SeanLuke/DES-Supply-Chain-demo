@@ -52,6 +52,9 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
 
 
 	monthlyOrderDistribution = para.getDistribution("order",state.random);
+
+	expiredProductSink = new ExpiredSink(state,  resource, 365);
+       
 	
 	//setCapacity(para.getDouble("capacity"));
 
@@ -130,6 +133,32 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
 	}  else {
             return 0;
         }
+    }
+
+    /** Keeps track of the amount of product that has been discarded because we discovered
+	that it was too close to expiration.  */
+     ExpiredSink expiredProductSink;
+  
+
+    /** Handles the request from a receiver (such as the EndConsumer) to send to it 
+	a number of batches, totaling at least a specified amount of stuff.
+	@param amt the requested amount
+	@return the actually sent amount. (Can be a bit more than amt due to batch size rounding,
+	or can be less due to the shortage of product).
+     */
+    double feedTo(Receiver r, double amt) {
+	double sent = 0;
+    	//double t = state.schedule.getTime();
+
+	Batch b;
+	while(getAvailable()>0 && sent<amt &&
+	      (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
+	    if (!offerReceiver(r, b)) throw new IllegalArgumentException("Expected acceptance by " + r);
+	    sent += b.getContentAmount();
+	}
+
+	
+	return sent;
     }
 
     

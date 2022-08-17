@@ -52,6 +52,10 @@ public class PharmaCompany extends Sink
     Distributor distro;
     public Distributor getDistributor() {return distro;    }
 
+    EndConsumer endConsumer;
+    public EndConsumer getEndConsumer() {return  endConsumer;    }
+
+    
     /** Splitters are elements used to "split" the output of one unit to two
 	destinations.
      */	
@@ -131,6 +135,9 @@ public class PharmaCompany extends Sink
 	packaging.setQaReceiver(distro);	
 	cmoPackaging.setQaReceiver(distro);	
 	distro.setDeliveryReceiver(hospitalPool);
+
+	endConsumer = new EndConsumer(state, "EndConsumer", config, pacDrugBatch);
+	endConsumer.setSource(hospitalPool);
 	
     	//dongle = new MSink(state,pacDrug);
 	//packaging.setQaReceiver(dongle);	
@@ -144,6 +151,7 @@ public class PharmaCompany extends Sink
 	state.schedule.scheduleRepeating(cmoPackaging);
 
 	state.schedule.scheduleRepeating(distro);
+	state.schedule.scheduleRepeating(endConsumer);
 
 	// the suppliers are scheduled just to enable charting
 	state.schedule.scheduleRepeating(rawMatSupplier );
@@ -232,6 +240,7 @@ public class PharmaCompany extends Sink
 	v.add(  cmoPackaging.report());
 	v.add( sep);
 	v.add( 	distro.report());
+	v.add( 	endConsumer.report());
 	//v.add( 	dongle.report());
 	return String.join("\n", v);
     }
