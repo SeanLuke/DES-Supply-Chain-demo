@@ -14,6 +14,9 @@ import sim.util.distribution.*;
     <p>When the configuration file is loaded, the value in the 
     first column of each line serves as the name of the ParaSet to
     which the data in the rest of the line belong.
+
+    <P>The map maps the key (a string, from the 2nd column of the line) to a vector of
+    strings, which represent the values from the 3rd and subsequent columns
 */
 
 public class ParaSet extends HashMap<String, Vector<String>> {
@@ -23,10 +26,15 @@ public class ParaSet extends HashMap<String, Vector<String>> {
      */
     final public String name;
 
+
+    private ParaSet parent = null;
+    
     ParaSet(String _name) {
 	name = _name;
     }
 
+
+    void setParent( ParaSet _parent) { parent = _parent; }
     
     void add(CsvData.BasicLineEntry line) throws IllegalInputException {
 	int nCol=line.nCol();
@@ -49,22 +57,39 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	Vector<String> v = get(key);
 	if (v==null)  throwII(key, "Missing");
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
-	return v.get(0);
-	
+	return v.get(0);	
     }
 
-    
+    /** @param key just for use in error messages
+	@param s  a real value or a fraction */
+    public Double parseDoubleEx(String key, String s)throws IllegalInputException {
+	String tok[] = s.split("/");
+	
+	if (tok.length==2) {	    
+	    try {
+		return new Double( tok[0].trim()) /new Double( tok[1].trim());
+	    } catch(Exception ex) {
+		throwII(key, "Cannot parse as a fraction: " + s);
+	    }
+	} else {
+	    try {
+		return new Double(s);
+	    } catch(Exception ex) {
+		throwII(key, "Cannot parse as a real number: " + s);
+	    }
+	}
+	return null; // never reached   
+    }
+
+ 
     public Double getDouble(String key, Double defVal) throws IllegalInputException {
 	Vector<String> v = get(key);
-	if (v==null)  return defVal;
+	if (v==null && parent!=null) v = parent.get(key);
+	if (v==null) 	return defVal;
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
-	try {
-	    return new Double(s);
-	} catch(Exception ex) {
-	    throwII(key, "Cannot parse as a real number: " + s);
-	    return null; // never reached
-	}	
+	return  parseDoubleEx(key, s);
+	
     }
 
 
@@ -80,12 +105,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	if (v.size()<1) throwII(key, "Expected at least 1 data column");
 	double[] q = new double[v.size()];
 	for(int j=0; j<q.length; j++) {
-	    String s = v.get(j);
-	    try {
-		q[j] = Double.parseDouble(s);
-	    } catch(Exception ex) {
-		throwII(key, "Cannot parse as a real number: " + s);
-	    }
+	    q[j] = parseDoubleEx(key, v.get(j));
 	}
 	return q;	
     }
@@ -122,13 +142,14 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     /** Creates a random distribution described by the parameters
 	in the specified line of this para set.
 	@param Shift the distribution to the right by this much. Normally 0, this value can be non-zero when modeling disruptions.     
+	@return The distribution, or null if one isn't found. (This is handy for some Pools)
     */
     public AbstractDistribution getDistribution(String key,
 						MersenneTwisterFast random,
 						double offset
 						) throws IllegalInputException {
 	Vector<String> v = get(key);	
-	if (v==null)  throwII(key, "Missing");
+	if (v==null)  return null; // throwII(key, "Missing");  //
 	if (v.size()<1) throwII(key, "No data in the row");
 	if (v.get(0).equals("Binomial")) {
 	    if (offset!=0) throw new IllegalInputException("Cannot apply non-zero offset ("+offset+") to a binomial distribution");
@@ -161,11 +182,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 
 	for(int j=0; j<n; j++) {
 	    String s = v.get(startPos+j);
-	    try {
-		p.add(new Double(s));
-	    } catch(Exception ex) {
-		throwII(key, "Cannot parse as a real number: " + s);
-	    }
+	    p.add(parseDoubleEx(key,s));
 	}
 	return p;
     }

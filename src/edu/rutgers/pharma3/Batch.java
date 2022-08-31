@@ -57,9 +57,19 @@ class Batch extends Entity {
 	*/
 	private double shelfLife;
 
-	PrototypeInfo(boolean _inheritsExpiration, Double _shelfLife) {
+	/** This field may be set to non-null in prototype batches with inheritsExpiration==true.
+	    It is used to initialize the expiration date of batches that appear "ex nihilo" 
+	    (e.g. for the initial stock) rather than are produced during the simulation intself
+	    from identifiable input batches, and whose expiratin date therefore cannot be "inherited"
+	    from the inputs.
+	 */
+	private Double backupShelfLife;
+
+	PrototypeInfo(boolean _inheritsExpiration, Double _shelfLife, Double _backupShelfLife) {
 	    inheritsExpiration = _inheritsExpiration;
 	    shelfLife = (_shelfLife==null)? Double.POSITIVE_INFINITY :_shelfLife;
+	    if (inheritsExpiration) backupShelfLife =  _backupShelfLife;
+	    
 	    //System.out.println("Created PI = " +this);
  	    
 	}
@@ -68,8 +78,12 @@ class Batch extends Entity {
 	    double exp;
 
 	    if (inheritsExpiration) {
-		if (inputs==null) throw new IllegalArgumentException("To make a lot of " + name +", we need to know the inputs' expiration dates");
-		exp =  earliestExpirationDate(inputs);
+		if (inputs==null) {
+		    if (backupShelfLife !=null) exp = now + backupShelfLife;
+		    else throw new IllegalArgumentException("To make a lot of " + name +", we need to know the inputs' expiration dates");
+		} else {
+		    exp =  earliestExpirationDate(inputs);
+		}
 	    } else {
 		exp = now + shelfLife;
 	    }
@@ -103,13 +117,18 @@ class Batch extends Entity {
 
     /** Retrieves the name of the underlying resource */
     String getUnderlyingName() {
-	return getStorage()[0].getName();
+	return getUnderlying().getName();
+    }
+
+    CountableResource getUnderlying() {
+	return (CountableResource)(getStorage()[0]);
     }
     
     /** Creates a "typical" (prototype) batch, rather than an actual batches */
-    private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration, Double _shelfLife) {
+    private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration,
+		  Double _shelfLife, Double _backupShelfLife) {
 	super(  "Batch of " + typicalUnderlying.getName());
-	setInfo( new PrototypeInfo( _inheritsExpiration, _shelfLife));
+	setInfo( new PrototypeInfo( _inheritsExpiration, _shelfLife,  _backupShelfLife));
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created Prototype Batch = " +this);
     }
@@ -136,9 +155,13 @@ class Batch extends Entity {
 	ParaSet para = config.get(uname);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for product named '" + uname +"'");
 
-	return new Batch(typicalUnderlying,
-			 para.getBoolean("inheritsExpiration", false),
-			 para.getDouble("expiration",Double.POSITIVE_INFINITY));
+	Batch b = new Batch(typicalUnderlying,
+			    para.getBoolean("inheritsExpiration", false),
+			    para.getDouble("expiration",Double.POSITIVE_INFINITY),
+			    para.getDouble("backupExpiration", null)			    );
+
+	return b;
+
     }
     
     /** Creates a new batch of underlying resource, with
@@ -203,7 +226,10 @@ class Batch extends Entity {
 	return  mkNewLot( size, now, null);
     }
 
-    /** What is the earliest expiration date among all the batches in the list? */
+    /** What is the earliest expiration date among all the batches in the list? 
+	@return the earliest expiration date, or  Double.POSITIVE_INFINITY if
+	the array of inputs is empty
+     */
     private static double earliestExpirationDate(Vector<Batch> batches) {
 	double d = Double.POSITIVE_INFINITY;
 	for(Batch b: batches) {

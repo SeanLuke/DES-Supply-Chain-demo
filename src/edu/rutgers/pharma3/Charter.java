@@ -43,9 +43,17 @@ class Charter {
 	allCharters.add(this);
     }
 
-    /** This should be called from c.step() */
-    public void print(double value) {
-	w.println( ""+sch.getTime()+ ","+ value); // c.getValue());
+    public void printHeader(String... names) {
+	w.println( "#time,"+		   String.join(",",   names));
+    }
+
+
+    /** This should be called from c.step()
+	@param values The value(s) to print. Can also take double[]  
+    */
+    public void print(double... values) {
+	w.println( ""+sch.getTime()+ ","+
+		   Util.joinNonBlank(",",   values)); // c.getValue());
 	//w.flush();
     }
 

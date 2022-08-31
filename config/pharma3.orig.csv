@@ -10,7 +10,7 @@
 #
 # All product amounts (including batch sizes) are in  doses
 #----------------------------------------------------------------------
-
+default,batch,5e5
 
 #----------------------------------------------------------------------
 #--- Properties of inputs (ingredients we use)
@@ -22,11 +22,16 @@ PackagingMaterial,expiration,+Infinity
 
 
 #----------------------------------------------------------------------
-#--- Properties of products we produce
+#--- Properties of products we produce. Some products have their shelf life
+#--- measured from the manufacturing date (regardless of the expiration
+#--- date of the ingredients); others (packaged drug) inherit the expiration
+#--- date of the input resource.
 #----------------------------------------------------------------------
 Api,expiration,2555
 BulkDrug,expiration,1095
 PackagedDrug,inheritsExpiration,true
+#-- this is used for initial supply, which is not produced internally but appears "ex nihilo"
+PackagedDrug,backupExpiration,1095
 
 
 #-----------------------------------------------------------------------
@@ -34,10 +39,42 @@ PackagedDrug,inheritsExpiration,true
 #-----------------------------------------------------------------------
 EndConsumer,dailyDemand,Triangular,37.688e6,37.690e6,37.692e6
 
-HospitalPool,intervalBetweenOrders,30
 #HospitalPool,orderSize,1.9e3
 #HospitalPool,order,Normal,1146404953,2887
-HospitalPool,order,Triangular,1209021340,1209030000,1209038660
+
+#HospitalPool,intervalBetweenOrders,30
+#HospitalPool,order,Triangular,1209021340,1209030000,1209038660
+HospitalPool,initial,1.146e9
+HospitalPool,batch,5e5
+HospitalPool,reorderPoint,0.75
+HospitalPool,reorderQty,0.25
+
+WholesalerPool,initial,1.146e9
+WholesalerPool,reorderPoint,0.75
+WholesalerPool,reorderQty,0.25
+
+
+UntrustedPool,illicit,Triangular,0,0.02,0.04
+#-----------------------------------------------------------------------
+#-- Links between pools
+#-----------------------------------------------------------------------
+EndConsumerPool,from1,HospitalPool,1.0
+EndConsumerPool,backOrder,HospitalPool,1.0
+
+HospitalPool,from1,WholesalerPool,0.95
+HospitalPool,from2,Distributor,0.05
+HospitalPool,backOrder,WholesalerPool,1.0
+HospitalPool,delay1,Triangular,7,10,15
+HospitalPool,delay2,Triangular,7,10,15
+HospitalPool,delayBackOrder,Triangular,7,10,15
+
+
+WholesalerPool,from1,Distributor,1.0
+WholesalerPool,from2,UntrustedPool,0.0
+WholesalerPool,delay1,Triangular,7,10,15
+WholesalerPool,delay2,Triangular,7,10,15
+
+
 
 PharmaCompany,orderDelay,Uniform,1,1
 
@@ -45,11 +82,10 @@ PharmaCompany,orderDelay,Uniform,1,1
 #--- Properties of supplier units 
 #----------------------------------------------------------------------
 RawMaterialSupplier,batch,5e5
-RawMaterialSupplier,prodDelay,Uniform,0.0031,0.0217
-#RawMaterialSupplier,transDelay,Uniform,0.0031,0.0217
+RawMaterialSupplier,prodDelay,Uniform,0.25/80.602,1.75/80.602
+#RawMaterialSupplier,transDelay,Uniform,0.25/80.602,1.75/80.602
 RawMaterialSupplier,transDelay,Uniform,5,10
-#RawMaterialSupplier,qaDelay,Uniform,0.0031,0.0217
-RawMaterialSupplier,qaDelay,Uniform,0.003,0.02
+RawMaterialSupplier,qaDelay,Uniform,0.25/80.602,1.75/80.602
 RawMaterialSupplier,faulty,0.05
 
 
@@ -120,6 +156,16 @@ CmoPackaging,prodDelay,Uniform,0.1,0.2
 CmoPackaging,qaDelay,Uniform,0.1,0.2
 
 Distributor,batch,5e5
+Distributor,initial,1.146e9
 Distributor,interval,30
-Distributor,shipOutDelay,Uniform,1,2
 
+#Distributor,shipOutDelay,Uniform,1,2
+
+#=======================================================================
+# The new CMO system
+
+CmoTrackA,input,RawMaterialSupplier,0.05
+CmoTrackA,output,DrugProduction
+CmoTrackA,prodDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackA,tranDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackA,qaDelay,Uniform,0.25/3.829,1.75/3.829

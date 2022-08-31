@@ -37,7 +37,7 @@ public class DemoWithUI2 extends GUIState    {
     NetworkPortrayal2D graphPortrayal = new NetworkPortrayal2D();
 
    
-    public DemoWithUI2() { super(new Demo(System.currentTimeMillis())); }    
+    //public DemoWithUI2() { super(new Demo(System.currentTimeMillis())); }    
     public DemoWithUI2(SimState state) { super(state); }
     public Object getSimulationInspectedObject() { return state; }
    
@@ -135,9 +135,18 @@ public class DemoWithUI2 extends GUIState    {
     
     public static void main(String[] argv)   throws IOException, IllegalInputException    {
 
-	argv = Demo.processArgv(argv);
+	Demo.MakesDemo maker = new Demo.MakesDemo(argv);
+	argv = maker.argvStripped;
+
+	long seed = System.currentTimeMillis();
+	Demo demo = (Demo)maker.newInstance(seed, argv);
+	
+        DemoWithUI2 tutorial2 = new DemoWithUI2(demo);
+
+	
+	//	argv = Demo.processArgv(argv);
 		
-        DemoWithUI2 tutorial2 = new DemoWithUI2();
+	//        DemoWithUI2 tutorial2 = new DemoWithUI2();
         sim.display.Console c = new sim.display.Console(tutorial2);
         c.setVisible(true);
     }

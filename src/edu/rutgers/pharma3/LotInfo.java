@@ -64,4 +64,7 @@ public class LotInfo {
 	return now >=  expirationDate;
     }
 
+    /** How many units in this batch are "illicit" */
+    double illicitCount=0;
+    
 }

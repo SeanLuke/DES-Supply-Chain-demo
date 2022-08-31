@@ -52,10 +52,6 @@ public class PharmaCompany extends Sink
     Distributor distro;
     public Distributor getDistributor() {return distro;    }
 
-    EndConsumer endConsumer;
-    public EndConsumer getEndConsumer() {return  endConsumer;    }
-
-    
     /** Splitters are elements used to "split" the output of one unit to two
 	destinations.
      */	
@@ -66,7 +62,7 @@ public class PharmaCompany extends Sink
     //    MSink dongle; 
 
 
-    PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
+    PharmaCompany(SimState state, String name, Config config, Pool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
 	super(state, drugOrderResource);
 	setName(name);
 	ParaSet para = config.get(name);
@@ -134,11 +130,8 @@ public class PharmaCompany extends Sink
 	distro = new Distributor(state, "Distributor", config,  pacDrugBatch);
 	packaging.setQaReceiver(distro);	
 	cmoPackaging.setQaReceiver(distro);	
-	distro.setDeliveryReceiver(hospitalPool);
+	//distro.setDeliveryReceiver(hospitalPool);
 
-	endConsumer = new EndConsumer(state, "EndConsumer", config, pacDrugBatch);
-	endConsumer.setSource(hospitalPool);
-	
     	//dongle = new MSink(state,pacDrug);
 	//packaging.setQaReceiver(dongle);	
 
@@ -150,8 +143,8 @@ public class PharmaCompany extends Sink
 	state.schedule.scheduleRepeating(cmoDrugProduction);
 	state.schedule.scheduleRepeating(cmoPackaging);
 
-	state.schedule.scheduleRepeating(distro);
-	state.schedule.scheduleRepeating(endConsumer);
+	((Demo)state).add(distro);
+
 
 	// the suppliers are scheduled just to enable charting
 	state.schedule.scheduleRepeating(rawMatSupplier );
@@ -207,7 +200,7 @@ public class PharmaCompany extends Sink
 
 	double amt = amount.getAmount();
 
-	distro.addToPlan(amt);
+	//distro.addToPlan(amt);
 	
 	boolean z = super.accept(provider, amount, atLeast, atMost);
 	//double s=getAvailable();
@@ -240,7 +233,6 @@ public class PharmaCompany extends Sink
 	v.add(  cmoPackaging.report());
 	v.add( sep);
 	v.add( 	distro.report());
-	v.add( 	endConsumer.report());
 	//v.add( 	dongle.report());
 	return String.join("\n", v);
     }

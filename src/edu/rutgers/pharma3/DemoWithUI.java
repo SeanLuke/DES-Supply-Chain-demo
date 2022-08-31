@@ -15,9 +15,15 @@ public class DemoWithUI extends GUIState    {
     public Display2D display;
     public JFrame displayFrame;
 
-    public DemoWithUI() { super(new Demo(System.currentTimeMillis())); }
+    //public DemoWithUI() { super(new Demo(System.currentTimeMillis())); }
     
     public DemoWithUI(SimState state) { super(state); }
+
+    //public DemoWithUI(Demo.MakesDemo maker, java.lang.String[] args) {
+    //	long seed = System.currentTimeMillis();
+    //	Demo demo = (Demo)maker.newInstance(seed, args);
+    //	super(demo);
+    //    }
     
     public static String getName() { return "Pharma3 Demo"; }
 
@@ -31,10 +37,17 @@ public class DemoWithUI extends GUIState    {
 
     public static void main(String[] argv)   throws IOException, IllegalInputException    {
 
-	argv = Demo.processArgv(argv);
-		
-        DemoWithUI tutorial2 = new DemoWithUI();
-        sim.display.Console c = new sim.display.Console(tutorial2);
+	Demo.MakesDemo maker = new Demo.MakesDemo(argv);
+	argv = maker.argvStripped;
+
+	long seed = System.currentTimeMillis();
+	Demo demo = (Demo)maker.newInstance(seed, argv);
+	
+        DemoWithUI tutorial2 = new DemoWithUI(demo);
+	//        DemoWithUI tutorial2 = new DemoWithUI();
+
+
+	sim.display.Console c = new sim.display.Console(tutorial2);
         c.setVisible(true);
     }
     
