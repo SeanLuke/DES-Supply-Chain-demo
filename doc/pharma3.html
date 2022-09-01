@@ -27,6 +27,7 @@ mkdir ~/mason
 cd ~/mason
 mkdir work
 cd work
+git init
 git remote add origin https://github.com/vmenkov/DES-Supply-Chain-demo.git
 git pull origin master
 </pre>
@@ -56,6 +57,7 @@ cd git
 git init
 git remote add origin https://github.com/eclab/mason.git
 git pull origin distributed-3.0
+<em>Note: as of August 2022, <tt>git pull origin dev</tt> works better than the above!</em>
 
 cd $m/git/code/contrib/des
 javac -d $m/out -cp $m/lib/mason.20.jar sim/des/*.java

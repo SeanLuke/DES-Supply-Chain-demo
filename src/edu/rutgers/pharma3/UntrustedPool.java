@@ -1,6 +1,7 @@
 package  edu.rutgers.pharma3;
 
 import java.util.*;
+import java.io.*;
 import java.text.*;
 
 import sim.engine.*;
@@ -22,7 +23,10 @@ public class UntrustedPool extends Provider
     final double batchSize;
     final AbstractDistribution illicitDis;
 
-    public UntrustedPool(SimState state, String name, Config config, Batch resource) throws IllegalInputException {
+    protected Charter charter;
+    
+    
+    public UntrustedPool(SimState state, String name, Config config, Batch resource) throws IllegalInputException, IOException {
 	
 	super(state, resource);	
 	prototype = resource;
@@ -33,9 +37,12 @@ public class UntrustedPool extends Provider
 	batchSize = para.getDouble("batch");
 	illicitDis = para.getDistribution("illicit",state.random);
 	if (illicitDis == null)  throw new  IllegalInputException("For element named '" + name +"', the 'illicit' distribution is not specified");
+ 	charter=new Charter(state.schedule, this);
+	charter.printHeader("sentToday");
+
     }
     
-    double everSent = 0, everSentIllicit=0;
+    double everSent = 0, everSentIllicit=0, sentToday=0;
     
     public double feedTo(Receiver r, double amt) {
 	double sent = 0, sentBad=0;
@@ -47,7 +54,9 @@ public class UntrustedPool extends Provider
 	    double bad = Math.round( batchSize * illicitDis.nextDouble());
 	    whiteHole.getLot().illicitCount = bad;
 	    if (!r.accept(this, whiteHole, 0, 0)) throw new AssertionError("Pool "+r.getName()+"  did not accept");
-	    sent += whiteHole.getContentAmount();
+	    double q = whiteHole.getContentAmount();	    
+	    sent += q;
+	    sentToday += q;
 	    sentBad += bad;
 	}	
 
@@ -57,7 +66,10 @@ public class UntrustedPool extends Provider
     }
 
 
-    public void step(SimState state) {}
+    public void step(SimState state) {
+	charter.print(sentToday);
+	sentToday=0;
+    }
 
    public String report() {
 	String s = "[" + getName()+ " has sent " + everSent + " u, including illicit= "+everSentIllicit+" u]";

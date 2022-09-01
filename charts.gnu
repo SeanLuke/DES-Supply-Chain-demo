@@ -16,7 +16,8 @@ set term qt 1
 set title 'Wholesaler Pool'
 plot 'WholesalerPool.csv'  using ($1):($2)  with lines title 'WP.Stock', \
 'WholesalerPool.csv'  using ($1):($3)  with lines title 'WP.Ordered', \
-'WholesalerPool.csv'  using  ($1):($4)  with lines title 'WP.Received'
+'WholesalerPool.csv'  using  ($1):($4)  with lines title 'WP.Received', \
+'UntrustedPool.csv'  using  ($1):($2)  with lines title 'Sent to WP from Untrusted Pool'
 set term png large
 set out 'WholesalerPool.png'
 replot
