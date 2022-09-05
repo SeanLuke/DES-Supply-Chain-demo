@@ -32,7 +32,7 @@ public class Splitter extends If {
 
     public Splitter(SimState state, Entity typical)        {
         super(state, typical);
-	setName("Split");
+	setName("Splitter of " + typical.getName());
     }
                   
     public boolean addReceiver(Receiver receiver) {
@@ -45,11 +45,14 @@ public class Splitter extends If {
 	if (fraction < 0) throw new IllegalArgumentException("Fractions must be non-negatitve; given " + fraction);
 	data.put(receiver, new RData(fraction));
 	setName("Splitter("+showRatios()+")");
+	//System.out.println("Add; Report for " + getName() + "\n" + report());
+			  
 	return super.addReceiver(receiver);
     }
 
     public boolean removeReceiver(Receiver receiver)        {
 	data.remove(receiver);
+	//System.out.println("Remove; Report for " + getName() + "\n" + report());
 	return super.removeReceiver(receiver);
     }
 
@@ -61,6 +64,10 @@ public class Splitter extends If {
     public void selectedOfferAccepted(Receiver receiver, Resource originalResource, Resource revisedResource) {
 	cnt2++;
 	RData d = data.get(receiver);
+
+	//System.out.println("Select; Report for " + getName() + "\n" + report());
+
+	
 	if (d==null) throw new  IllegalArgumentException("Unknown receiver: " + receiver);
 	double givenAmt=0;
 
@@ -94,13 +101,16 @@ public class Splitter extends If {
 	cnt1 ++;
 	if (receivers.size()==0) throw new IllegalArgumentException("No receivers!");
 	
-	int sumF=0;
+	double sumF=0;
 	for(Receiver r: receivers) {
 	    RData d = data.get(r);
 	    if (d==null) throw new IllegalArgumentException("Unknown receiver: " + r);	   
 	    sumF += d.fraction;
 	}
-	if (sumF == 0) throw new IllegalArgumentException("All fractions are zero!");
+	if (sumF == 0) {
+	    //System.out.println(report());
+	    throw new IllegalArgumentException(toString()+": All fractions are zero!");
+	}
 	
 
 	// How much "stuff" are we offering?
@@ -129,7 +139,7 @@ public class Splitter extends If {
         
     public String toString()
         {
-        return "Splitter@" + System.identityHashCode(this) + "(" + (getName() == null ? "" : getName()) + typical.getName() + ", " + typical + ")";
+        return "Splitter@" + System.identityHashCode(this) + "(" + (getName() == null ? "" : getName()) + typical.getName() + ")";
         }
 
     /** Does nothing.  There's no reason to step a Splitter. */
@@ -160,7 +170,7 @@ public class Splitter extends If {
 	Vector<String> v=new Vector<>();
 	for(Receiver r: data.keySet()) {
 	    RData d = data.get(r);
-	    v.add("To " + r.getName() + ", " +Util.ifmt(d.given));
+	    v.add("To " + r.getName() + " [f="+d.fraction+"], " +Util.ifmt(d.given));
 	}
 	String s = "Split ("+showRatios()+") "+Util.ifmt(totalAccepted)+" units: ";
 

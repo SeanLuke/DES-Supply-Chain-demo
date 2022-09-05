@@ -47,7 +47,9 @@ public class Demo extends SimState {
 
     /** Used to look up supply chain elements by name */
     private HashMap<String,Steppable> addedNodes = new HashMap<>();
-
+    //private HashMap<String,Object> addedNodes = new HashMap<>();
+    Steppable lookupNode(String name) { return addedNodes.get(name); }
+    
     private int ordering = 0;
     void add(Steppable z) {
 	if (z instanceof Named) {
@@ -75,7 +77,7 @@ public class Demo extends SimState {
 	return pharmaCompany.listMacros(); 
     }
 
-    public String version = "2.003";
+    public String version = "2.004";
 
     EndConsumer endConsumer;
     public EndConsumer getEndConsumer() {return  endConsumer;    }
@@ -132,7 +134,8 @@ public class Demo extends SimState {
 	    ex.printStackTrace(System.err);
 	    System.exit(1);
 	}
-	final int CENSUS_INTERVAL=60;
+	//	final int CENSUS_INTERVAL=60;
+	final int CENSUS_INTERVAL=5;
 	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
 	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
 	doReport("Start");
@@ -178,6 +181,8 @@ public class Demo extends SimState {
 
 	v.add(endConsumer.report());
 	v.add(hospitalPool.report());
+	v.add(wholesalerPool.report());
+	v.add(untrustedPool.report());
 	v.add(pharmaCompany.report());
 
 	return String.join("\n", v);

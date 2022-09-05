@@ -33,7 +33,7 @@ import edu.rutgers.pharma3.Disruptions.Disruption;
 
   */
 public class Production extends sim.des.Macro
-    implements Reporting,  Named
+    implements Reporting,  Named, SplitManager.HasQA
 {
 
     /** A Queue for storing an input ingredient, with a facility
@@ -186,15 +186,19 @@ public class Production extends sim.des.Macro
 	stages of the chain. These Queues are not scheduled; instead, Production.step() pulls
 	stuff from them (by calling Queue.provide(..) when needed. 
     */
-    InputStore[] inputStore;
+    private InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
 
     private Charter charter;
  
     
-    ProdDelay prodDelay;
+    private ProdDelay prodDelay;
+    /** Exists only in CMO tracks */
+    private SimpleDelay transDelay = null;
     /** Models the delay taken by the QA testing at the output	*/
-    QaDelay qaDelay;
+    private QaDelay qaDelay;
+    
+    private final ThrottleQueue needProd, needTrans,	needQa;
 
 
     public ProdDelay getProdDelay() { return prodDelay; }
@@ -206,8 +210,10 @@ public class Production extends sim.des.Macro
     /** How big is the output batch? */
     final double outBatchSize;
 
-    /** The maximum number of batches that can be started each day */
-    final int batchesPerDay;
+    /** The maximum number of batches that can be started each day. If null, there is no 
+	limit (other then the input resources)
+     */
+    final Long batchesPerDay;
 
     /** What is the "entry point" for input No. j? */
     Receiver getEntrance(int j) {
@@ -246,19 +252,37 @@ public class Production extends sim.des.Macro
 	if (inBatchSizes.length!=inputStore.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inputStore.length + " resources ("+Util.joinNonBlank(";",inputStore)+"), but " + inBatchSizes.length + " input batch sizes");
 
 	outBatchSize = para.getDouble("batch");
-	batchesPerDay = (int)para.getLong("batchesPerDay");
+
+	
+	batchesPerDay = para.getLong("batchesPerDay", null);
+
+	double cap = (outResource instanceof Batch) ? 1:    outBatchSize;	
 
 	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
 	if (this instanceof Macro)  addProvider(qaDelay, false);
- 	
-	prodDelay = new ProdDelay(state,outResource);
-	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));				       
-	prodDelay.addReceiver(qaDelay);
+	needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random)); 
 
+	if (para.get("transDelay")!=null) {
+	    transDelay = new SimpleDelay(state, outResource);
+	    transDelay.setName("TransDelay of " + outResource.getName());
+	    needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random)); 
+	    transDelay.addReceiver(needQa);
+	} else {
+	    transDelay = null;
+	    needTrans = null;
+	}
+	
+	prodDelay = new ProdDelay(state,outResource);
+	prodDelay.addReceiver(needTrans!=null? needTrans: needQa);
+	needProd = new ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
+	
 	if (qaDelay.reworkProb >0) {
-	    qaDelay.setRework( prodDelay);
+	    qaDelay.setRework( needProd);
 	}
 
+	sm = new SplitManager(this, outResource, qaDelay);
+
+	
 	charter=new Charter(state.schedule, this);
  		 
     }
@@ -284,21 +308,20 @@ public class Production extends sim.des.Macro
 	x += dx;
 	
 	macroField.add(prodDelay, x, y);
+	if (transDelay!=null) {
+	    macroField.add(transDelay, x +=dx, y+=dy);
+	}
 	macroField.add(qaDelay, x +=dx, y+=dy);
-        macroField.connectAll();
+	if (sm.outputSplitter!=null) {
+	    macroField.add(sm.outputSplitter, x += dx, y += dy);
+	}
+
+
+	macroField.connectAll();
 	setField(macroField);
 
    }
     
-    /** Sets the destination for the product that has passed the QA. This
-	should be called after the constructor has returned, and before
-	the simulation starts.
-       @param _rcv The place to which good stuff goes after QA
-     */
-    void setQaReceiver(Receiver _rcv) {
-	qaDelay.addReceiver( _rcv);
-    }
-
     /** Do we have enough input materials of each kind to make a batch? 
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
      */
@@ -388,7 +411,7 @@ public class Production extends sim.des.Macro
 	    }
 	    
 
-	    for(int nb=0; nb<batchesPerDay && hasEnoughInputs(); nb++) {
+	    for(int nb=0; (batchesPerDay==null || nb<batchesPerDay) && hasEnoughInputs(); nb++) {
 
 		Vector<Batch> usedBatches = new Vector<>();
 		
@@ -413,10 +436,11 @@ public class Production extends sim.des.Macro
 		    
 		}
 	    
-		if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+		if (Demo.verbose)
+		    System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 		Batch onTheTruck = outResource.mkNewLot(outBatchSize, now, usedBatches);
-		Provider provider = null;  // why do we need it?
-		prodDelay.accept(provider, onTheTruck, 1, 1);
+		Provider provider = null;  // why do we need it?		
+		needProd.accept(provider, onTheTruck, 1, 1);
 		batchesStarted++;
 		everStarted += outBatchSize;
 	    }
@@ -463,21 +487,27 @@ public class Production extends sim.des.Macro
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
 	    "Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 	if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
-	s += " = ("+
-	    "in prod=" +   prodDelay.hasBatches() +
-	    " ba; in QA= " +  qaDelay.hasBatches() +
-	    " ba; discarded="+(long)qaDelay.badResource  +
-	    " ("+qaDelay.badBatches+" ba)";
-	if (qaDelay.reworkProb>0) s+= "; rework="+(long)qaDelay.reworkResource +
-				      " ("+qaDelay.reworkBatches+" ba)";
-
-	s += "; good=" + (long)qaDelay.releasedGoodResource+" ("+qaDelay.releasedBatches+" ba))]";
+	s += " = (in prod=" +   needProd.hasBatches() +	    " ba;";
+	if (needTrans!=null) s +="  in trans=" +   needTrans.hasBatches() +")";
+	s +="  in QA=" +   needQa.hasBatches() +")";
+	    
 	s += "\n" + prodDelay.report();
+
+
+	if (sm.outputSplitter !=null) 	s += "\n" + sm.outputSplitter.report();
+	
 	return s;
 
     }
-  
 
+    //--------- Managing the downstream operations
+
+    SplitManager sm;
+    
+    public void setQaReceiver(Receiver rcv, double fraction) {  
+	sm.setQaReceiver(rcv, fraction);
+    }
+    
     //String name;
     //    public String getName() { return name; }
     //    public void setName(String name) { this.name = name; }    

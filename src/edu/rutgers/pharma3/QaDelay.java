@@ -16,7 +16,10 @@ import  edu.rutgers.util.*;
     before it's offered to the downstream consumer. Optionally, it
     can also direct some portion of the input to the "rework" receiver.
  */
-public class QaDelay extends Delay {
+public class QaDelay extends //Delay
+SimpleDelay
+    implements Reporting, Reporting.HasBatches
+{
 
     /** If non-null, we reschedule this object at the end of each 
 	offerReceiver. This can be used to get the QaDelay automatically
@@ -63,7 +66,7 @@ public class QaDelay extends Delay {
     }
  
   
-
+    final Resource prototype;
 
     
     /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
@@ -71,6 +74,7 @@ public class QaDelay extends Delay {
      */
     public QaDelay(SimState state, Resource typicalBatch,  double _discardProb, double _reworkProb, AbstractDistribution _faultyPortionDistribution) {
 	super(state, typicalBatch);
+	prototype = typicalBatch;
 	setName("QaDelay("+typicalBatch.getName()+")");
 	setOfferPolicy(Provider.OFFER_POLICY_FORWARD);
 	discardProb = _discardProb;
@@ -90,18 +94,24 @@ public class QaDelay extends Delay {
 	// a distribution....
 	double faultyProb=0;	
 	AbstractDistribution faultyPortionDistribution=null;
-	try {
-	    faultyPortionDistribution = 
-		para.getDistribution("faulty",state.random);
-	} catch(IllegalInputException ex) {
+
+	if (para.get("faulty")==null) {
+	    throw  new IllegalInputException("Found no value for  " + para.name +".faulty");
+	} else if (para.get("faulty").size()==1) {
 	    faultyProb = para.getDouble("faulty");
+	} else {
+	    faultyPortionDistribution = para.getDistribution("faulty",state.random);
 	}
 	double reworkProb = para.getDouble("rework", 0.0);	    
 
 	if (faultyPortionDistribution !=null && faultyProb+reworkProb!=0) throw new IllegalInputException("For " + para.name +", specify either faulty portion distribution or faulty+rework probabilities, but not both!");    
     
 	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution);			      
-	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	//qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	//Double delayTime = para.getDouble("qaDelay", null);
+	//if (delayTime==null) throw new IllegalInputException("Missing value for " + para.name +".qaDelay in config file!");
+	//System.out.println("Creating QaDelay." + para.name + "(" + delayTime+")");
+	//qaDelay.setDelayTime(delayTime);
 	return qaDelay;
     }
 
@@ -119,7 +129,8 @@ public class QaDelay extends Delay {
     
     /** This is a wrapper over the standard Provider.offerReceiver(),
 	which reduces the amount of available stuff (resource) we
-	are to offer to the receiver. The reduction is due to 
+	are to offer to the receiver. The reduction can be due to the QA inspection
+	removing some poor quality items, or due to 
 	to damage by mice and weevils, or to other adverse effects.	
 
 	//FIXME: this method has the assumption that the
@@ -132,7 +143,7 @@ public class QaDelay extends Delay {
     */
     protected boolean offerReceiver(Receiver receiver, double atMost) {
 
-	if (Demo.verbose) System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+")");
+	if (Demo.verbose)   System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+")");
 	
 	boolean z;
 
@@ -157,15 +168,14 @@ public class QaDelay extends Delay {
 		cr.decrease(faulty);
 		z = super.offerReceiver(receiver, atMost-faulty);
 	    } else {
-		throw new IllegalArgumentException("pharma3.QaDelay with faultyPortionDistribution only works with fungibles, because we don't support variable-size batches!");
-		/*
+		// throw new IllegalArgumentException("pharma3.QaDelay with faultyPortionDistribution only works with fungibles, because we don't support variable-size batches!");
+		
 		Batch e = (Batch)entities.getFirst();
 		amt = e.getContentAmount();
 		faulty = Math.round( amt * r);
 		e.getContent().decrease(faulty);
 		z = super.offerReceiver(receiver, e);
-		*/
-		// FIXME: do I need to manually remove e from entities?
+		entities.remove(e);		// FIXME: do I need to manually remove e from entities?
 	    }
 
 
@@ -223,6 +233,22 @@ public class QaDelay extends Delay {
 		releasedGoodResource += amt;
 		releasedBatches++;
 	    }
+
+	    // System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+"): reworkBatches="+reworkBatches+", badBatches=" + badBatches+", releasedBatches=" + releasedBatches);
+
+	    //throw new AssertionError("Here we go");
+	    /*
+Exception in thread "MASON 0" java.lang.AssertionError: Here we go
+        at edu.rutgers.pharma3.QaDelay.offerReceiver(QaDelay.java:235)
+        at sim.des.Provider.offerReceivers(Provider.java:494)
+        at sim.des.SimpleDelay.offerReceivers(SimpleDelay.java:242)
+        at sim.des.Provider.offerReceivers(Provider.java:476)
+        at sim.des.SimpleDelay.step(SimpleDelay.java:237)
+        at sim.engine.Schedule.step(Schedule.java:388)
+        at sim.engine.SimState$2.run(SimState.java:637)
+        at java.base/java.lang.Thread.run(Thread.java:829)
+	    */
+	    
 	}
 
 	if (whomToWakeUp != null) {
@@ -247,6 +273,18 @@ public class QaDelay extends Delay {
 	String s = "" + (long)getDelayed();
 	if (getAvailable()>0) s += "+"+(long)getAvailable();
 	return s;
+    }
+
+    public String report() {
+
+	String s = "(in QA= " +  hasBatches() +	" ba; discarded="+(long)badResource  +
+	" ("+badBatches+" ba)";
+	if (reworkProb>0) s+= "; rework="+(long)reworkResource +
+				      " ("+reworkBatches+" ba)";
+
+	s += "; good=" + (long)releasedGoodResource+" ("+releasedBatches+" ba))";
+	return s;
+	
     }
 
     

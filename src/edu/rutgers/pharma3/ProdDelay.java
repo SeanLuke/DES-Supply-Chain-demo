@@ -20,7 +20,8 @@ import edu.rutgers.pharma3.Disruptions.Disruption;
     via the disruption schedule.
 
 */
-public class ProdDelay extends Delay implements Reporting {
+public class ProdDelay extends SimpleDelay // Delay
+    implements Reporting, Reporting.HasBatches {
     /** Total batches started */
     int batchCnt=0;
     public int getBatchCnt() { return batchCnt; }
@@ -32,6 +33,7 @@ public class ProdDelay extends Delay implements Reporting {
      */
     ProdDelay(SimState state,  Resource resource) {
 	super(state, resource);
+	setName("ProdDelay of " + resource.getName());
     }
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
 	double amt = 
@@ -40,7 +42,16 @@ public class ProdDelay extends Delay implements Reporting {
 	    r.getAmount();
 	if (r instanceof Batch) 	batchCnt++;
 	totalStarted+=amt;
-	return super.accept( provider, r, atLeast, atMost);
+
+	double t = state.schedule.getTime();
+
+	//System.out.println("At " + t +", "+getName() + " accepting " + r+", had=" + hasBatches());
+
+	boolean z = super.accept( provider, r, atLeast, atMost);
+
+
+	//System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
+	return z;
     }
     
     public String hasBatches() {
@@ -65,10 +76,15 @@ public class ProdDelay extends Delay implements Reporting {
     protected boolean offerReceiver(Receiver receiver, Entity entity) {
 	double t = state.schedule.getTime();
 
+
+	
 	Batch b  = (Batch)entity;
 	b.getLot().increaseInFaultRate = faultRateIncrease.getValue(t);
+	boolean z=super.offerReceiver( receiver, entity);
 
-	return super.offerReceiver( receiver, entity);
+	//System.out.println("At " + t +", "+getName() + " offering to " + receiver.getName()+", result=" + z +"; receiver.ava=" + getAvailable());
+
+	return z; 
     }    
 	    
 }

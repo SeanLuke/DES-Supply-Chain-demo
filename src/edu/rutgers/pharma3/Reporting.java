@@ -35,5 +35,8 @@ interface Reporting {
   
     }
 
+    static interface HasBatches {
+	public String hasBatches();
+    }
     
 }

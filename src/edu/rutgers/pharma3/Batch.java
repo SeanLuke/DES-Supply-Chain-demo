@@ -127,7 +127,7 @@ class Batch extends Entity {
     /** Creates a "typical" (prototype) batch, rather than an actual batches */
     private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration,
 		  Double _shelfLife, Double _backupShelfLife) {
-	super(  "Batch of " + typicalUnderlying.getName());
+	super(  "BatchOf" + typicalUnderlying.getName());
 	setInfo( new PrototypeInfo( _inheritsExpiration, _shelfLife,  _backupShelfLife));
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created Prototype Batch = " +this);

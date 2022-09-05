@@ -111,15 +111,21 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     }
     
     public long getLong(String key) throws IllegalInputException {
+	Long x = getLong(key, null);
+	if (x==null)  throwII(key, "Missing");
+	return x.longValue();
+	    
+    }
+    public Long getLong(String key, Long defVal) throws IllegalInputException {
 	Vector<String> v = get(key);
-	if (v==null)  throwII(key, "Missing");
+	if (v==null)  return defVal;
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
 	try {
-	    return Long.parseLong(s);
+	    return new Long(s);
 	} catch(Exception ex) {
 	    throwII(key, "Cannot parse as a long int: " + s);
-	    return 0; // never reached
+	    return null; // never reached
 	}
 	
     }

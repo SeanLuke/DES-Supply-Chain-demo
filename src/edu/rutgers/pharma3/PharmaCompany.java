@@ -43,8 +43,10 @@ public class PharmaCompany extends Sink
 
     /** Production units wihin our supply chain */
     Production apiProduction, drugProduction, packaging;
-    Production cmoApiProduction, cmoDrugProduction, cmoPackaging;
+    //Production cmoApiProduction, cmoDrugProduction, cmoPackaging;
+    Production[] cmoTrack=new Production[4];
 
+    
     public Production getApiProduction() {return apiProduction;    }
     public Production getDrugProduction() {	return drugProduction;    }
     public Production getPackaging() {	return packaging;    }
@@ -55,16 +57,18 @@ public class PharmaCompany extends Sink
     /** Splitters are elements used to "split" the output of one unit to two
 	destinations.
      */	
-    Splitter rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter;
+    //    Splitter rawMatSplitter, apiSplitter, drugSplitter, cmoApiSplitter;
 
     /** This was used during development instead of not-yet-built
 	parts of the supply chain model */
     //    MSink dongle; 
 
-
+    final double fudgeFactor;
+    
     PharmaCompany(SimState state, String name, Config config, Pool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
 	super(state, drugOrderResource);
 	setName(name);
+
 	ParaSet para = config.get(name);
 
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
@@ -74,6 +78,11 @@ public class PharmaCompany extends Sink
 	//	orderDelay.addReceiver(this);
 
 
+	fudgeFactor = para.getDouble("fudgeFactor", 1.0);
+	System.out.println(name + ": RM over-ordering fudgeFactor=" + fudgeFactor);
+	
+
+	
 	// Raw material comes in lots, as it has expiration dates
 	rawMatSupplier = MaterialSupplier.mkMaterialSupplier(state, "RawMaterialSupplier", config, rawMaterial, true);
 	Batch rawMatBatch = (Batch)rawMatSupplier.getPrototype();
@@ -91,68 +100,107 @@ public class PharmaCompany extends Sink
 
 	apiProduction = new Production(state, "ApiProduction",  config,
 				       new Batch[] {rawMatBatch}, apiBatch);
-	cmoApiProduction = new Production(state, "CmoApiProduction",  config,
-				       new Batch[] {rawMatBatch}, apiBatch);
+	//cmoApiProduction = new Production(state, "CmoApiProduction",  config,
+	//				       new Batch[] {rawMatBatch}, apiBatch);
 
 	drugProduction = new Production(state, "DrugProduction",  config,
 					new Batch[]{ apiBatch, excipientBatch}, bulkDrugBatch);
-	cmoDrugProduction = new Production(state, "CmoDrugProduction",  config,
-					new Batch[]{ apiBatch}, bulkDrugBatch);
+	//	cmoDrugProduction = new Production(state, "CmoDrugProduction",  config,
+	//					new Batch[]{ apiBatch}, bulkDrugBatch);
 
 	packaging = new Production(state, "Packaging",  config,
 				   new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
-	cmoPackaging = new Production(state, "CmoPackaging",  config,
-				      new Resource[] {bulkDrugBatch}, pacDrugBatch);
+	//	cmoPackaging = new Production(state, "CmoPackaging",  config,
+	//				      new Resource[] {bulkDrugBatch}, pacDrugBatch);
 
-	rawMatSupplier.setQaReceiver(rawMatSplitter = new Splitter( state, rawMatBatch));	
-	rawMatSplitter.addReceiver(apiProduction.getEntrance(0), 90);
-	rawMatSplitter.addReceiver(cmoApiProduction.getEntrance(0), 10);
+	rawMatSupplier.sm.setQaReceiver(apiProduction.getEntrance(0), 0.90);
+	//rawMatSupplier.sm.setQaReceiver(cmoApiProduction.getEntrance(0), 0.10);
+	       
+	apiProduction.sm.setQaReceiver(drugProduction.getEntrance(0), 0.70);
+	//apiProduction.sm.setQaReceiver(cmoDrugProduction.getEntrance(0), 0.30);
 
-		
-	apiProduction.setQaReceiver(apiSplitter = new Splitter( state, apiBatch));	
-	apiSplitter.addReceiver(drugProduction.getEntrance(0), 70);
-	apiSplitter.addReceiver(cmoDrugProduction.getEntrance(0), 30);
-
-	cmoApiProduction.setQaReceiver(cmoApiSplitter = new Splitter( state, apiBatch));	
-	cmoApiSplitter.addReceiver(cmoDrugProduction.getEntrance(0), 50);
-	cmoApiSplitter.addReceiver(drugProduction.getEntrance(0), 50);
 	
-	excipientFacility.setQaReceiver(drugProduction.getEntrance(1));
+	//cmoApiProduction.sm.setQaReceiver(cmoDrugProduction.getEntrance(0), 0.50);
+	//cmoApiProduction.sm.setQaReceiver(drugProduction.getEntrance(0), 0.50);
 	
-       	drugProduction.setQaReceiver(drugSplitter = new Splitter( state, bulkDrugBatch));	
-	drugSplitter.addReceiver( packaging.getEntrance(0), 50);
-	drugSplitter.addReceiver( cmoPackaging.getEntrance(0), 50);
+	excipientFacility.sm.setQaReceiver(drugProduction.getEntrance(1));
+	
+   	drugProduction.sm.setQaReceiver(packaging.getEntrance(0), 0.50);
+	//  	drugProduction.sm.setQaReceiver(cmoPackaging.getEntrance(0), 0.50);
 
-	cmoDrugProduction.setQaReceiver(cmoPackaging.getEntrance(0));
+	//cmoDrugProduction.sm.setQaReceiver(cmoPackaging.getEntrance(0));
 	
-	pacMatFacility.setQaReceiver(packaging.getEntrance(1));
+	pacMatFacility.sm.setQaReceiver(packaging.getEntrance(1));
 
 	distro = new Distributor(state, "Distributor", config,  pacDrugBatch);
-	packaging.setQaReceiver(distro);	
-	cmoPackaging.setQaReceiver(distro);	
-	//distro.setDeliveryReceiver(hospitalPool);
+	packaging.sm.setQaReceiver(distro);	
+	//cmoPackaging.sm.setQaReceiver(distro);	
 
-    	//dongle = new MSink(state,pacDrug);
-	//packaging.setQaReceiver(dongle);	
-
-	state.schedule.scheduleRepeating(apiProduction);
-	state.schedule.scheduleRepeating(drugProduction);
+	((Demo)state).add(apiProduction);
+	((Demo)state).add(drugProduction);
 	state.schedule.scheduleRepeating(packaging);
 
-	state.schedule.scheduleRepeating(cmoApiProduction);
-	state.schedule.scheduleRepeating(cmoDrugProduction);
-	state.schedule.scheduleRepeating(cmoPackaging);
+	//state.schedule.scheduleRepeating(cmoApiProduction);
+	//	state.schedule.scheduleRepeating(cmoDrugProduction);
+	//	state.schedule.scheduleRepeating(cmoPackaging);
 
 	((Demo)state).add(distro);
 
 
 	// the suppliers are scheduled just to enable charting
-	state.schedule.scheduleRepeating(rawMatSupplier );
+	((Demo)state).add(rawMatSupplier );
 	state.schedule.scheduleRepeating(pacMatFacility);
 	state.schedule.scheduleRepeating(excipientFacility);
+
+	setupCmoTracks((Demo)state,  config);
 	
     }
 
+    /** Sets up the 4 CMO Tracks, based on the data in the config file */
+    private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputException, IOException {
+	for(int j=0; j<cmoTrack.length; j++) {
+	    char c = (char)('A' +j);
+	    String name = "CmoTrack" + c;
+	    ParaSet para = config.get(name);
+
+	    //CmoTrackA,input,RawMaterialSupplier,0.05
+	    
+	    Vector<String> v = para.get("input");
+	    if (v.size()!=2) throw new IllegalArgumentException("Invalid data for " +name+ ".input");
+	    Steppable node = demo.lookupNode(v.get(0));
+	    if (node==null) throw new IllegalArgumentException("Invalid input name for " +name+ ".input: " + v.get(0));
+	    SplitManager.HasQA inputNode = (SplitManager.HasQA) node;
+	    double fraction = Double.parseDouble(v.get(1));
+	    QaDelay inputQaDelay = inputNode.getQaDelay();
+
+	    // CmoTrackA,output,DrugProduction
+	    v = para.get("output");
+	    if (v.size()!=1) throw new IllegalArgumentException("Invalid data for " +name+ ".output");
+	    Steppable node2 = demo.lookupNode(v.get(0));
+	    if (node2==null) throw new IllegalArgumentException("Invalid output name for " +name+ ".input: " + v.get(0));
+	    Receiver rcv = null;
+	    Batch outResource;
+	    if (node2 instanceof Pool) {
+		rcv = (Pool)node2;
+		outResource = ((Pool)rcv).prototype;
+	    } else if (node2 instanceof Production) {
+		// just assuming input buffer 0
+		rcv = ((Production)node2).getEntrance(0);
+		outResource = (Batch)((Production)node2).inResources[0];
+	    } else  throw new IllegalArgumentException("Cannot identify the output unit as given for " +name+ ".input: " + v.get(0));
+	    
+		    
+	    cmoTrack[j] = new Production(demo, name,  config,
+					 new Resource[] {inputQaDelay.prototype},
+					 outResource);
+
+	    inputNode.setQaReceiver(cmoTrack[j].getEntrance(0), fraction);
+	    cmoTrack[j].setQaReceiver(rcv, 1.0);
+	    demo.schedule.scheduleRepeating(cmoTrack[j]);
+		
+	}
+    }
+    
 
     // (x,y)
     void depict(DES2D field) {
@@ -161,30 +209,33 @@ public class PharmaCompany extends Sink
 	excipientFacility.depict(field,  20, 220);
 	pacMatFacility.depict(field,  20, 420);
 
-	field.add(rawMatSplitter, 200, 50);
+	//field.add(rawMatSplitter, 200, 50);
 
 
 	
 	apiProduction.depict(field, 400, 20);
  
-	field.add(apiSplitter, 500, 50);
+	//field.add(apiSplitter, 500, 50);
 
 	drugProduction.depict(field, 600, 120);
 	packaging.depict(field, 800, 220);
 
-	field.add(drugSplitter, 700, 150);
+	//field.add(drugSplitter, 700, 150);
 
-
+	for(int j=0; j<cmoTrack.length; j++) {
+	    cmoTrack[j].depict(field, 400, 100+50*j);
+	}
 	
-	cmoApiProduction.depict(field, 400, 350);
-	field.add(cmoApiSplitter, 500, 380);
+	//	cmoApiProduction.depict(field, 400, 350);
+	//field.add(cmoApiSplitter, 500, 380);
 	
-	cmoDrugProduction.depict(field, 600, 450);
-	cmoPackaging.depict(field, 800, 550);
+	//cmoDrugProduction.depict(field, 600, 450);
+	//cmoPackaging.depict(field, 800, 550);
 
 	field.add(distro, 900, 300);
 
     }
+
 
     /** Overriding accept(), so that we can process the receipt of an order.
 	FIXME: the assumption is made that to produce 1 unit of drug, one needs 1 unit of each 
@@ -206,8 +257,10 @@ public class PharmaCompany extends Sink
 	//double s=getAvailable();
 	//msg += "; stock changed from " + s0 + " to " +s;	
 	if (Demo.verbose) System.out.println(msg);
+
+
 	
-	rawMatSupplier.receiveOrder(amt);
+	rawMatSupplier.receiveOrder(amt * fudgeFactor);
 	pacMatFacility.receiveOrder(amt);
 	excipientFacility.receiveOrder(amt);
  
@@ -220,7 +273,7 @@ public class PharmaCompany extends Sink
 	Vector<String> v= new Vector<>();
 	v.add( "---- Suppliers: -------------------------------");
 	v.add( 	rawMatSupplier.report());
-	v.add( 	rawMatSplitter.report());
+	//v.add( 	rawMatSplitter.report());
 	v.add( 	pacMatFacility.report());
 	v.add( 	excipientFacility.report());
 	v.add( "---- FC: --------------------------------------");
@@ -228,9 +281,13 @@ public class PharmaCompany extends Sink
 	v.add( 	drugProduction.report());
 	v.add(  packaging.report());
 	v.add( "---- CMO: -------------------------------------");
-	v.add( 	cmoApiProduction.report());
-	v.add( 	cmoDrugProduction.report());
-	v.add(  cmoPackaging.report());
+	for(int j=0; j<cmoTrack.length; j++) {
+	    v.add( cmoTrack[j].report());
+	}
+
+	//v.add( 	cmoApiProduction.report());
+	//v.add( 	cmoDrugProduction.report());
+	//v.add(  cmoPackaging.report());
 	v.add( sep);
 	v.add( 	distro.report());
 	//v.add( 	dongle.report());
@@ -246,9 +303,9 @@ public class PharmaCompany extends Sink
 	    apiProduction,
 	    drugProduction,
 	    packaging,
-	    cmoApiProduction,
-	    cmoDrugProduction,
-	    cmoPackaging
+	    //cmoApiProduction,
+	    //cmoDrugProduction,
+	    //cmoPackaging
 	};
     }
     

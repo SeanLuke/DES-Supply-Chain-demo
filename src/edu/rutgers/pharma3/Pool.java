@@ -97,17 +97,17 @@ public class Pool extends sim.des.Queue
 	/** Where does this supplier send stuff to? This can be either
 	    this Pool itself (for immediate shipping), or a Delay
 	    feeding into this Pool.
-	    @param dis The delay distribution, or null for immediate delivery
+	    @param delayDistr The delay distribution, or null for immediate delivery
 	*/
 	final Receiver entryPoint;
-	Supplier(BatchProvider _src, double _fraction,	    AbstractDistribution dis) {
+	Supplier(BatchProvider _src, double _fraction,	    AbstractDistribution delayDistr) {
 	    src = _src;
 	    fraction = _fraction;
 
 	    Receiver rcv = Pool.this;
-	    if (dis!=null) {
+	    if (delayDistr!=null) {
 		Delay delay = new Delay(state,prototype);
-		delay.setDelayDistribution(dis);
+		delay.setDelayDistribution(delayDistr);
 		delay.addReceiver(rcv);
 		rcv = delay;
 	    }
@@ -324,7 +324,7 @@ HospitalPool,backOrder,WholesalerPool
 	if (!hasReorderPolicy) return;
     	double t = state.schedule.getTime();
 	double lms = getLastMonthDemand();
-	System.out.println("As of " + t+", " + getName() + " has sent " + lms + " units over the last month");
+	if (Demo.verbose) System.out.println("As of " + t+", " + getName() + " has sent " + lms + " units over the last month");
 	double have =  getContentAmount() + onOrder;
 	if (have > reorderPoint * lms) return;
 	double needed = Math.round(reorderQty * lms);
@@ -357,7 +357,7 @@ HospitalPool,backOrder,WholesalerPool
     
 
     public String report() {	
-	String s = "[" + getName()+ " has received " + everReceived + " u, has sent "+everSent+" u";
+	String s = "[" + getName()+ " has received " + everReceived + " u (including initial="+initial+" u), has sent "+everSent+" u";
 
 	if (expiredProductSink.everConsumed >0) {	
 	    s += ". Discarded as expired=" + expiredProductSink.everConsumedBatches +  " ba";

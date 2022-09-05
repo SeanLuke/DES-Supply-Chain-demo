@@ -33,31 +33,25 @@ object to which this supplier should push QA'ed material.
 
  */
 public class MaterialSupplier extends Macro
-    implements     Named,	    Reporting
+    implements     Named,	    Reporting, SplitManager.HasQA
 {
 
     private double outstandingOrderAmount=0;
     private double everOrdered=0;
-    //private double badResource = 0, releasedGoodResource=0;
-
-    //    private long everOrderedBatches=0;
-    //private long badResourceBatches = 0, releasedGoodResourceBatches=0;
     private long startedProdBatches = 0;
     
     
     public double getOutstandingOrderAmount() { return outstandingOrderAmount; }
     public double getEverOrdered() { return everOrdered; }
-    //public double getBadResource() { return badResource; }
-    //public double getReleasedGoodResource() { return releasedGoodResource; }
-
+ 
  
     /** Production delay */
     private final ProdDelay prodDelay;
     /** Transportation delay */
-    private final Delay transDelay;
+    private final SimpleDelay transDelay;
     private final QaDelay qaDelay;
 
-    private final sim.des.Queue needProd, needTrans, needQa;
+    private final ThrottleQueue needProd, needTrans, needQa;
 
     /** Accepts resources when it's enabled, and rejects otherwise. This can be 
 	used to imitate a temporary phenomenon, such as disappearance of loads
@@ -111,33 +105,11 @@ public class MaterialSupplier extends Macro
 	
     protected SimState state;
 
-    /** Creates a Queue to be attached in front of the Delay, and
-	links it up appropriately. This is done so that we can model a
-	production facility (or a transportation service, etc) which can
-	handle no more than a given number of batches at any given
-	time.
-	
-	@param delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
-	
-	@param cap The max number of batches that the production unit (the Delay object) can physically handle simultaneously. (Usually, 1).
-
-	@return A Queue object into which one can put any number of "raw" batches, where they will sit and wait for the production facility to grab them whenever it's ready. 
-     */
-    private sim.des.Queue controlInput(Delay delay, double cap) {
-	sim.des.Queue need = new sim.des.Queue(state, prototype);
-	need.setOffersImmediately(true);
-	delay.setCapacity(cap);
-
-	need.addReceiver(delay);
-	delay.setSlackProvider(need);
-	
-	return need;
-    }
 
     /** The tool to write a CSV file with data that can later be charted by an external program */	
     private Charter charter;
 
-    private static boolean throttleTrans = false;
+    //private static boolean throttleTrans = false;
 
     /** The standard one. This can be modified during disruptions */
     final private  AbstractDistribution transDelayDistribution;
@@ -163,23 +135,31 @@ public class MaterialSupplier extends Macro
 	double cap = (prototype instanceof Batch) ? 1:    standardBatchSize;	
 
 	prodDelay = new ProdDelay(state, resource);
-	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
-	needProd = controlInput(prodDelay, cap);
+	//prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
+	//needProd = controlInput(prodDelay, cap);
+	needProd = new ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
 
 	stolenGoodsSink = new SometimesSink(state, resource);
-	transDelay = new Delay(state, resource);
-	transDelay.setDelayDistribution( transDelayDistribution = para.getDistribution("transDelay",state.random));
-	needTrans = throttleTrans? controlInput(transDelay, cap) : null;
+	//transDelay = new Delay(state, resource);
+	//transDelay.setDelayDistribution( transDelayDistribution = para.getDistribution("transDelay",state.random));
+	//needTrans = throttleTrans? controlInput(transDelay, cap) : null;
+
+	transDelay = new SimpleDelay(state, resource);
+	needTrans = new ThrottleQueue(transDelay, cap,
+				      transDelayDistribution = para.getDistribution("transDelay",state.random));
+
 	
 	qaDelay = QaDelay.mkQaDelay( para, state, resource);
-	needQa = controlInput(qaDelay, cap);
+	//needQa = controlInput(qaDelay, cap);
+	needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random)); 
 		
 	//--- link them all	
 	prodDelay.setOfferPolicy(Provider.OFFER_POLICY_FORWARD);
 	prodDelay.addReceiver( stolenGoodsSink );
-	prodDelay.addReceiver( throttleTrans?needTrans: transDelay );
+	prodDelay.addReceiver( needTrans );
 	transDelay.addReceiver( needQa );
 	//-- the output for qaDelay will be added by setQaReceiver
+	sm = new SplitManager(this, resource, qaDelay);
 
 	if (this instanceof Macro)  addProvider(qaDelay, false);
  
@@ -205,16 +185,21 @@ public class MaterialSupplier extends Macro
 	int x=20, y=20;
 	macroField.add(needProd, x, y);
 	macroField.add(prodDelay, x += dx, y += dy);
-	if (throttleTrans) macroField.add(needTrans,  x += dx, y += dy);
+	macroField.add(needTrans,  x += dx, y += dy);
 	macroField.add(transDelay, x += dx, y += dy);
 	macroField.add(needQa,  x += dx, y += dy);
 	macroField.add(qaDelay, x += dx, y += dy);
+
+	if (sm.outputSplitter!=null) {
+	    macroField.add(sm.outputSplitter, x += dx, y += dy);
+	}
+	
         macroField.connectAll();
 	setField(macroField);
 
     }
 
- 
+    public QaDelay getQaDelay() {	return qaDelay;    }
     
     final double standardBatchSize;
 
@@ -222,17 +207,21 @@ public class MaterialSupplier extends Macro
 	plant.
     */
     // FIXME: an array of receivers can be used instead, with its own
-    private Receiver rcv;
-    
+    //private Receiver rcv;
+
+    SplitManager sm;
+        
     /** Sets the destination for the product that has passed the QA. This
 	should be called after the constructor has returned, and before
 	the simulation starts.
        @param _rcv The place to which good stuff goes after QA
      */
-    void setQaReceiver(Receiver _rcv) {
-	rcv = _rcv;
-	qaDelay.addReceiver( rcv );
+    public void setQaReceiver(Receiver rcv, double fraction) {
+	sm.setQaReceiver(rcv, fraction);
     }
+	//	rcv = _rcv;
+    //	qaDelay.addReceiver( rcv );
+    //    }
 
     
     /** This method is called by an external customer when it needs
@@ -261,7 +250,8 @@ public class MaterialSupplier extends Macro
 	    new CountableResource((CountableResource)prototype, x);
 
 	    Provider provider = null;
-	    if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " putting batch of "+x+" into needProd, bcnt=" + bcnt +", outstandingOrderAmount=" + outstandingOrderAmount);
+	    if (Demo.verbose)
+	    System.out.println( "At t=" + t+", " + getName() + " putting batch of "+x+" into needProd (had="+needProd.hasBatches()+"), bcnt=" + bcnt +", outstandingOrderAmount=" + outstandingOrderAmount );
 
 	    double a =batch.getAmount();
 
@@ -271,12 +261,15 @@ public class MaterialSupplier extends Macro
 
 	    if (!z) throw new AssertionError("needProd is supposed to accept everything, but it didn't!");
 
+	    if (Demo.verbose)	    System.out.println( "Now needProd has="+needProd.hasBatches());
+
 	    outstandingOrderAmount -= y;
 
 	    startedProdBatches++;
 	    bcnt ++;
 	}
-	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " has put "+bcnt + " batches to needProd");
+	if (Demo.verbose)
+	System.out.println( "At t=" + t+", " + getName() + " has put "+bcnt + " batches to needProd; needProd: " + needProd.hasBatches());
 	needProd.step(state); // causes offerReceivers() to the prodDelay
 	return (bcnt>0);
     }
@@ -290,13 +283,10 @@ public class MaterialSupplier extends Macro
 	    "Ever ordered="+everOrdered+
 	    "; ever started production="+	startedProdBatches+ " ba" +
 	    ". Of this, "+
-	    " still in factory=" + Util.ifmt(needProd.getAvailable()) + "+" + Util.ifmt(prodDelay.getDelayed()) + ba +
-	    ", in transit " +
-	    (throttleTrans? ""+Util.ifmt(needTrans.getAvailable()) + "+": "") +
-	    Util.ifmt(transDelay.getDelayed()) + ba +
+	    " still in factory=" + needProd.hasBatches() + ba +
+	    ", in transit " +  needTrans.hasBatches() + ba +
 	    (stolenGoodsSink.everConsumed>0? ", stolen " + (long)stolenGoodsSink.everConsumedBatches  + " ba":"") +
 	    ", in QA " +  Util.ifmt(needQa.getAvailable()) +  "+" +  Util.ifmt(qaDelay.getDelayed());
-	if (transDelay.getAvailable()>0) s += "+" +  (long)transDelay.getAvailable();
 	s += ba + ". ";
 	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+ " ba)" +
 	    ", QA released=" + qaDelay.releasedGoodResource + " ("+qaDelay.releasedBatches+" ba)";
@@ -312,6 +302,7 @@ public class MaterialSupplier extends Macro
 		   qaDelay.badBatches+ qaDelay.releasedBatches);
 	if ( prototype instanceof Batch &&     missing!=0) s += ". Missing " + missing + " ba";
 
+	if (sm.outputSplitter !=null) 	s += "\n" + sm.outputSplitter.report();
 	
 	return wrap(s);
     } 
@@ -334,7 +325,7 @@ public class MaterialSupplier extends Macro
 	if (vd.size()==1) {
 	    // activate modified delay distribution
 	    try {
-		transDelay.setDelayDistribution( para.getDistribution("transDelay",state.random, vd.get(0).magnitude));
+		needTrans.setDelayDistribution( para.getDistribution("transDelay",state.random, vd.get(0).magnitude));
 	    } catch( IllegalInputException ex) {
 		throw new IllegalArgumentException(ex.getMessage());
 	    }
@@ -342,7 +333,7 @@ public class MaterialSupplier extends Macro
 	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	} else {
 	    // resume normal delay
-	    transDelay.setDelayDistribution(transDelayDistribution);
+	    needTrans.setDelayDistribution(transDelayDistribution);
 	}
 
 	vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.ShipmentLoss, getName());
