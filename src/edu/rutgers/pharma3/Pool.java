@@ -84,7 +84,7 @@ public class Pool extends sim.des.Queue
 	for(int j=0; j<n; j++) {
 	    Batch whiteHole = prototype.mkNewLot(batchSize, now);
 	    Provider provider = null;  // why do we need it?
-	    if (!accept(provider, whiteHole, 0, 0)) throw new AssertionError("Queue did not accept");
+	    if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
 	}	
     }
 

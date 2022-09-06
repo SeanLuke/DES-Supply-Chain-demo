@@ -7,7 +7,6 @@ import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
-//import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
 import edu.rutgers.pharma3.Disruptions.Disruption;
@@ -49,8 +48,8 @@ public class ProdDelay extends SimpleDelay // Delay
 
 	boolean z = super.accept( provider, r, atLeast, atMost);
 
-
-	//System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
+	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) 
+	    System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
 	return z;
     }
     
@@ -72,7 +71,10 @@ public class ProdDelay extends SimpleDelay // Delay
 	faultRateIncrease.setValueUntil(x,_untilWhen);
     }
  
-    /** Sometimes reduces the quality of the offered batch */
+    /** Sometimes reduces the quality of the offered batch.
+	FIXME: this will only work for RM and Excp, not for PacMat, because
+	PacMat is fungible and does not use this method.
+     */
     protected boolean offerReceiver(Receiver receiver, Entity entity) {
 	double t = state.schedule.getTime();
 
@@ -83,6 +85,7 @@ public class ProdDelay extends SimpleDelay // Delay
 	boolean z=super.offerReceiver( receiver, entity);
 
 	//System.out.println("At " + t +", "+getName() + " offering to " + receiver.getName()+", result=" + z +"; receiver.ava=" + getAvailable());
+	
 
 	return z; 
     }    

@@ -68,17 +68,28 @@ public class ThrottleQueue extends sim.des.Queue
 					       delay.getCapacity());
 	}
 	*/
+
+	if (delay.getDelayed() > 0) return false; // the SimpleDelay is not empty
+
+	
 	double delayTime = Math.abs(delayDistribution.nextDouble());
-	delay.setDelayTimeNoClearing( delayTime);
+	//	delay.setDelayTimeNoClearing( delayTime);
+
+	
+	delay.setDelayTime( delayTime);
 			    
-	double t = state.schedule.getTime();
+	double t = state.schedule.getTime();       
 	SimpleDelay sd = (SimpleDelay)receiver;
-	//	System.out.println("At " + t +", "+getName() + ".offerReceiver(" + receiver.getName()+","+atMost+") (cap="+
-	//			   sd.getCapacity() +", delay="+sd.getDelayTime()+"), had=" + hasBatches());
+
+	if (Demo.verbose && getName().indexOf("PackagingMat")>=0 && t>0) 		    
+	    	System.out.println("At " + t +", "+getName() + ".offerReceiver(" + receiver.getName()+","+atMost+") (cap="+
+				   sd.getCapacity() +", delay="+sd.getDelayTime()+"), had=" + hasBatches());
 
 	boolean z=super.offerReceiver(receiver, atMost);
 
-	//	System.out.println("At " + t +", "+getName() + " offered to " + receiver.getName()+", result=" + z +"; now has=" + hasBatches());
+	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) {
+	    System.out.println("At " + t +", "+getName() + " offered to " + receiver.getName()+", result=" + z +"; now has=" + hasBatches());
+	}
 			    
 	return z;
     }
@@ -94,15 +105,17 @@ public class ThrottleQueue extends sim.des.Queue
 
     public void step(SimState state) throws IllegalArgumentException {
 	super.step(state);
-	System.out.println(getName() + "=" + hasBatches());
+	//System.out.println(getName() + "=" + hasBatches());
     }
 
     /** Just for debugging */
-    /*
+    /*   
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
 	double t = state.schedule.getTime();
-	System.out.println("At " + t +", "+getName() + " accepting " + r+", had=" + hasBatches());
+	if (System.verbose && getName().indexOf("PackagingMat")>=0) 
+	    System.out.println("At " + t +", "+getName() + " accepting " + r+", had=" + hasBatches());
 	boolean z = super.accept( provider, r, atLeast, atMost);
+	if (System.verbose && getName().indexOf("PackagingMat")>=0) 
 	System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
 	return z;
     }

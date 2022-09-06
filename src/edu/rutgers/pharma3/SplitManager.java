@@ -7,7 +7,7 @@ import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
-import sim.des.portrayal.*;
+//import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
 

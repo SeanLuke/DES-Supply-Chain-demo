@@ -237,15 +237,13 @@ public class Production extends sim.des.Macro
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
-	//setCapacity(para.getDouble("capacity"));
 
 	// Storage for input ingredients
 	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
 	    inputStore[j] = new InputStore(state,inResources[j]);
 	    //inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
-	    if (this instanceof Macro)  addReceiver(inputStore[j], false);
- 
+	    if (this instanceof Macro)  addReceiver(inputStore[j], false); 
 	}
 	
 	inBatchSizes = para.getDoubles("inBatch");
@@ -411,7 +409,9 @@ public class Production extends sim.des.Macro
 	    }
 	    
 
-	    for(int nb=0; (batchesPerDay==null || nb<batchesPerDay) && hasEnoughInputs(); nb++) {
+	    int nb=0;
+	    for(
+		    ; (batchesPerDay==null || nb<batchesPerDay) && hasEnoughInputs(); nb++) {
 
 		Vector<Batch> usedBatches = new Vector<>();
 		
@@ -444,7 +444,23 @@ public class Production extends sim.des.Macro
 		batchesStarted++;
 		everStarted += outBatchSize;
 	    }
-		
+
+	    
+	    System.out.println("At " + now +", done step for " + getName()+". nb="+ nb +
+			       ", batchesPerDay=" + batchesPerDay +
+			       ", hasEnoughInputs="  + hasEnoughInputs());
+
+	    if (!hasEnoughInputs()) {
+		for(int j=0; j<inBatchSizes.length; j++) {
+		    boolean has =  inputStore[j].hasEnough(inBatchSizes[j]);
+		    String msg = "For " + getName()+".input["+j+"], hasEnough("+inBatchSizes[j]+")=" + has;
+		    if (!has) msg += ". Typical=" + inputStore[j].getTypical() +", avail="+inputStore[j].getAvailable();
+		    System.out.println(msg);
+
+		}
+	    }
+	    
+	    
 	    //  the Queue.step() call resource offers to registered receivers
 	    //super.step(state);
 

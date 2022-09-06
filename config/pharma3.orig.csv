@@ -73,6 +73,8 @@ WholesalerPool,from1,Distributor,1.0
 WholesalerPool,from2,UntrustedPool,0.0
 WholesalerPool,delay1,Triangular,7,10,15
 WholesalerPool,delay2,Triangular,7,10,15
+#WholesalerPool,delay1,Uniform,1,2
+#WholesalerPool,delay2,Uniform,1,2
 
 
 
@@ -85,24 +87,19 @@ PharmaCompany,fudgeFactor,1.10
 RawMaterialSupplier,batch,5e5
 RawMaterialSupplier,prodDelay,Uniform,0.25/80.602,1.75/80.602
 RawMaterialSupplier,transDelay,Uniform,0.25/80.602,1.75/80.602
-#RawMaterialSupplier,transDelay,Uniform,5,10
 RawMaterialSupplier,qaDelay,Uniform,0.25/80.602,1.75/80.602
-#RawMaterialSupplier,qaDelay,1/80.602
 RawMaterialSupplier,faulty,0.05
-
 
 
 PacMatSupplier,batch,5e5
 PacMatSupplier,prodDelay,Uniform,0.25/25.717,1.75/25.717
-#PacMatSupplier,transDelay,Uniform,0.0097,0.0680
+#PacMatSupplier,prodDelay,Uniform,0.99/25,1.01/25
 PacMatSupplier,transDelay,Uniform,0.25/25.717,1.75/25.717
 PacMatSupplier,qaDelay,Uniform,0.25/25.717,1.75/25.717
-#PacMatSupplier,qaDelay,1/25.717
 PacMatSupplier,faulty,Triangular,0.0,0.02,0.04
 
 ExcipientSupplier,batch,5e5
 ExcipientSupplier,prodDelay,Uniform,0.25/52.490,1.75/52.490
-#ExcipientSupplier,transDelay,Uniform,0.0031,0.0217
 ExcipientSupplier,transDelay,Uniform,0.25/52.490,1.75/52.490
 ExcipientSupplier,qaDelay,Uniform,0.25/52.490,1.75/52.490
 ExcipientSupplier,faulty,0.03
@@ -120,16 +117,6 @@ ApiProduction,prodDelay,Uniform,0.25/68.915,1.75/68.915
 ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
 #ApiProduction,qaDelay,1/73.741
 
-
-CmoApiProduction,inBatch,5e5
-CmoApiProduction,batch,5e5
-CmoApiProduction,batchesPerDay,8
-#-- faulty + rework
-CmoApiProduction,faulty,0.01
-CmoApiProduction,rework,0.01
-CmoApiProduction,prodDelay,Uniform,0.1,0.2
-CmoApiProduction,qaDelay,Uniform,0.1,0.2
-
 DrugProduction,inBatch,5e5,5e5
 DrugProduction,batch,5e5
 DrugProduction,batchesPerDay,51
@@ -138,27 +125,12 @@ DrugProduction,prodDelay,Uniform,0.25/50.915,1.75/50.915
 #DrugProduction,qaDelay,1/50.915
 DrugProduction,qaDelay,Uniform,0.25/50.915,1.75/50.915
 
-CmoDrugProduction,inBatch,5e5
-CmoDrugProduction,batch,5e5
-CmoDrugProduction,batchesPerDay,22
-CmoDrugProduction,faulty,0.01
-CmoDrugProduction,prodDelay,Uniform,0.1,0.2
-CmoDrugProduction,qaDelay,Uniform,0.1,0.2
-
-
 Packaging,inBatch,5e5,5e5
 Packaging,batch,5e5
 Packaging,batchesPerDay,26
-Packaging,faulty,0.02
+Packaging,faulty,Triangular,0,0.02,0.04
 Packaging,prodDelay,Uniform,0.25/25.077,1.75/25.077
 Packaging,qaDelay,Uniform,0.25/25.077,1.75/25.077
-
-CmoPackaging,inBatch,5e5
-CmoPackaging,batch,5e5
-CmoPackaging,batchesPerDay,26
-CmoPackaging,faulty,0.02
-CmoPackaging,prodDelay,Uniform,0.1,0.2
-CmoPackaging,qaDelay,Uniform,0.1,0.2
 
 Distributor,batch,5e5
 Distributor,initial,1.146e9

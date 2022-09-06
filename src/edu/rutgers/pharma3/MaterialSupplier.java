@@ -203,12 +203,6 @@ public class MaterialSupplier extends Macro
     
     final double standardBatchSize;
 
-    /** The place to which good stuff goes after QA, e.g. a manufacturing
-	plant.
-    */
-    // FIXME: an array of receivers can be used instead, with its own
-    //private Receiver rcv;
-
     SplitManager sm;
         
     /** Sets the destination for the product that has passed the QA. This
@@ -219,9 +213,6 @@ public class MaterialSupplier extends Macro
     public void setQaReceiver(Receiver rcv, double fraction) {
 	sm.setQaReceiver(rcv, fraction);
     }
-	//	rcv = _rcv;
-    //	qaDelay.addReceiver( rcv );
-    //    }
 
     
     /** This method is called by an external customer when it needs
