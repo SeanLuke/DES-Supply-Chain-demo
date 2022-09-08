@@ -47,13 +47,16 @@ public class Production extends sim.des.Macro
 	/** Dummy receiver used for the consumption of this
 	    ingredient as it's used, with metering */
 	MSink sink;
+
+	final Resource prototype;
 	
 	InputStore(SimState _state,
 		   Resource resource) {
 	    super(_state, resource);
-	    String name;
+	    prototype = resource;
+
+	    String name = "Input("+getUnderlyingName() +")";
 	    //name = Production.this.getName() + "/Input store for " + resource.getName();
-	    name = "Input("+resource.getName()+")";
 	    setName(name);
 
 	    setOffersImmediately(false); // the stuff sits here until taken
@@ -68,6 +71,9 @@ public class Production extends sim.des.Macro
 
 	}
 
+	String getUnderlyingName() {
+	    return (prototype instanceof Batch)? ((Batch)prototype).getUnderlyingName(): prototype.getName();
+	}
 
 	double discardedExpired=0;
 	int discardedExpiredBatches=0;
@@ -164,6 +170,24 @@ public class Production extends sim.des.Macro
 	    
 	    return z;
 	}
+
+	/** How much stuff is stored by this pool? 
+	    @return the total content of the pool (in units)
+	*/
+	public double getContentAmount()        {
+	    if (resource != null) {
+		return resource.getAmount();
+	    } else if (entities != null) {
+		double sum = 0;
+		for(Entity e: entities) {
+		    sum +=  (e instanceof Batch)? ((Batch)e).getContentAmount() : e.getAmount();
+		}
+		return sum;
+	    }  else {
+		return 0;
+	    }
+	}
+
 	
 	String report(boolean showBatchSize)  {
 	    String s = getTypical().getName() +":" +
@@ -190,15 +214,15 @@ public class Production extends sim.des.Macro
     public sim.des.Queue[] getInputStore() { return inputStore;}
 
     private Charter charter;
- 
-    
+     
     private ProdDelay prodDelay;
     /** Exists only in CMO tracks */
     private SimpleDelay transDelay = null;
     /** Models the delay taken by the QA testing at the output	*/
     private QaDelay qaDelay;
     
-    private final ThrottleQueue needProd, needTrans,	needQa;
+    private final ProdThrottleQueue needProd;
+    private final ThrottleQueue needTrans, needQa;
 
 
     public ProdDelay getProdDelay() { return prodDelay; }
@@ -272,7 +296,7 @@ public class Production extends sim.des.Macro
 	
 	prodDelay = new ProdDelay(state,outResource);
 	prodDelay.addReceiver(needTrans!=null? needTrans: needQa);
-	needProd = new ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
+	needProd = new ProdThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
 	
 	if (qaDelay.reworkProb >0) {
 	    qaDelay.setRework( needProd);
@@ -282,7 +306,13 @@ public class Production extends sim.des.Macro
 
 	
 	charter=new Charter(state.schedule, this);
- 		 
+	String moreHeaders[] = new String[1 + inResources.length];
+	moreHeaders[0] = "releasedToday";
+	for(int j=0; j<inputStore.length; j++) {
+	    moreHeaders[j+1] = "StockOf" + inputStore[j].getUnderlyingName();
+	}
+	charter.printHeader(moreHeaders);
+	 
     }
 
     /** Lay out the elements for display */
@@ -351,10 +381,10 @@ public class Production extends sim.des.Macro
 	double t = state.schedule.getTime();
 	
 	for(int j=0; j<inBatchSizes.length; j++) {
-	    Resource r = inResources[j];
-	    String name = (r instanceof Batch)? ((Batch)r).getUnderlyingName(): r.getName();
-	    InputStore p = inputStore[j];
+	    //Resource r = inResources[j];
 
+	    InputStore p = inputStore[j];
+	    String name = p.getUnderlyingName();
 	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion, name);
 	    if (vd.size()==1) {
 		// deplete inventory
@@ -403,57 +433,36 @@ public class Production extends sim.des.Macro
 
 
 	    if (!hasEnoughInputs()) {
-		if (Demo.verbose)  System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " +
-						      reportInputs(true));
+		//if (Demo.verbose)
+		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " + reportInputs(true));
 		return;
 	    }
-	    
 
+	    // This will "prime the system" by starting the first
+	    // mkBatch(), if needed and possible. After that, the
+	    // production cycle will repeat via the slackProvider
+	    // mechanism
+	    needProd.provide(prodDelay);
+
+	    
+	    /*
 	    int nb=0;
-	    for(
-		    ; (batchesPerDay==null || nb<batchesPerDay) && hasEnoughInputs(); nb++) {
+	    while(batchesPerDay==null || nb<batchesPerDay) {
 
-		Vector<Batch> usedBatches = new Vector<>();
-		
-		for(int j=0; j<inBatchSizes.length; j++) {
-		    
-		    InputStore p = inputStore[j];
-		    //System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
-		    if (p.getTypical() instanceof Batch) {
-			//z = p.provide(p.sink, 1);
-			
-			usedBatches.add(p.consumeOneBatch());
-		       			
-		    } else if (p.getTypical() instanceof CountableResource) {
-			boolean z = p.provide(p.sink, inBatchSizes[j]);				    if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");    
-		    } else throw new IllegalArgumentException("Wrong input resource type");
-
-		    if (p.sink.lastConsumed != inBatchSizes[j]) {
-			String msg = "Batch size mismatch on sink["+j+"]=" +
-			    p.sink +": have " + p.sink.lastConsumed+", expected " + inBatchSizes[j];
-			throw new IllegalArgumentException(msg);
-		    }
-		    
-		}
-	    
-		if (Demo.verbose)
-		    System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
-		Batch onTheTruck = outResource.mkNewLot(outBatchSize, now, usedBatches);
-		Provider provider = null;  // why do we need it?		
-		needProd.accept(provider, onTheTruck, 1, 1);
-		batchesStarted++;
-		everStarted += outBatchSize;
+		if (!mkBatch(state)) break;
+		nb++;
 	    }
 
 	    
-	    System.out.println("At " + now +", done step for " + getName()+". nb="+ nb +
+	    if (Demo.verbose) System.out.println("At " + now +", done step for " + getName()+". nb="+ nb +
 			       ", batchesPerDay=" + batchesPerDay +
 			       ", hasEnoughInputs="  + hasEnoughInputs());
-
+	    */
+	    
 	    if (!hasEnoughInputs()) {
 		for(int j=0; j<inBatchSizes.length; j++) {
 		    boolean has =  inputStore[j].hasEnough(inBatchSizes[j]);
-		    String msg = "For " + getName()+".input["+j+"], hasEnough("+inBatchSizes[j]+")=" + has;
+		    String msg = "Starvation report at t="+now+": for " + getName()+".input["+j+"], hasEnough("+inBatchSizes[j]+")=" + has;
 		    if (!has) msg += ". Typical=" + inputStore[j].getTypical() +", avail="+inputStore[j].getAvailable();
 		    System.out.println(msg);
 
@@ -468,11 +477,92 @@ public class Production extends sim.des.Macro
 	    double releasedAsOfToday = qaDelay.getReleasedGoodResource();
 	    double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	    releasedAsOfYesterday = releasedAsOfToday;
-	    charter.print(releasedToday);
+
+	    double[] data = new double[1 + inputStore.length];
+	    data[0] = releasedToday;
+	    for(int j=0; j<inputStore.length; j++) {
+		data[j+1] = inputStore[j].getContentAmount();
+	    }	
+
+	    
+	    charter.print(data);
 	}
 	
     }
 
+    /** Tries to make a batch, if resources are available
+	@return true if a batch was made; false if not enough input resources
+	was there to make one
+
+	FIXME: Must add number-of-batches (monthly planning) control, as
+	per Ben's formula, in addition to the supply-side control.
+     */
+    private boolean  mkBatch(SimState state) {
+
+	if (!hasEnoughInputs()) return false;
+	double now = state.schedule.getTime();
+		
+	Vector<Batch> usedBatches = new Vector<>();
+	
+	for(int j=0; j<inBatchSizes.length; j++) {
+	    
+	    InputStore p = inputStore[j];
+	    //System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
+	    if (p.getTypical() instanceof Batch) {
+		//z = p.provide(p.sink, 1);
+		
+		usedBatches.add(p.consumeOneBatch());
+		
+	    } else if (p.getTypical() instanceof CountableResource) {
+		boolean z = p.provide(p.sink, inBatchSizes[j]);				    if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");    
+	    } else throw new IllegalArgumentException("Wrong input resource type");
+	    
+	    if (p.sink.lastConsumed != inBatchSizes[j]) {
+		String msg = "Batch size mismatch on sink["+j+"]=" +
+		    p.sink +": have " + p.sink.lastConsumed+", expected " + inBatchSizes[j];
+		throw new IllegalArgumentException(msg);
+	    }
+	    
+	}
+
+	if (Demo.verbose)	    System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+
+	Batch onTheTruck = outResource.mkNewLot(outBatchSize, now, usedBatches);
+	Provider provider = null;  // why do we need it?		
+	needProd.accept(provider, onTheTruck, 1, 1);
+
+	batchesStarted++;
+	everStarted += outBatchSize;
+
+	return true;
+
+    }
+
+    /** It's like ThrottleQueue, except that it does not actually hold much 
+	product in, but "makes" it on the fly */
+    class ProdThrottleQueue extends ThrottleQueue {
+	public ProdThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
+	    super( _delay, cap,  _delayDistribution);
+	}
+
+	/** This is triggered from the SimpleDelay via the slackProvider
+	    mechanism */
+	public boolean provide(Receiver receiver) {
+  	    if (getAvailable()==0) {
+		mkBatch(getState());
+	    }
+	    return super.provide(receiver);
+	}
+
+	/*
+	protected boolean offerReceiver(Receiver receiver, double atMost) {
+	    if (getAvailable()==0) {
+		mkBatch(getState());
+	    }
+	    return super.offerReceiver(receiver, atMost);
+	}	
+	*/
+    }
     
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();

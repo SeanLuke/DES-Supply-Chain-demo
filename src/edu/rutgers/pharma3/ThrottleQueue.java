@@ -57,7 +57,12 @@ public class ThrottleQueue extends sim.des.Queue
 	delayDistribution = d;
     }
     
-    /** Sets a different delay for each batch */
+    /** This method is called whenever a batch is put into the ThrottleQueue
+	(due to the immediatOffers flag), and whenever the throttled SimpleDelay
+	becomes empty (through the slackProvider mechanism). When it is 
+	called, it verifies that the throttled SimpleDelay is in fact
+	empty, and if it is, sets a new randomly picked delay time,
+	and then puts a batch into the delay. */
     protected boolean offerReceiver(Receiver receiver, double atMost) {
 	if (receiver != delay)  throw new IllegalArgumentException("Wrong receiver for ThrottleQueue");
 
@@ -133,5 +138,13 @@ public class ThrottleQueue extends sim.des.Queue
     }
     */
 
+    /** Simply exposes offerReceivers() to classes in this package. Can be
+	used to "prime the system". */
+    protected boolean offerReceivers() {
+	return super.offerReceivers();
+    }
+   	
+
+    
 }
      

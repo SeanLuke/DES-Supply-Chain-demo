@@ -22,7 +22,7 @@ public class Distributor extends Pool
     Distributor(SimState state, String name, Config config,
 		Batch resource) throws IllegalInputException, IOException {
 	
-	super(state, name, config, resource, new String[]{"orderSize"});	
+	super(state, name, config, resource, new String[0]);	
 	setOffersImmediately(false); // shipping to be done only on the proper schedule
 
 	interval = (int)para.getLong("interval");
@@ -31,7 +31,7 @@ public class Distributor extends Pool
  
     private int lastMonthShippedAt= -1;
   
-    private double everOrdered=0, lastOrderedAt = 0;
+    private double lastOrderedAt = 0;
     private int batchesOrdered = 0;
 
     

@@ -5,7 +5,11 @@
 #----------------------------------------------------
 
 
-set h=`(cd ..; pwd)`
+#-- The directory where this script is
+set d=`dirname $0`
+
+
+set h=`(cd $d/..; pwd)`
 setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*'
 
 

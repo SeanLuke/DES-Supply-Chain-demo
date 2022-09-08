@@ -53,7 +53,7 @@ public class UntrustedPool extends Provider
 	    Batch whiteHole = prototype.mkNewLot(batchSize, now);
 	    double bad = Math.round( batchSize * illicitDis.nextDouble());
 	    whiteHole.getLot().illicitCount = bad;
-	    if (!r.accept(this, whiteHole, 0, 0)) throw new AssertionError("Pool "+r.getName()+"  did not accept");
+	    if (!r.accept(this, whiteHole, 1, 1)) throw new AssertionError("Pool "+r.getName()+"  did not accept");
 	    double q = whiteHole.getContentAmount();	    
 	    sent += q;
 	    sentToday += q;

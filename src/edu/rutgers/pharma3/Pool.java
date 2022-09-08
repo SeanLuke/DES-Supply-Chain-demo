@@ -31,10 +31,17 @@ public class Pool extends sim.des.Queue
     private boolean hasReorderPolicy = false;
     private double reorderPoint=0, reorderQty=0;
 
+
+    protected double everOrdered=0;
+
+    
     public double getEverReceived() {
 	return everReceived;
     }
-    
+
+    /** Ever received by the pool (not including the amount "received"
+	during the initialization process in the constructor)
+     */
     double everReceived = 0;
     final double  initial;
 
@@ -59,7 +66,8 @@ public class Pool extends sim.des.Queue
 	initial = para.getDouble("initial");
 	batchSize = para.getDouble("batch");
 	initSupply(initial);
-
+	everReceived = 0; // not counting the initial supply
+	
 	expiredProductSink = new ExpiredSink(state,  resource, 365);
 	stolenProductSink = new MSink(state,  resource);
 
@@ -352,7 +360,8 @@ HospitalPool,backOrder,WholesalerPool
 	}
 
 	orderedToday = needed;
-	
+	everOrdered += orderedToday;
+
     }
     
 
@@ -402,7 +411,7 @@ HospitalPool,backOrder,WholesalerPool
     }
 
     void doChart​Header(String... moreHeaders) {
-	String[] a = {"stock","orderedToday"  ,"receivedToday", "demandedToday","sentToday"};
+	String[] a = {"stock","orderedToday"  ,"receivedToday", "stillOnOrder", "demandedToday","sentToday"};
 	String[] b = Arrays.copyOf(a, a.length + moreHeaders.length);
 	int j=a.length;
 	for(String x:  moreHeaders) { b[j++] = x; }
@@ -412,8 +421,9 @@ HospitalPool,backOrder,WholesalerPool
 
     /** Writes a line to the time series file. Call this from step() */
     void doChart​(double... moreValues) {
-	double stock =  getContentAmount();        
-	double[] a = {stock,orderedToday,receivedToday,demandedToday,sentToday};
+	double stock =  getContentAmount();
+	double stillOnOrder = everOrdered - everReceived;
+	double[] a = {stock,orderedToday,receivedToday,stillOnOrder,demandedToday,sentToday};
 	double[] b = Arrays.copyOf(a, a.length + moreValues.length);
 	int j=a.length;
 	for(double x:  moreValues) { b[j++] = x; }
