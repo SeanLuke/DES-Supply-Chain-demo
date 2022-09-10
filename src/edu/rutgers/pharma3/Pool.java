@@ -292,8 +292,7 @@ HospitalPool,backOrder,WholesalerPool
     public void step​(sim.engine.SimState state) {
 	reorderCheck();
 	fillBackOrders();
-
-	doChart​(new double[0]);
+	doChart(new double[0]);
     }
 
     private double receivedToday=0;
@@ -354,7 +353,7 @@ HospitalPool,backOrder,WholesalerPool
 	}
 
 	// if still unfilled, back-order
-	if (unfilled > 0) {
+	if (unfilled > 0 && backOrderSupplier!=null) {
 	    ((Pool)backOrderSupplier.src).backOrder(backOrderSupplier.entryPoint, unfilled);
 	    onOrder += unfilled;	    
 	}
@@ -410,7 +409,10 @@ HospitalPool,backOrder,WholesalerPool
 	return  destroyed;		
     }
 
-    void doChart​Header(String... moreHeaders) {
+    /** Prints the header of the time series CSV filw
+	@param moreHeaders Names of any additional columns (beyond those that 
+	all Pools print) */
+    void doChartHeader(String... moreHeaders) {
 	String[] a = {"stock","orderedToday"  ,"receivedToday", "stillOnOrder", "demandedToday","sentToday"};
 	String[] b = Arrays.copyOf(a, a.length + moreHeaders.length);
 	int j=a.length;
@@ -420,7 +422,7 @@ HospitalPool,backOrder,WholesalerPool
     }
 
     /** Writes a line to the time series file. Call this from step() */
-    void doChart​(double... moreValues) {
+    void doChart(double... moreValues) {
 	double stock =  getContentAmount();
 	double stillOnOrder = everOrdered - everReceived;
 	double[] a = {stock,orderedToday,receivedToday,stillOnOrder,demandedToday,sentToday};

@@ -144,6 +144,16 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	}	
     }
 
+
+    public class MyUniform extends sim.util.distribution.Uniform {
+	public MyUniform(double min, double max, MersenneTwisterFast randomGenerator) {
+	    super(min,max,randomGenerator);
+	}
+	public double getMin() { return min;}
+	public double getMax() { return max;}
+	
+    }
+    
     
     /** Creates a random distribution described by the parameters
 	in the specified line of this para set.
@@ -163,7 +173,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	    return new Binomial((int)Math.round(p.get(0)),p.get(1), random);
 	} else if (v.get(0).equals("Uniform")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
-	    return new Uniform(p.get(0)+offset, p.get(1)+offset, random);
+	    return new MyUniform(p.get(0)+offset, p.get(1)+offset, random);
 	} else if (v.get(0).equals("Normal")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 2);
 	    return new Normal(p.get(0)+offset,p.get(1), random);

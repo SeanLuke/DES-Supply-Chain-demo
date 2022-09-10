@@ -236,19 +236,6 @@ SimpleDelay
 
 	    // System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+"): reworkBatches="+reworkBatches+", badBatches=" + badBatches+", releasedBatches=" + releasedBatches);
 
-	    //throw new AssertionError("Here we go");
-	    /*
-Exception in thread "MASON 0" java.lang.AssertionError: Here we go
-        at edu.rutgers.pharma3.QaDelay.offerReceiver(QaDelay.java:235)
-        at sim.des.Provider.offerReceivers(Provider.java:494)
-        at sim.des.SimpleDelay.offerReceivers(SimpleDelay.java:242)
-        at sim.des.Provider.offerReceivers(Provider.java:476)
-        at sim.des.SimpleDelay.step(SimpleDelay.java:237)
-        at sim.engine.Schedule.step(Schedule.java:388)
-        at sim.engine.SimState$2.run(SimState.java:637)
-        at java.base/java.lang.Thread.run(Thread.java:829)
-	    */
-	    
 	}
 
 	if (whomToWakeUp != null) {
@@ -287,5 +274,47 @@ Exception in thread "MASON 0" java.lang.AssertionError: Here we go
 	
     }
 
+    /**  binary search for the median of the faultyPortionDistribution */
+    double findMedian() {
+
+	//AbstractContinousDistribution u = (AbstractContinousDistribution)faultyPortionDistribution;
+	Uniform u = (Uniform)faultyPortionDistribution;
+	
+	final double eps = 1e-6;
+	
+	double a=0, b=1, c;
+	if (u.cdf(a)>0.5 ||
+	    u.cdf(b)<0.5) throw new IllegalArgumentException("Bad cdf for " + faultyPortionDistribution);
+	do {
+	    c = (a+b) /2;
+	    double val = u.cdf(c);
+	    if (val == 0.5) return c;
+	    else if (val < 0.5) a = c;
+	    else b = c;
+	} while(b-a > eps);
+	return c;
+    }
+
+    /** Stats for planning 
+	@param return The average output/input ratio
+     */
+    double computeAlpha() {
+
+	double mean = 0;
+	if (faultyPortionDistribution!=null) {
+	    if (faultyPortionDistribution instanceof ParaSet.MyUniform) {
+		ParaSet.MyUniform u = (ParaSet.MyUniform)faultyPortionDistribution;
+		mean = (u.getMin() + u.getMax())/2;
+	    } else {
+		// FIXME: if the distribution is not symmetric, the mean
+		// is not the same as median
+		mean =  findMedian();
+	    }
+	} else {
+	    mean = discardProb;
+	}
+	return 1-mean;
+	
+    }
     
 }
