@@ -155,11 +155,25 @@ public class Production extends sim.des.Macro
 	
 	/** Purely for debugging */
 	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":
-		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":
-		"an entity";
+	    //	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":		"an entity";
 	    boolean z = super.accept(provider,  amount, atLeast,  atMost);
 
+	    // See if the production system is empty, and needs to be "primed"
+	    // to start.
+	    if (needProd.getAvailable()==0 && prodDelay.getSize()==0) {
+		double t = state.schedule.getTime();
+		System.out.println("At " + t + ", the "+getName()+" tries to prime " + Production.this.getName());
+
+		// This will "prime the system" by starting the first
+		// mkBatch(), if needed and possible. After that, the
+		// production cycle will repeat via the slackProvider
+		// mechanism
+		mkBatch(getState());
+	    }
+
+
+	    
+	    /*
 	    if (!z) {
 	    
 	    System.out.println("DEBUG: " + getName() + ", " +
@@ -171,7 +185,7 @@ public class Production extends sim.des.Macro
 	    System.out.println("cap=" + getCapacity()+"; r/o="+ getRefusesOffers());
 
 	    }
-	    
+	    */
 	    return z;
 	}
 
@@ -312,7 +326,7 @@ public class Production extends sim.des.Macro
 	charter=new Charter(state.schedule, this);
 	String moreHeaders[] = new String[2 + inResources.length];
 	moreHeaders[0] = "releasedToday";
-	moreHeaders[0] = "outstandingPlan";
+	moreHeaders[1] = "outstandingPlan";
 	for(int j=0; j<inputStore.length; j++) {
 	    moreHeaders[j+2] = "StockOf" + inputStore[j].getUnderlyingName();
 	}
@@ -441,12 +455,7 @@ public class Production extends sim.des.Macro
 		// reduce quality of newly produced lots, in effect for 1 day
 		prodDelay.setFaultRateIncrease(0.1 * d.magnitude, now+1);
 	    }
-
 	    
-	// FIXME: should stop working if the production plan has been fulfilled
-	//double haveNow = getAvailable() + prodDelay.getDelayed() +	    qaDelay.getDelayed();
-
-
 	    if (!hasEnoughInputs()) {
 		//if (Demo.verbose)
 		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " + reportInputs(true));
@@ -459,20 +468,6 @@ public class Production extends sim.des.Macro
 	    // mechanism
 	    needProd.provide(prodDelay);
 
-	    
-	    /*
-	    int nb=0;
-	    while(batchesPerDay==null || nb<batchesPerDay) {
-
-		if (!mkBatch(state)) break;
-		nb++;
-	    }
-
-	    
-	    if (Demo.verbose) System.out.println("At " + now +", done step for " + getName()+". nb="+ nb +
-			       ", batchesPerDay=" + batchesPerDay +
-			       ", hasEnoughInputs="  + hasEnoughInputs());
-	    */
 	    
 	    if (!hasEnoughInputs()) {
 		for(int j=0; j<inBatchSizes.length; j++) {
@@ -513,7 +508,7 @@ public class Production extends sim.des.Macro
 	FIXME: Must add number-of-batches (monthly planning) control, as
 	per Ben's formula, in addition to the supply-side control.
      */
-    private boolean  mkBatch(SimState state) {
+    private boolean mkBatch(SimState state) {
 
 	if (startPlan != null && startPlan <= 0) return false;
 	if (!hasEnoughInputs()) return false;
