@@ -153,6 +153,20 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	public double getMax() { return max;}
 	
     }
+
+    public class MyTriangular extends sim.util.distribution.Triangular {
+	double _min, _max, _mode;
+	public MyTriangular(double min, double mode, double max, MersenneTwisterFast randomGenerator) {
+	    super(min,mode,max,randomGenerator);
+	    _min = min;
+	    _max = max;
+	    _mode = mode;
+	}
+	public double getMin() { return _min;}
+	public double getMode() { return _mode;}
+	public double getMax() { return _max;}
+	
+    }
     
     
     /** Creates a random distribution described by the parameters
@@ -179,7 +193,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	    return new Normal(p.get(0)+offset,p.get(1), random);
 	} else if (v.get(0).equals("Triangular")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 3);
-	    return new Triangular(p.get(0)+offset,p.get(1)+offset, p.get(2)+offset, random);
+	    return new MyTriangular(p.get(0)+offset,p.get(1)+offset, p.get(2)+offset, random);
 	} else {
 	    throwII(key, "Random distribution type not supported: " +v.get(0));
 	    return null;

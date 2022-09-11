@@ -39,9 +39,9 @@ replot
 
 set term qt 3
 set title "Production chain: daily output from each step's QA"
-plot 'ApiProduction.csv' using ($1):($2)   with lines, \
-'DrugProduction.csv'  using ($1):($2)  with lines, \
-'Packaging.csv'  using ($1):($2)  with lines
+plot 'ApiProduction.csv' using ($1):($2)   with lines title 'API', \
+'DrugProduction.csv'  using ($1):($2)  with lines title 'Bulk drug', \
+'Packaging.csv'  using ($1):($2)  with lines title 'Packaged drug'
 set term png size 800,600
 set out 'Production.png'
 replot
@@ -62,9 +62,19 @@ replot
 set term qt 5
 set title 'Inventory at production steps' 
 plot \
-'ApiProduction.csv' using ($1):($3)   with lines title 'RM => ApiProd', \
-'DrugProduction.csv'  using ($1):($3)  with lines title 'API => DrugProd', \
-'Packaging.csv'  using ($1):($3)  with lines  title 'Bulk Drug => Packaging'
+'ApiProduction.csv' using ($1):($4)   with lines title 'RM => ApiProd', \
+'DrugProduction.csv'  using ($1):($4)  with lines title 'API => DrugProd', \
+'Packaging.csv'  using ($1):($4)  with lines  title 'Bulk Drug => Packaging'
 set term png size 800,600
 set out 'Inventory.png'
+replot
+
+set term qt 6
+set title 'Outstanding production plans at production steps' 
+plot \
+'ApiProduction.csv' using ($1):($3)   with lines title 'ApiProd', \
+'DrugProduction.csv'  using ($1):($3)  with lines title 'DrugProd', \
+'Packaging.csv'  using ($1):($3)  with lines  title 'Packaging'
+set term png size 800,600
+set out 'ProductionPlans.png'
 replot

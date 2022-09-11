@@ -226,16 +226,49 @@ HospitalPool,backOrder,WholesalerPool
     public double feedTo(Receiver r, double amt) {
 	return feedTo(r, amt, true);
     }
+
+    /*
+    private String reportDelayState(Delay delay) {
+	DelayNode[] nodes = delay.getDelayedResources();
+	Vector<String> v = new Vector();
+	v.add("DS: " + nodes.length + " nodes; TDR=" + delay.getTDR() +", ava=" +delay.getAvailable());
+	for(DelayNode node: nodes) {
+	    int n = 0;
+	    for(DelayNode z=node; z.next!=null; z=z.next) n++;
+	    String s = "DS: " + node.getTimestamp();
+	    if (n>0) s += "; extra " + n;
+	    v.add(s); 
+	}	
+	return String.join("\n", v);
+    }
+    */
     
     public double feedTo(Receiver r, double amt, boolean doRecordDemand) {
+	final boolean consolidate = true;//false;
 	double sent = 0;
-   
-	Batch b;
+ 	Batch b;
+	Delay delay = (consolidate && (r instanceof Delay))? (Delay)r: null;
+	int n = 0;
+
+	if (delay!=null) {
+	    delay.setDropsResourcesBeforeUpdate(false);
+	    double now = state.schedule.getTime();
+	    //	    System.out.println("At " +  now + ", " + getName() + " will feed "+amt+" u to " + r.getName() +", getDelayed=" + delay.getDelayed());
+	    //System.out.println(reportDelayState(delay)); 
+	}
+	
 	while(getAvailable()>0 && sent<amt &&
 	      (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
 	    if (!offerReceiver(r, b)) throw new IllegalArgumentException("Expected acceptance by " + r);
+	    n++;
+	    if (n==1 && delay!=null) delay.setFreezingDelay(true);
 	    sent += b.getContentAmount();
 	    entities.remove(b);
+	}
+	if (delay!=null) {
+	    delay.setFreezingDelay(false);
+	    //System.out.println(getName() + " fed " + n +  " ba to " + r.getName() +", getDelayed=" + delay.getDelayed());
+	    //System.out.println(reportDelayState(delay)); 
 	}
 
 	everSent += sent;
@@ -306,10 +339,14 @@ HospitalPool,backOrder,WholesalerPool
 	@param amount a Batch object
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " receiving "+
-						      atLeast + " to " +  atMost + " units of " + amount );
-	//+					      ", while delay.ava=" + supplierDelay.getAvailable());
-	//double s0 = getAvailable();
+	if (((Demo)state).verbose) {
+	    String msg = "DS: At t=" + state.schedule.getTime() + ", " +  getName()+ " receiving "+
+		atLeast + " to " +  atMost + " units of " + amount;
+	    if (provider!=null) msg += ", while provider.ava=" + provider.getAvailable();
+	    System.out.println(msg);
+	}
+
+    //double s0 = getAvailable();
 	double a = ((Batch)amount).getContentAmount();
 	boolean z = super.accept(provider, amount, atLeast, atMost);
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
@@ -320,6 +357,11 @@ HospitalPool,backOrder,WholesalerPool
 	}
 	everReceived += a;
 	receivedToday += a;
+
+	//msg = "DS: At t=" + state.schedule.getTime() + ", " +  getName()+ " received something";
+	//	if (provider!=null) msg += ", while provider.ava=" + provider.getAvailable();
+	//	System.out.println(msg);
+
 	
 	return z;
     }

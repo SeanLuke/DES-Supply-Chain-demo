@@ -15,16 +15,17 @@ import  edu.rutgers.util.Util;
 public class Splitter extends If {
 
 
-    private static class RData {
+    static class RData {
 	/** fractions[j] specifies the fraction of the input that will
 	    be sent to the j-th receiver */
 	final double fraction;
 	/** How much resource has been given to this receiver so far */
 	double given=0;
 	RData(double f) { fraction = f; }
+	RData(RData z) { this(z.fraction); }
     }
 
-    private HashMap<Receiver, RData> data = new HashMap<>();
+    HashMap<Receiver, RData> data = new HashMap<>();
 	
     void throwDoNotUse()        {
         throw new RuntimeException("Splitters do not respond to addReceiver(Receiver).  Instead, use addReceiver(Receiver, fraction).");
@@ -89,6 +90,19 @@ public class Splitter extends If {
     }
 
     //private Batch lastBatch = null;
+
+    double computeSumF(//Abstract
+		       Collection<Receiver> receivers) {
+	double sumF=0;
+	for(Receiver r: receivers) {
+	    RData d = data.get(r);
+	    if (d==null) throw new IllegalArgumentException("Unknown receiver: " + r);	   
+	    sumF += d.fraction;
+	}
+	return sumF;
+    }
+
+
     
     /** Decides to which receiver this batch of resource should be given.
 	This method is called by Provider.offerReceivers(ArrayList<Receiver>),
@@ -101,12 +115,14 @@ public class Splitter extends If {
 	cnt1 ++;
 	if (receivers.size()==0) throw new IllegalArgumentException("No receivers!");
 	
-	double sumF=0;
+	double sumF= computeSumF(receivers);
+	/*
 	for(Receiver r: receivers) {
 	    RData d = data.get(r);
 	    if (d==null) throw new IllegalArgumentException("Unknown receiver: " + r);	   
 	    sumF += d.fraction;
 	}
+	*/
 	if (sumF == 0) {
 	    //System.out.println(report());
 	    throw new IllegalArgumentException(toString()+": All fractions are zero!");

@@ -305,15 +305,19 @@ SimpleDelay
 	    if (faultyPortionDistribution instanceof ParaSet.MyUniform) {
 		ParaSet.MyUniform u = (ParaSet.MyUniform)faultyPortionDistribution;
 		mean = (u.getMin() + u.getMax())/2;
+	    } else if (faultyPortionDistribution instanceof ParaSet.MyTriangular) {
+		ParaSet.MyTriangular u = (ParaSet.MyTriangular)faultyPortionDistribution;
+		mean = (u.getMin() + u.getMax())/2;
+		if (Math.abs (u.getMode()-mean) > 1e-6) throw new IllegalArgumentException("No formula for skewed triangula distribution");
 	    } else {
 		// FIXME: if the distribution is not symmetric, the mean
-		// is not the same as median
+		// is not the same as the median
 		mean =  findMedian();
 	    }
 	} else {
 	    mean = discardProb;
 	}
-	return 1-mean;
+	return (1-mean - reworkProb)/(1-reworkProb);
 	
     }
     

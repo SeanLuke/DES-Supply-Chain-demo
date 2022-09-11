@@ -368,6 +368,10 @@ public class MaterialSupplier extends Macro
 	charter.print(releasedToday);
     }
 
+    /** Stats for planning */
+    double computeAlpha() {
+	return qaDelay.computeAlpha();
+    }
   
 
 

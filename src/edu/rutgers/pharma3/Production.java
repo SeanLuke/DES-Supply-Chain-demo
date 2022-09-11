@@ -49,6 +49,10 @@ public class Production extends sim.des.Macro
 	MSink sink;
 
 	final Resource prototype;
+
+	Production whose() {
+	    return Production.this;
+	}
 	
 	InputStore(SimState _state,
 		   Resource resource) {
@@ -306,10 +310,11 @@ public class Production extends sim.des.Macro
 
 	
 	charter=new Charter(state.schedule, this);
-	String moreHeaders[] = new String[1 + inResources.length];
+	String moreHeaders[] = new String[2 + inResources.length];
 	moreHeaders[0] = "releasedToday";
+	moreHeaders[0] = "outstandingPlan";
 	for(int j=0; j<inputStore.length; j++) {
-	    moreHeaders[j+1] = "StockOf" + inputStore[j].getUnderlyingName();
+	    moreHeaders[j+2] = "StockOf" + inputStore[j].getUnderlyingName();
 	}
 	charter.printHeader(moreHeaders);
 	 
@@ -408,6 +413,16 @@ public class Production extends sim.des.Macro
 	return haltedUntil.isOn( now );
     }
 
+    /** If this is not null, it indicates how many units of the product we
+	are still to produce (or, more precisely, to start). If null,
+	then the control is entirely by the supply side. */
+    Double startPlan = null;
+
+    void setPlan(double x) { startPlan = x; }
+    void addToPlan(double x) {
+	if (startPlan != null) x += startPlan;
+	startPlan = x;
+    }
     
     /** Produce as many batches as allowed by the production capacity (per day)
 	and available inputs. A disruption may reduce the production capacity temporarily.
@@ -478,10 +493,11 @@ public class Production extends sim.des.Macro
 	    double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	    releasedAsOfYesterday = releasedAsOfToday;
 
-	    double[] data = new double[1 + inputStore.length];
+	    double[] data = new double[2 + inputStore.length];
 	    data[0] = releasedToday;
+	    data[1] = (startPlan==null)? 0 : startPlan;
 	    for(int j=0; j<inputStore.length; j++) {
-		data[j+1] = inputStore[j].getContentAmount();
+		data[j+2] = inputStore[j].getContentAmount();
 	    }	
 
 	    
@@ -492,13 +508,14 @@ public class Production extends sim.des.Macro
 
     /** Tries to make a batch, if resources are available
 	@return true if a batch was made; false if not enough input resources
-	was there to make one
+	was there to make one, or the current plan does not call for one
 
 	FIXME: Must add number-of-batches (monthly planning) control, as
 	per Ben's formula, in addition to the supply-side control.
      */
     private boolean  mkBatch(SimState state) {
 
+	if (startPlan != null && startPlan <= 0) return false;
 	if (!hasEnoughInputs()) return false;
 	double now = state.schedule.getTime();
 		
@@ -533,7 +550,7 @@ public class Production extends sim.des.Macro
 
 	batchesStarted++;
 	everStarted += outBatchSize;
-
+	if (startPlan != null) startPlan -= outBatchSize;
 	return true;
 
     }

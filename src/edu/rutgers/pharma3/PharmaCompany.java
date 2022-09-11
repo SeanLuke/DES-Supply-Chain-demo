@@ -64,6 +64,8 @@ public class PharmaCompany extends Sink
     //    MSink dongle; 
 
     final double fudgeFactor;
+
+    final GraphAnalysis ga;
     
     PharmaCompany(SimState state, String name, Config config, Pool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
 	super(state, drugOrderResource);
@@ -78,8 +80,7 @@ public class PharmaCompany extends Sink
 	//	orderDelay.addReceiver(this);
 
 
-	fudgeFactor = para.getDouble("fudgeFactor", 1.0);
-	System.out.println(name + ": RM over-ordering fudgeFactor=" + fudgeFactor);
+	//fudgeFactor = para.getDouble("fudgeFactor", 1.0);
 	
 
 	
@@ -100,52 +101,33 @@ public class PharmaCompany extends Sink
 
 	apiProduction = new Production(state, "ApiProduction",  config,
 				       new Batch[] {rawMatBatch}, apiBatch);
-	//cmoApiProduction = new Production(state, "CmoApiProduction",  config,
-	//				       new Batch[] {rawMatBatch}, apiBatch);
 
 	drugProduction = new Production(state, "DrugProduction",  config,
 					new Batch[]{ apiBatch, excipientBatch}, bulkDrugBatch);
-	//	cmoDrugProduction = new Production(state, "CmoDrugProduction",  config,
-	//					new Batch[]{ apiBatch}, bulkDrugBatch);
 
 	packaging = new Production(state, "Packaging",  config,
 				   new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
-	//	cmoPackaging = new Production(state, "CmoPackaging",  config,
-	//				      new Resource[] {bulkDrugBatch}, pacDrugBatch);
 
 	rawMatSupplier.sm.setQaReceiver(apiProduction.getEntrance(0), 0.90);
-	//rawMatSupplier.sm.setQaReceiver(cmoApiProduction.getEntrance(0), 0.10);
+
 	       
 	apiProduction.sm.setQaReceiver(drugProduction.getEntrance(0), 0.70);
-	//apiProduction.sm.setQaReceiver(cmoDrugProduction.getEntrance(0), 0.30);
 
-	
-	//cmoApiProduction.sm.setQaReceiver(cmoDrugProduction.getEntrance(0), 0.50);
-	//cmoApiProduction.sm.setQaReceiver(drugProduction.getEntrance(0), 0.50);
 	
 	excipientFacility.sm.setQaReceiver(drugProduction.getEntrance(1));
 	
    	drugProduction.sm.setQaReceiver(packaging.getEntrance(0), 0.50);
-	//  	drugProduction.sm.setQaReceiver(cmoPackaging.getEntrance(0), 0.50);
-
-	//cmoDrugProduction.sm.setQaReceiver(cmoPackaging.getEntrance(0));
 	
 	pacMatFacility.sm.setQaReceiver(packaging.getEntrance(1));
 
 	distro = new Distributor(state, "Distributor", config,  pacDrugBatch);
 	packaging.sm.setQaReceiver(distro);	
-	//cmoPackaging.sm.setQaReceiver(distro);	
 
 	((Demo)state).add(apiProduction);
 	((Demo)state).add(drugProduction);
 	state.schedule.scheduleRepeating(packaging);
 
-	//state.schedule.scheduleRepeating(cmoApiProduction);
-	//	state.schedule.scheduleRepeating(cmoDrugProduction);
-	//	state.schedule.scheduleRepeating(cmoPackaging);
-
 	((Demo)state).add(distro);
-
 
 	// the suppliers are scheduled just to enable charting
 	((Demo)state).add(rawMatSupplier );
@@ -153,7 +135,17 @@ public class PharmaCompany extends Sink
 	state.schedule.scheduleRepeating(excipientFacility);
 
 	setupCmoTracks((Demo)state,  config);
-	
+
+	Vector<Production> vp = Util.array2vector(cmoTrack);
+	Production [] myp = {apiProduction, drugProduction, packaging};
+	vp.addAll( Util.array2vector(myp));
+		    
+	ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]));
+
+	fudgeFactor = 1.0 / ga.terminalAmt / rawMatSupplier.computeAlpha();
+	System.out.println(name + ": RM over-ordering fudgeFactor=" + fudgeFactor);
+
+	for(Production p: myp) { p.setPlan(0); }
     }
 
     /** Sets up the 4 CMO Tracks, based on the data in the config file */
@@ -258,12 +250,31 @@ public class PharmaCompany extends Sink
 	//msg += "; stock changed from " + s0 + " to " +s;	
 	if (Demo.verbose) System.out.println(msg);
 
+	rawMatSupplier.receiveOrder(Math.round(amt * fudgeFactor));
+
+	pacMatFacility.receiveOrder(Math.round(amt * ga.getStartPlanFor(packaging) /pacMatFacility.computeAlpha()));
+
+	excipientFacility.receiveOrder(Math.round(amt * ga.getStartPlanFor(drugProduction)/ excipientFacility.computeAlpha()));
+
+	Production [] myp = {apiProduction, drugProduction, packaging};
+	for(Production p: myp) {
+	    double plan = Math.round(amt * ga.getStartPlanFor(p));
+	    p.addToPlan(plan);
+	}
+
+
+	/*
+	vp.addAll( Util.array2vector(myp));
+		    
+	GraphAnalysis ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]));
+
+	fudgeFactor = 1.0 / ga.terminalAmount / rawMatSupplier.getQaDelay().computeAlpha();
+	System.out.println(name + ": RM over-ordering fudgeFactor=" + fudgeFactor);
+
+	for(Production p: myp) { p.setPlan(0); }
+	*/
 
 	
-	rawMatSupplier.receiveOrder(amt * fudgeFactor);
-	pacMatFacility.receiveOrder(amt);
-	excipientFacility.receiveOrder(amt);
- 
 	return z;
 
     }

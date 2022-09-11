@@ -56,9 +56,12 @@ public class Distributor extends Pool
 
 	    Resource orderPaper = new CountableResource(PharmaCompany.drugOrderResource, orderSize);
 	    Provider provider = null;  // FIXME: replace with a bottomless Source
-	    
-	    ((Demo)state).getPharmaCompany().accept(provider, orderPaper, orderSize, orderSize);
-	    batchesOrdered++;
+	    if (orderSize==0) {
+		System.out.println("Warning: At t="+t+", " + getName() + " skips its monthly order because the avg demand computes to 0!");
+	    } else {
+		((Demo)state).getPharmaCompany().accept(provider, orderPaper, orderSize, orderSize);
+		batchesOrdered++;
+	    }
 	    lastMonthShippedAt = month;
 	}
 	// instead of super.step(), just do what's needed in this class

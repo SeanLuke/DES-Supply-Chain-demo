@@ -39,11 +39,6 @@ PackagedDrug,backupExpiration,1095
 #-----------------------------------------------------------------------
 EndConsumer,dailyDemand,Triangular,37.688e6,37.690e6,37.692e6
 
-#HospitalPool,orderSize,1.9e3
-#HospitalPool,order,Normal,1146404953,2887
-
-#HospitalPool,intervalBetweenOrders,30
-#HospitalPool,order,Triangular,1209021340,1209030000,1209038660
 HospitalPool,initial,1.146e9
 HospitalPool,batch,5e5
 HospitalPool,reorderPoint,0.75
