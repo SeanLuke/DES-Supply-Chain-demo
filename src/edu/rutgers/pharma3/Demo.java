@@ -134,7 +134,7 @@ public class Demo extends SimState {
 	    ex.printStackTrace(System.err);
 	    System.exit(1);
 	}
-	final int CENSUS_INTERVAL=60;
+	final int CENSUS_INTERVAL=360;
 	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
 	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
 	doReport("Start");

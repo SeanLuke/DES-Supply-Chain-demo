@@ -65,6 +65,10 @@ public class Production extends sim.des.Macro
 	/** The standard batch size for this input */
 	final double batchSize;
 
+	/** How much stuff is stored here. The value should be the same as given by
+	    getContentAmount(), but without scanning the entire buffer */
+	private double currentStock=0;
+
 	/** @return a link to the Production object whose part this InputStore is */
 	Production whose() {
 	    return Production.this;
@@ -116,7 +120,7 @@ public class Production extends sim.des.Macro
 		refillDelay.addReceiver(InputStore.this);
 
 		// Initialize the safety stock
-		stock = magicFeed(InputStore.this, target);
+		//stock = magicFeed(InputStore.this, target);
 	    }
 
 	    /** Has the magic source feed some stuff to the specified
@@ -221,11 +225,45 @@ public class Production extends sim.des.Macro
 	    return entities.remove(b);
 	}
 
+	/** Removes a batch of stored input resource, to indicate that
+	    it has been consumed to produce something else.
+
+	    This method should only called if hasEnough() has returned
+	    true for all ingredients, because we don't want to consume
+	    one ingredient without being able to consume all other
+	    ingredients!
+	    
+	    @return the consumed batch (so that its data can be used
+	    for later analysis) if Batch product, or null if fungible
+	 */
 	Batch consumeOneBatch() {
-	    Batch b=getFirst();			
-	    if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-	    remove(b);
-	    return b;
+
+
+	    if (getTypical() instanceof Batch) {
+		//z = p.provide(p.sink, 1);
+		Batch b=getFirst();			
+		if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		remove(b);
+		currentStock -= b.getContentAmount();
+		return b;
+		
+		//usedBatches.add(p.consumeOneBatch());
+	    } else if (getTypical() instanceof CountableResource) {
+		boolean z = provide(sink, batchSize);
+		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
+		currentStock -= batchSize;
+
+
+		if (sink.lastConsumed != batchSize) {
+		    String msg = "Batch size mismatch on " + sink +": have " + sink.lastConsumed+", expected " + batchSize;
+		    throw new IllegalArgumentException(msg);
+		}
+
+		return null;
+		
+	    } else throw new IllegalArgumentException("Wrong input resource type");
+	    
+	    
 	}
 	
 	/** Do we have enough input materials of this kind to make a batch? 
@@ -245,7 +283,9 @@ public class Production extends sim.des.Macro
 		    // System.out.println(getName() + ", has expired batch; created=" + b.getLot().manufacturingDate +", expires at="+b.getLot().expirationDate+"; now=" +t);
 		    if (!offerReceiver( expiredDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
 		    remove(b);
-		    discardedExpired += b.getContentAmount();
+		    double a = b.getContentAmount();
+		    currentStock -= a;
+		    discardedExpired += a;
 		    discardedExpiredBatches ++;		    
 		}
 		
@@ -268,7 +308,9 @@ public class Production extends sim.des.Macro
 		    Batch b=getFirst();
 		    if (!offerReceiver( stolenDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
 		    remove(b);
-		    destroyed += b.getContentAmount();
+		    double a = b.getContentAmount();
+		    currentStock -= a;
+		    destroyed += a;
 		    stolenBatches ++;
 		}
 	    } else {
@@ -286,13 +328,18 @@ public class Production extends sim.des.Macro
 	 */
 	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 	    //	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":		"an entity";
+
+	    double a = (amount instanceof Batch)? ((Batch)amount).getContentAmount() : amount.getAmount();
+
 	    boolean z = super.accept(provider,  amount, atLeast,  atMost);
+	    if (!z) throw new AssertionError();
+	    currentStock += a;
 
 	    // See if the production system is empty, and needs to be "primed"
 	    // to start.
 	    if (needProd.getAvailable()==0 && prodDelay.getSize()==0) {
 		double t = state.schedule.getTime();
-		System.out.println("At " + t + ", the "+getName()+" tries to prime " + Production.this.getName());
+		//System.out.println("At " + t + ", the "+getName()+" tries to prime " + Production.this.getName());
 
 		// This will "prime the system" by starting the first
 		// mkBatch(), if needed and possible. After that, the
@@ -326,11 +373,15 @@ public class Production extends sim.des.Macro
 	    if (resource != null) {
 		return resource.getAmount();
 	    } else if (entities != null) {
+		/*
 		double sum = 0;
 		for(Entity e: entities) {
 		    sum +=  (e instanceof Batch)? ((Batch)e).getContentAmount() : e.getAmount();
 		}
-		return sum;
+		if (sum!=currentStock) throw new AssertionError("currentStock=" + currentStock +", sum="+sum);
+		*/
+		return currentStock;
+
 	    }  else {
 		return 0;
 	    }
@@ -569,10 +620,19 @@ public class Production extends sim.des.Macro
     /** Produce as many batches as allowed by the production capacity (per day)
 	and available inputs. A disruption may reduce the production capacity temporarily.
     */
-    public void step​(SimState state) {
+    public void step(SimState state) {
 
 	try {
+	    foo(state);
 
+	} finally {
+	    dailyChart();
+	}
+	
+    }
+
+    	    private void foo(SimState state) {
+	    
 	    disruptInputs( state);
 	    if (isHalted(state)) return;
 
@@ -585,7 +645,7 @@ public class Production extends sim.des.Macro
 	    }
 	    
 	    if (!hasEnoughInputs()) {
-		//if (Demo.verbose)
+		if (Demo.verbose)
 		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " + reportInputs(true));
 		return;
 	    }
@@ -595,7 +655,8 @@ public class Production extends sim.des.Macro
 	    // production cycle will repeat via the slackProvider
 	    // mechanism
 	    needProd.provide(prodDelay);
-	    
+
+	    /*
 	    if (!hasEnoughInputs()) {
 		for(int j=0; j<inBatchSizes.length; j++) {
 		    boolean has =  inputStore[j].hasEnough(inBatchSizes[j]);
@@ -606,11 +667,18 @@ public class Production extends sim.des.Macro
 		}
 	    }
 	    
-	    
+	    */
 	    //  the Queue.step() call resource offers to registered receivers
 	    //super.step(state);
+	    }
 
-	} finally {
+
+    private static final boolean skipWork = false;
+    
+    
+    private void dailyChart() {
+	if (skipWork) return;
+	
 	    double releasedAsOfToday = qaDelay.getReleasedGoodResource();
 	    double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	    releasedAsOfYesterday = releasedAsOfToday;
@@ -624,10 +692,9 @@ public class Production extends sim.des.Macro
 
 	    
 	    charter.print(data);
-	}
-	
     }
 
+    
     /** Tries to make a batch, if resources are available
 	@return true if a batch was made; false if not enough input resources
 	was there to make one, or the current plan does not call for one
@@ -647,20 +714,9 @@ public class Production extends sim.des.Macro
 	    
 	    InputStore p = inputStore[j];
 	    //System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
-	    if (p.getTypical() instanceof Batch) {
-		//z = p.provide(p.sink, 1);
-		
-		usedBatches.add(p.consumeOneBatch());
-		
-	    } else if (p.getTypical() instanceof CountableResource) {
-		boolean z = p.provide(p.sink, inBatchSizes[j]);				    if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");    
-	    } else throw new IllegalArgumentException("Wrong input resource type");
-	    
-	    if (p.sink.lastConsumed != inBatchSizes[j]) {
-		String msg = "Batch size mismatch on sink["+j+"]=" +
-		    p.sink +": have " + p.sink.lastConsumed+", expected " + inBatchSizes[j];
-		throw new IllegalArgumentException(msg);
-	    }
+	    Batch b = p.consumeOneBatch();
+	    if (b!=null) 		usedBatches.add(b);
+
 	    
 	}
 

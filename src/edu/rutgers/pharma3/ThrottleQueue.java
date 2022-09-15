@@ -22,6 +22,7 @@ public class ThrottleQueue extends sim.des.Queue
 {
 
     private AbstractDistribution delayDistribution;
+    /** The cap-1 SimpleDelay for which the ThrottleQueue serves as an inpu buffer */
     final private SimpleDelay delay;
     
 /** Creates a Queue to be attached in front of the Delay, and
@@ -78,23 +79,14 @@ public class ThrottleQueue extends sim.des.Queue
 
 	
 	double delayTime = Math.abs(delayDistribution.nextDouble());
-	//	delay.setDelayTimeNoClearing( delayTime);
-
 	
 	delay.setDelayTime( delayTime);
 			    
-	double t = state.schedule.getTime();       
-	SimpleDelay sd = (SimpleDelay)receiver;
+	//double t = state.schedule.getTime();       
 
-	if (Demo.verbose && getName().indexOf("PackagingMat")>=0 && t>0) 		    
-	    	System.out.println("At " + t +", "+getName() + ".offerReceiver(" + receiver.getName()+","+atMost+") (cap="+
-				   sd.getCapacity() +", delay="+sd.getDelayTime()+"), had=" + hasBatches());
 
 	boolean z=super.offerReceiver(receiver, atMost);
 
-	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) {
-	    System.out.println("At " + t +", "+getName() + " offered to " + receiver.getName()+", result=" + z +"; now has=" + hasBatches());
-	}
 			    
 	return z;
     }

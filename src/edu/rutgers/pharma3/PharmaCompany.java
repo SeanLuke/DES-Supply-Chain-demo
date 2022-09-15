@@ -174,7 +174,7 @@ public class PharmaCompany extends Sink
 	    Batch outResource;
 	    if (node2 instanceof Pool) {
 		rcv = (Pool)node2;
-		outResource = ((Pool)rcv).prototype;
+		outResource = (Batch)((Pool)rcv).prototype;
 	    } else if (node2 instanceof Production) {
 		// just assuming input buffer 0
 		rcv = ((Production)node2).getEntrance(0);
