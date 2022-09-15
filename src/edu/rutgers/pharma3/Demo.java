@@ -143,9 +143,11 @@ public class Demo extends SimState {
     /** Set up our network for display purposes 
      */
     void depict() {
-        field = new DES2D(1000, 700);
+        //field = new DES2D(1000, 700);
+	field = null;
+	if (field==null) return;
+	
 
-        //field.add(pharmaCompany, 200, 20);
         //field.add(hospitalPool, 400, 20);
 
 

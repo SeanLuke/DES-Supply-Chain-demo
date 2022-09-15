@@ -34,7 +34,7 @@ public class Config extends HashMap<String,ParaSet> {
 	ParaSet defaultPara = h.get("default");
 	if (defaultPara!=null) {
 	    for(ParaSet para: h.values()) {
-		if (para!= defaultPara) para.setParent( defaultPara);
+		if (para!= defaultPara && para.getParent()==null) para.setParent( defaultPara);
 	    }
 	}
 	

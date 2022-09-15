@@ -12,10 +12,22 @@ import sim.des.portrayal.*;
 import edu.rutgers.util.*;
 import edu.rutgers.pharma3.Disruptions.Disruption;
 
-/** A Production plant receives QA-inspected ingredients pushed to it from upstream
-    suppliers, puts them through production and QA delays, and pushes the output 
-    to a specified Receiver.
+/** A Production plant receives QA-inspected ingredients pushed to it
+    from upstream suppliers, puts them through production and QA
+    delays, and pushes the output to a specified Receiver.
 
+    <p>A Production object typically includes a ProdDelay (modeling
+    the production step), an optional SimpleDelay modeling a
+    transportaion delay, and a QaDelay modeling the testing stage. All
+    three of them are actually "throttled delays", i.e. a combination
+    of a ThrottleQueue (which holds batches to be processed) and a
+    SimpleDelay (or a derived class object) which handles at most 1
+    batch at a time.
+
+    <P>Production objects are used to represent the 3 stages of the FC
+    operation (API production, drug production, and packaging), as
+    well the the 4 parallel tracks of the CMO operation (A, B, C, D).
+   
     <p>Sample usage:
     <ol>
 
@@ -28,7 +40,6 @@ import edu.rutgers.pharma3.Disruptions.Disruption;
 
     <li>Schedule the production element, so that it will know to initiate production daily.
     </ol>
-
 
 
   */
@@ -48,16 +59,130 @@ public class Production extends sim.des.Macro
 	    ingredient as it's used, with metering */
 	MSink sink;
 
+	/** Either Batch (in most cases) or CountableResource (for pac.mat) */
 	final Resource prototype;
 
+	/** The standard batch size for this input */
+	final double batchSize;
+
+	/** @return a link to the Production object whose part this InputStore is */
 	Production whose() {
 	    return Production.this;
 	}
+
+	/** The data for a "virtual safety stock", i.e. information
+	    about how much material in this InputStore belongs to the
+	    "safety stock" (supplied by a magic source supplier),
+	    rather than the "regular input" (supplied by the regular
+	    production chain). */
+	class Safety {
+	    /** If true, we have a safety stock for this resource */
+	    final boolean on;
+	    final double reorderPoint, target;
+
+	    /** Used for replenishing the safety stock from the magic supplier */
+	    Delay refillDelay = null;
+
+	    /** Sets safety-stock control parameters from the parameter set,
+		and, if the safety stock is present, fills it to the target 
+		amount.
+	     */
+	    Safety() throws IllegalInputException {
+		//	    safety.reorderPoint.RawMaterial
+		String un=getUnderlyingName();
+		Double q = para.getDouble("safety.target." + un, null);
+		if (q!=null) {
+		    target = q;
+		    on = (target != 0);
+		    reorderPoint = para.getDouble("safety.reorderPoint." + un);
+		} else {
+		    on = false;
+		    reorderPoint = target = 0;
+		}
+		String msg = Production.this.getName() + "." + InputStore.this.getName();
+		msg += on?
+		    " has safety stock ("+target+", "+reorderPoint+")":
+		    " has no safety stock";	    
+		System.out.println(msg);
+		if (!on) {
+		    return;
+		}
+		if (reorderPoint >= target) throw new IllegalInputException("In "+InputStore.this.getName()+", invalid reorderPoint=" + reorderPoint);
+
+		
+		AbstractDistribution refillDistr = para.getDistribution("safety.delay." +un,state.random); 
+		refillDelay = new Delay(state,prototype);
+		refillDelay.setDelayDistribution(refillDistr);
+		refillDelay.addReceiver(InputStore.this);
+
+		// Initialize the safety stock
+		stock = magicFeed(InputStore.this, target);
+	    }
+
+	    /** Has the magic source feed some stuff to the specified
+		receiver. 
+		@param rcv Where to put stuff. It can be the InputStore itself
+		(for initialization) or a Delay (for replenishment). In the
+		latter case, ensure that all batches travel together.
+		@param amt The desired amount of stuff (units) to be sent.
+		@return How much stuff (units) has actually be sent. It can exceed amt, due to the last-batch rounding.
+		*/
+	    private double magicFeed(Receiver rcv, double amt) {
+		if (!on) return 0;
+		double sent = 0;
+		if (InputStore.this.prototype instanceof Batch) {
+		    double now = getState().schedule.getTime();
+		    Provider provider = null;  // why do we need it?
+
+		    Delay delay = (rcv instanceof Delay)? (Delay)rcv: null;
+		    if (delay!=null) delay.setDropsResourcesBeforeUpdate(false);
+	 
+		    int n=0;
+	    
+		    while(sent < amt) {
+			Batch b = ((Batch)InputStore.this.prototype).mkNewLot(batchSize, now);
+			if (!rcv.accept(provider, b, 1, 1)) throw new AssertionError("Queue did not accept");
+			n++;
+			if (n==1 && delay!=null) delay.setUsesLastDelay(true);
+			sent += b.getContentAmount();
+		    }
+		    if (delay!=null) delay.setUsesLastDelay(false);
+		} else {
+		    CountableResource b = new CountableResource((CountableResource)prototype, amt);
+		    Provider provider = null;  // why do we need it?
+		    if (!rcv.accept(provider, b, amt, amt)) throw new AssertionError("Queue did not accept");
+		    sent += amt;
+		}
+		return sent;
+	    }
+	    
+
+	    /** Checks if a refill is needed, and if so, effects it */
+	    private void refillCheck() {
+		if (!on) return;
+		double need = reorderPoint - (stock + onOrder);
+		if (need <= 0) return;
+		double sent = magicFeed(refillDelay, need);
+		onOrder += sent;
+	    }
+	    
+	    /** Ordered from the magic source, but has not arrived yet */
+	    double onOrder=0;
+	    double stock=0, everUsed=0;
+	    
+	}
+
+	final Safety safety;
 	
+	double regularStock=0, everUsedRegular=0, everUsedSafety=0;
+	
+	       	
 	InputStore(SimState _state,
-		   Resource resource) {
+		   Resource resource,
+		   double _batchSize) throws IllegalInputException {
 	    super(_state, resource);
 	    prototype = resource;
+	    batchSize = _batchSize;
 
 	    String name = "Input("+getUnderlyingName() +")";
 	    //name = Production.this.getName() + "/Input store for " + resource.getName();
@@ -73,8 +198,12 @@ public class Production extends sim.des.Macro
 	    addReceiver(sink);
 	    addReceiver(expiredDump);
 
+	    safety = new Safety();
+	       
+		
 	}
 
+	/** The name of the underlying resource */
 	String getUnderlyingName() {
 	    return (prototype instanceof Batch)? ((Batch)prototype).getUnderlyingName(): prototype.getName();
 	}
@@ -153,7 +282,8 @@ public class Production extends sim.des.Macro
 	    return  destroyed;		
 	}
 	
-	/** Purely for debugging */
+	/** Performs certain auxiliary operation piggy-backed on acceptance
+	 */
 	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 	    //	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":		"an entity";
 	    boolean z = super.accept(provider,  amount, atLeast,  atMost);
@@ -264,7 +394,7 @@ public class Production extends sim.des.Macro
 
     final Resource[] inResources;
     final Batch outResource; 
-    
+    final ParaSet para;
     /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
 	@param outResource batches of output (e.g. bulk drug)
      */
@@ -273,24 +403,23 @@ public class Production extends sim.des.Macro
 	       Resource[] _inResources,
 	       Batch _outResource ) throws IllegalInputException, IOException
     {
-	//super(state, outResource);
 	inResources =  _inResources;
 	outResource = _outResource;
 	setName(name);
-	ParaSet para = config.get(name);
+	para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+
+	inBatchSizes = para.getDoubles("inBatch");
+	if (inBatchSizes.length!=inResources.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inResources.length + " resources ("+Util.joinNonBlank(";",inResources)+"), but " + inBatchSizes.length + " input batch sizes");
+
 
 	// Storage for input ingredients
 	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
-	    inputStore[j] = new InputStore(state,inResources[j]);
-	    //inputStore[j].setName(getName() + "/Input store for " + inResources[j].getName());
+	    inputStore[j] = new InputStore(state,inResources[j], inBatchSizes[j]);
 	    if (this instanceof Macro)  addReceiver(inputStore[j], false); 
 	}
 	
-	inBatchSizes = para.getDoubles("inBatch");
-	if (inBatchSizes.length!=inputStore.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inputStore.length + " resources ("+Util.joinNonBlank(";",inputStore)+"), but " + inBatchSizes.length + " input batch sizes");
-
 	outBatchSize = para.getDouble("batch");
 
 	
@@ -321,14 +450,13 @@ public class Production extends sim.des.Macro
 	}
 
 	sm = new SplitManager(this, outResource, qaDelay);
-
 	
 	charter=new Charter(state.schedule, this);
 	String moreHeaders[] = new String[2 + inResources.length];
 	moreHeaders[0] = "releasedToday";
 	moreHeaders[1] = "outstandingPlan";
 	for(int j=0; j<inputStore.length; j++) {
-	    moreHeaders[j+2] = "StockOf" + inputStore[j].getUnderlyingName();
+	    moreHeaders[j+2] = "Stock." + inputStore[j].getUnderlyingName();
 	}
 	charter.printHeader(moreHeaders);
 	 
@@ -336,7 +464,7 @@ public class Production extends sim.des.Macro
 
     /** Lay out the elements for display */
     void depict(DES2D field, int x0, int y0) {
-
+	if (field==null) return;
 	field.add(this, x0, y0);
 	setImage("images/factory.png", true);
 
@@ -467,7 +595,6 @@ public class Production extends sim.des.Macro
 	    // production cycle will repeat via the slackProvider
 	    // mechanism
 	    needProd.provide(prodDelay);
-
 	    
 	    if (!hasEnoughInputs()) {
 		for(int j=0; j<inBatchSizes.length; j++) {

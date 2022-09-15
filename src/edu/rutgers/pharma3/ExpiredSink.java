@@ -67,7 +67,7 @@ class ExpiredSink extends MSink  {
     Batch getNonExpiredBatch(Provider p, LinkedList<Entity> entities) {
 	while( p.getAvailable()>0) {
 	    Batch b = (Batch)entities.getFirst();
-	    if (!accept(p, b, 0, 0))  return b;	
+	    if (!accept(p, b, 1, 1))  return b;	
 	    entities.remove(b);
 	}
 	return null;

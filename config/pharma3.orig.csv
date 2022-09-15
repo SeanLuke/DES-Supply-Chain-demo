@@ -116,6 +116,9 @@ ApiProduction,rework,0.01
 ApiProduction,prodDelay,Uniform,0.25/68.915,1.75/68.915
 ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
 #ApiProduction,qaDelay,1/73.741
+#-- safety stocks
+ApiProduction,safety.target.RawMaterial,80450*5e5
+ApiProduction,safety.reorderPoint.RawMaterial,53634*5e5
 
 DrugProduction,inBatch,5e5,5e5
 DrugProduction,batch,5e5
@@ -124,6 +127,17 @@ DrugProduction,faulty,0.01
 DrugProduction,prodDelay,Uniform,0.25/50.915,1.75/50.915
 #DrugProduction,qaDelay,1/50.915
 DrugProduction,qaDelay,Uniform,0.25/50.915,1.75/50.915
+#-- safety stocks
+DrugProduction,safety.target.Api,55752*5e5
+DrugProduction,safety.reorderPoint.Api,37168*5e5
+DrugProduction,safety.target.Excipient,3055*5e5
+DrugProduction,safety.reorderPoint.Excipient,1527*5e5
+
+
+#
+#Excipient,expiration,1095
+#PackagingMaterial,expiration,+Infinity
+
 
 Packaging,inBatch,5e5,5e5
 Packaging,batch,5e5

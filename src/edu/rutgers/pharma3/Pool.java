@@ -11,29 +11,37 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** The common base for various "warehouses", such as the Hospital/Pharmacies Pool or the Wholesale Pool.
+/** A Pool models a place where a product is stored, and from which it
+    can be "pulled" by other elements of a supply chain. A Pool is
+    implemented as a DES Queue, with additional methods used for
+    processing pull requests, and for automatic replenishment when the 
+    level falls below a certain point.
+
+    <p>
+    The Pool class is the common base for various "warehouses", such as the
+    Hospital/Pharmacies Pool or the Wholesale Pool.
  */
 public class Pool extends sim.des.Queue
-    implements Reporting, Named, BatchProvider 					    
-{
+    implements Reporting, Named, BatchProvider {
 
     final double batchSize;
 
-    /** Similar to typical, but with storage. In this case, it's batches of packaged drug  */
-    protected final Batch prototype;
+    /** Similar to Provider.typical, but with information about the
+	underlying resource in its storage[]. In the Wholesaler Pool
+	etc, this represents batches of packaged drug. */
+    //protected final Batch prototype;
+    protected final Resource prototype;
 
     protected final ParaSet para;
 
-    /* 
+    /* Controlled by configuration parameters, e.g.:
     WholesalerPool,reorderPoint,0.75
     WholesalerPool,reorderQty,0.25
     */
     private boolean hasReorderPolicy = false;
     private double reorderPoint=0, reorderQty=0;
 
-
     protected double everOrdered=0;
-
     
     public double getEverReceived() {
 	return everReceived;
@@ -47,12 +55,16 @@ public class Pool extends sim.des.Queue
 
     protected Charter charter;
 
-    Pool(SimState state, String name, Config config, Batch resource) throws IllegalInputException,
+    Pool(SimState state, String name, Config config,
+	 //Batch
+	 Resource resource) throws IllegalInputException,
  IOException {
 	this( state,  name,  config, resource, new String[0]);
     }
     
-    Pool(SimState state, String name, Config config, Batch resource, String[] moreHeaders) throws IllegalInputException,
+    Pool(SimState state, String name, Config config,
+	 //Batch
+	 Resource resource, String[] moreHeaders) throws IllegalInputException,
  IOException {
 									    
 	super(state, resource);	
@@ -67,8 +79,10 @@ public class Pool extends sim.des.Queue
 	batchSize = para.getDouble("batch");
 	initSupply(initial);
 	everReceived = 0; // not counting the initial supply
-	
-	expiredProductSink = new ExpiredSink(state,  resource, 365);
+
+	expiredProductSink = (resource instanceof Batch) ?
+	    new ExpiredSink(state,  (Batch)resource, 365) : null;
+
 	stolenProductSink = new MSink(state,  resource);
 
 	Double r = para.getDouble("reorderPoint", null);
@@ -87,28 +101,38 @@ public class Pool extends sim.des.Queue
     
     /** Loads the Queue with the "initial supply", in standard size batches made today */
     private void initSupply(double initial) {
-	int n = (int)Math.round( initial / batchSize);
-	double now = state.schedule.getTime();
-	for(int j=0; j<n; j++) {
-	    Batch whiteHole = prototype.mkNewLot(batchSize, now);
+
+	if (prototype instanceof Batch) {
+
+	    int n = (int)Math.round( initial / batchSize);
+	    double now = state.schedule.getTime();
+	    for(int j=0; j<n; j++) {
+		Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
+		Provider provider = null;  // why do we need it?
+		if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
+	    }
+
+	} else {
+	    CountableResource b = new CountableResource((CountableResource)prototype, initial);
 	    Provider provider = null;  // why do we need it?
-	    if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
+	    if (!accept(provider, b, initial, initial)) throw new AssertionError("Queue did not accept");
 	}	
     }
 
-    /** Stores information about one of the Pools from which this Pool get supplies. */
+    /** An auxiliary structure that stores information about one of
+	the Pools from which this Pool gets replenished. */
     private class Supplier {
 	final //Pool
 	    BatchProvider
 	    src;
 	final double fraction;
 	/** Where does this supplier send stuff to? This can be either
-	    this Pool itself (for immediate shipping), or a Delay
-	    feeding into this Pool.
+	    this Pool itself (if shipping is immediate shipping), 
+	    or a Delay feeding into this Pool.
 	    @param delayDistr The delay distribution, or null for immediate delivery
 	*/
 	final Receiver entryPoint;
-	Supplier(BatchProvider _src, double _fraction,	    AbstractDistribution delayDistr) {
+	Supplier(BatchProvider _src, double _fraction,	AbstractDistribution delayDistr) {
 	    src = _src;
 	    fraction = _fraction;
 
@@ -152,7 +176,16 @@ HospitalPool,backOrder,WholesalerPool
 	backOrderSupplier = mkSupplier(key, key2, knownPools, true);				
     }
 
-    /** Initializes a supplier based on a line from the ParaSet */
+    /** Initializes a supplier based on a line from the ParaSet. Example:
+    HospitalPool,from1,WholesalerPool,1.00
+#HospitalPool,from2,Distributor,0.00
+HospitalPool,backOrder,WholesalerPool,1.0
+HospitalPool,delay1,Triangular,7,10,15
+HospitalPool,delay2,Triangular,7,10,15
+HospitalPool,delayBackOrder,Triangular,7,10,15
+
+
+ */
     private Supplier mkSupplier(String key, String key2, HashMap<String,Steppable> knownPools, boolean bePool)
 	throws IllegalInputException {
 	Vector<String> v = para.get(key);
@@ -227,7 +260,8 @@ HospitalPool,backOrder,WholesalerPool
 	return feedTo(r, amt, true);
     }
 
-    /*
+    /* // This was used to helpt to figure how Delay really works in some sticky
+       // situations
     private String reportDelayState(Delay delay) {
 	DelayNode[] nodes = delay.getDelayedResources();
 	Vector<String> v = new Vector();
@@ -253,22 +287,22 @@ HospitalPool,backOrder,WholesalerPool
 	if (delay!=null) {
 	    delay.setDropsResourcesBeforeUpdate(false);
 	    double now = state.schedule.getTime();
-	    //	    System.out.println("At " +  now + ", " + getName() + " will feed "+amt+" u to " + r.getName() +", getDelayed=" + delay.getDelayed());
-	    //System.out.println(reportDelayState(delay)); 
 	}
 	
 	while(getAvailable()>0 && sent<amt &&
 	      (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
 	    if (!offerReceiver(r, b)) throw new IllegalArgumentException("Expected acceptance by " + r);
 	    n++;
-	    if (n==1 && delay!=null) delay.setFreezingDelay(true);
+	    if (n==1 && delay!=null) {
+		//delay.setFreezingDelay(true);
+		delay.setUsesLastDelay(true);
+	    }
 	    sent += b.getContentAmount();
 	    entities.remove(b);
 	}
 	if (delay!=null) {
-	    delay.setFreezingDelay(false);
-	    //System.out.println(getName() + " fed " + n +  " ba to " + r.getName() +", getDelayed=" + delay.getDelayed());
-	    //System.out.println(reportDelayState(delay)); 
+	    // delay.setFreezingDelay(false);
+	    delay.setUsesLastDelay(false);
 	}
 
 	everSent += sent;
@@ -303,7 +337,8 @@ HospitalPool,backOrder,WholesalerPool
     }
     
     /** How much stuff is stored by this pool? 
-	@return the total content of the pool (in units)
+	@return the total content of the pool, i.e. the sum of sizes
+	of all stored batches (in units)
      */
     public double getContentAmount()        {
         if (resource != null) {
@@ -419,11 +454,8 @@ HospitalPool,backOrder,WholesalerPool
        return wrap(s);
    }
 
-    /** Used when modeling disruptions */
+    /** Used when modeling "depletion" disruptions */
     private MSink stolenProductSink;
-    //private double stolen=0;
-    //private int stolenBatches=0;
-
 
     /** Simulates theft or destruction of some of the product stored in 
 	this pool
@@ -451,7 +483,7 @@ HospitalPool,backOrder,WholesalerPool
 	return  destroyed;		
     }
 
-    /** Prints the header of the time series CSV filw
+    /** Prints the header of the time series CSV file
 	@param moreHeaders Names of any additional columns (beyond those that 
 	all Pools print) */
     void doChartHeader(String... moreHeaders) {
@@ -478,7 +510,6 @@ HospitalPool,backOrder,WholesalerPool
 	sentToday=0;
 	orderedToday=0;
     }
-
     
 }
 

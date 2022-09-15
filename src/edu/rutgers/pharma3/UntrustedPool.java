@@ -11,16 +11,18 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** An inexhaustible supply of stuff, into which some "illicit" units are mixed in
+/** The Untrusted Suppplier Pool has an inexhaustible supply of stuff,
+    into which some "illicit" units are mixed in.
  */
 public class UntrustedPool extends Provider
-    implements Reporting, Named, BatchProvider 					    
-{
+    implements Reporting, Named, BatchProvider 	{
     
     /** Similar to typical, but with storage. In this case, it's batches of packaged drug  */
     protected final Batch prototype;
 
+    /** Standard batch size */
     final double batchSize;
+    /** From this batch, the percentage of bad pills mixed into each batch is drawn */
     final AbstractDistribution illicitDis;
 
     protected Charter charter;
@@ -42,8 +44,17 @@ public class UntrustedPool extends Provider
 
     }
     
-    double everSent = 0, everSentIllicit=0, sentToday=0;
-    
+    private double everSent = 0, everSentIllicit=0;
+    /** How many units have been sent since the previous-day
+	reporting. The amount is incremented on sending, and will be
+	zeroed after today's reporting.
+    */
+    double sentToday=0;
+
+    /** Satisfies a pull request, sendig a specified amount of product to 
+	a specified receiver. The amount may be rounded up to a full batch
+	for convenience of the subsequent accounting.
+    */
     public double feedTo(Receiver r, double amt) {
 	double sent = 0, sentBad=0;
    
@@ -65,7 +76,7 @@ public class UntrustedPool extends Provider
 	return sent;
     }
 
-
+    /** Just writes the numbers to the CVS file */
     public void step(SimState state) {
 	charter.print(sentToday);
 	sentToday=0;

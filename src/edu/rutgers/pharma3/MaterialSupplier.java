@@ -175,7 +175,7 @@ public class MaterialSupplier extends Macro
 	@param y0 Y offset for the top left corner
  */
     void depict(DES2D field, int x0, int y0) {
-
+	if (field==null) return;
 	field.add(this, x0, y0);
 	//this.setImage("images/square.svg", true);	    
 
@@ -241,10 +241,8 @@ public class MaterialSupplier extends Macro
 	    new CountableResource((CountableResource)prototype, x);
 
 	    Provider provider = null;
-	    if (Demo.verbose)
-	    System.out.println( "At t=" + t+", " + getName() + " putting batch of "+x+" into needProd (had="+needProd.hasBatches()+"), bcnt=" + bcnt +", outstandingOrderAmount=" + outstandingOrderAmount );
 
-	    double a =batch.getAmount();
+	    double a = batch.getAmount();
 
 	    double y = (batch instanceof Batch)? ((Batch)batch).getContentAmount() : ((CountableResource)batch).getAmount();
 

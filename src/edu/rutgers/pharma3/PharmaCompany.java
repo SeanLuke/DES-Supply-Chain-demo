@@ -196,6 +196,7 @@ public class PharmaCompany extends Sink
 
     // (x,y)
     void depict(DES2D field) {
+	if (field==null) return;
 	
 	rawMatSupplier.depict(field, 20, 20);
 	excipientFacility.depict(field,  20, 220);

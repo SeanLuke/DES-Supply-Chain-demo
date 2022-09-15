@@ -25,16 +25,18 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	whose parameters this ParaSet contains.
      */
     final public String name;
-
-
-    private ParaSet parent = null;
     
     ParaSet(String _name) {
 	name = _name;
     }
 
+    /** This may refer to the "default" para set, or (for nested para sets)
+	to the enclosing para set */
+    private ParaSet parent = null;
 
     void setParent( ParaSet _parent) { parent = _parent; }
+    ParaSet getParent() { return parent; }
+    
     
     void add(CsvData.BasicLineEntry line) throws IllegalInputException {
 	int nCol=line.nCol();
@@ -62,22 +64,36 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 
     /** @param key just for use in error messages
 	@param s  a real value or a fraction */
-    public Double parseDoubleEx(String key, String s)throws IllegalInputException {
-	String tok[] = s.split("/");
+    public Double parseDoubleEx(String key, String s) throws IllegalInputException {
+
+	String[] ops = {"/", "*", "+", "-"};
+	String[] rops = {"/", "\\*", "\\+", "\\-"};
+
+	int k=0;
+	for(String op: ops) {
 	
-	if (tok.length==2) {	    
+	    String tok[] = s.split(rops[k++]);
+	
+	    if (tok.length!=2) continue;
 	    try {
-		return new Double( tok[0].trim()) /new Double( tok[1].trim());
+		Double a[] = new Double[tok.length];
+		for(int j=0; j<tok.length; j++) {
+		    a[j]= new Double(tok[j].trim());
+		}
+		return op.equals("/")? a[0]/a[1]:
+		    op.equals("*")? a[0]/a[1]:
+		    op.equals("+")? a[0]+a[1]:
+		    op.equals("-")? a[0]-a[1] : null;
 	    } catch(Exception ex) {
-		throwII(key, "Cannot parse as a fraction: " + s);
-	    }
-	} else {
-	    try {
-		return new Double(s);
-	    } catch(Exception ex) {
-		throwII(key, "Cannot parse as a real number: " + s);
+		throwII(key, "Cannot parse as a simple expression: " + s);
 	    }
 	}
+
+	try {
+	    return new Double(s);
+	} catch(Exception ex) {
+	    throwII(key, "Cannot parse as a real number: " + s);
+	}	
 	return null; // never reached   
     }
 
