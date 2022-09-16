@@ -47,362 +47,6 @@ public class Production extends sim.des.Macro
     implements Reporting,  Named, SplitManager.HasQA
 {
 
-    /** A Queue for storing an input ingredient, with a facility
-	to discard expired lots */
-    class InputStore extends sim.des.Queue {
-	/** Used to discard expired lots */
-	Sink expiredDump;
-	/** Simulates theft or destruction (disruption type A4 etc) */
-	Sink stolenDump;
-
-	/** Dummy receiver used for the consumption of this
-	    ingredient as it's used, with metering */
-	MSink sink;
-
-	/** Either Batch (in most cases) or CountableResource (for pac.mat) */
-	final Resource prototype;
-
-	/** The standard batch size for this input */
-	final double batchSize;
-
-	/** How much stuff is stored here. The value should be the same as given by
-	    getContentAmount(), but without scanning the entire buffer */
-	private double currentStock=0;
-
-	/** @return a link to the Production object whose part this InputStore is */
-	Production whose() {
-	    return Production.this;
-	}
-
-	/** The data for a "virtual safety stock", i.e. information
-	    about how much material in this InputStore belongs to the
-	    "safety stock" (supplied by a magic source supplier),
-	    rather than the "regular input" (supplied by the regular
-	    production chain). */
-	class Safety {
-	    /** If true, we have a safety stock for this resource */
-	    final boolean on;
-	    final double reorderPoint, target;
-
-	    /** Used for replenishing the safety stock from the magic supplier */
-	    Delay refillDelay = null;
-
-	    /** Sets safety-stock control parameters from the parameter set,
-		and, if the safety stock is present, fills it to the target 
-		amount.
-	     */
-	    Safety() throws IllegalInputException {
-		//	    safety.reorderPoint.RawMaterial
-		String un=getUnderlyingName();
-		Double q = para.getDouble("safety.target." + un, null);
-		if (q!=null) {
-		    target = q;
-		    on = (target != 0);
-		    reorderPoint = para.getDouble("safety.reorderPoint." + un);
-		} else {
-		    on = false;
-		    reorderPoint = target = 0;
-		}
-		String msg = Production.this.getName() + "." + InputStore.this.getName();
-		msg += on?
-		    " has safety stock ("+target+", "+reorderPoint+")":
-		    " has no safety stock";	    
-		System.out.println(msg);
-		if (!on) {
-		    return;
-		}
-		if (reorderPoint >= target) throw new IllegalInputException("In "+InputStore.this.getName()+", invalid reorderPoint=" + reorderPoint);
-
-		
-		AbstractDistribution refillDistr = para.getDistribution("safety.delay." +un,state.random); 
-		refillDelay = new Delay(state,prototype);
-		refillDelay.setDelayDistribution(refillDistr);
-		refillDelay.addReceiver(InputStore.this);
-
-		// Initialize the safety stock
-		//stock = magicFeed(InputStore.this, target);
-	    }
-
-	    /** Has the magic source feed some stuff to the specified
-		receiver. 
-		@param rcv Where to put stuff. It can be the InputStore itself
-		(for initialization) or a Delay (for replenishment). In the
-		latter case, ensure that all batches travel together.
-		@param amt The desired amount of stuff (units) to be sent.
-		@return How much stuff (units) has actually be sent. It can exceed amt, due to the last-batch rounding.
-		*/
-	    private double magicFeed(Receiver rcv, double amt) {
-		if (!on) return 0;
-		double sent = 0;
-		if (InputStore.this.prototype instanceof Batch) {
-		    double now = getState().schedule.getTime();
-		    Provider provider = null;  // why do we need it?
-
-		    Delay delay = (rcv instanceof Delay)? (Delay)rcv: null;
-		    if (delay!=null) delay.setDropsResourcesBeforeUpdate(false);
-	 
-		    int n=0;
-	    
-		    while(sent < amt) {
-			Batch b = ((Batch)InputStore.this.prototype).mkNewLot(batchSize, now);
-			if (!rcv.accept(provider, b, 1, 1)) throw new AssertionError("Queue did not accept");
-			n++;
-			if (n==1 && delay!=null) delay.setUsesLastDelay(true);
-			sent += b.getContentAmount();
-		    }
-		    if (delay!=null) delay.setUsesLastDelay(false);
-		} else {
-		    CountableResource b = new CountableResource((CountableResource)prototype, amt);
-		    Provider provider = null;  // why do we need it?
-		    if (!rcv.accept(provider, b, amt, amt)) throw new AssertionError("Queue did not accept");
-		    sent += amt;
-		}
-		return sent;
-	    }
-	    
-
-	    /** Checks if a refill is needed, and if so, effects it */
-	    private void refillCheck() {
-		if (!on) return;
-		double need = reorderPoint - (stock + onOrder);
-		if (need <= 0) return;
-		double sent = magicFeed(refillDelay, need);
-		onOrder += sent;
-	    }
-	    
-	    /** Ordered from the magic source, but has not arrived yet */
-	    double onOrder=0;
-	    double stock=0, everUsed=0;
-	    
-	}
-
-	final Safety safety;
-	
-	double regularStock=0, everUsedRegular=0, everUsedSafety=0;
-	
-	       	
-	InputStore(SimState _state,
-		   Resource resource,
-		   double _batchSize) throws IllegalInputException {
-	    super(_state, resource);
-	    prototype = resource;
-	    batchSize = _batchSize;
-
-	    String name = "Input("+getUnderlyingName() +")";
-	    //name = Production.this.getName() + "/Input store for " + resource.getName();
-	    setName(name);
-
-	    setOffersImmediately(false); // the stuff sits here until taken
-	    
-	    expiredDump = new Sink(state, resource);
-	    stolenDump = new Sink(state, resource);
-	
-	    sink = new MSink(state, getTypical());
-	    // this is just for the purpose of the graphical display
-	    addReceiver(sink);
-	    addReceiver(expiredDump);
-
-	    safety = new Safety();
-	       
-		
-	}
-
-	/** The name of the underlying resource */
-	String getUnderlyingName() {
-	    return (prototype instanceof Batch)? ((Batch)prototype).getUnderlyingName(): prototype.getName();
-	}
-
-	double discardedExpired=0;
-	int discardedExpiredBatches=0;
-	double stolen=0;
-	int stolenBatches=0;
-
-	private Batch getFirst() {
-	    return (Batch)entities.getFirst();
-	}
-
-	private boolean remove(Batch b) {
-	    return entities.remove(b);
-	}
-
-	/** Removes a batch of stored input resource, to indicate that
-	    it has been consumed to produce something else.
-
-	    This method should only called if hasEnough() has returned
-	    true for all ingredients, because we don't want to consume
-	    one ingredient without being able to consume all other
-	    ingredients!
-	    
-	    @return the consumed batch (so that its data can be used
-	    for later analysis) if Batch product, or null if fungible
-	 */
-	Batch consumeOneBatch() {
-
-
-	    if (getTypical() instanceof Batch) {
-		//z = p.provide(p.sink, 1);
-		Batch b=getFirst();			
-		if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-		remove(b);
-		currentStock -= b.getContentAmount();
-		return b;
-		
-		//usedBatches.add(p.consumeOneBatch());
-	    } else if (getTypical() instanceof CountableResource) {
-		boolean z = provide(sink, batchSize);
-		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
-		currentStock -= batchSize;
-
-
-		if (sink.lastConsumed != batchSize) {
-		    String msg = "Batch size mismatch on " + sink +": have " + sink.lastConsumed+", expected " + batchSize;
-		    throw new IllegalArgumentException(msg);
-		}
-
-		return null;
-		
-	    } else throw new IllegalArgumentException("Wrong input resource type");
-	    
-	    
-	}
-	
-	/** Do we have enough input materials of this kind to make a batch? 
-	    While checking the amount, this method also discards expired lots.
-
-	    FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
-	*/
-	private boolean hasEnough(double inBatchSize) {
-	    if (getTypical() instanceof Batch) {
-		double t = state.schedule.getTime();
-
-		// Discard any expired batches
-		Batch b; 
-		while (getAvailable()>0 &&
-		       (b=getFirst()).willExpireSoon(t, 0)) {
-
-		    // System.out.println(getName() + ", has expired batch; created=" + b.getLot().manufacturingDate +", expires at="+b.getLot().expirationDate+"; now=" +t);
-		    if (!offerReceiver( expiredDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-		    remove(b);
-		    double a = b.getContentAmount();
-		    currentStock -= a;
-		    discardedExpired += a;
-		    discardedExpiredBatches ++;		    
-		}
-		
-		return (getAvailable()>0);
-	    } else if (getTypical()  instanceof CountableResource) {
-		return getAvailable()>=inBatchSize;
-	    } else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
-	}
-
-
-	/** Simulates theft or destruction of some of the product stored in 
-	    this input buffer.
-	   @param The amount of product (units) to destroy.
-	   @param return The amount actually destroyed
-	 */
-	private synchronized double deplete(double amt) {
-	    double destroyed = 0;
-	    if (getTypical() instanceof Batch) {
-		while(destroyed<amt && getAvailable()>0) {
-		    Batch b=getFirst();
-		    if (!offerReceiver( stolenDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-		    remove(b);
-		    double a = b.getContentAmount();
-		    currentStock -= a;
-		    destroyed += a;
-		    stolenBatches ++;
-		}
-	    } else {
-		if (getAvailable()>0) {
-		    double ga0 = getAvailable();
-		    offerReceiver(stolenDump, amt);
-		    destroyed = ga0 - getAvailable();
-		}
-	    }
-	    stolen += destroyed;
-	    return  destroyed;		
-	}
-	
-	/** Performs certain auxiliary operation piggy-backed on acceptance
-	 */
-	public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	    //	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":		"an entity";
-
-	    double a = (amount instanceof Batch)? ((Batch)amount).getContentAmount() : amount.getAmount();
-
-	    boolean z = super.accept(provider,  amount, atLeast,  atMost);
-	    if (!z) throw new AssertionError();
-	    currentStock += a;
-
-	    // See if the production system is empty, and needs to be "primed"
-	    // to start.
-	    if (needProd.getAvailable()==0 && prodDelay.getSize()==0) {
-		double t = state.schedule.getTime();
-		//System.out.println("At " + t + ", the "+getName()+" tries to prime " + Production.this.getName());
-
-		// This will "prime the system" by starting the first
-		// mkBatch(), if needed and possible. After that, the
-		// production cycle will repeat via the slackProvider
-		// mechanism
-		mkBatch(getState());
-	    }
-
-
-	    
-	    /*
-	    if (!z) {
-	    
-	    System.out.println("DEBUG: " + getName() + ", " +
-			       (z? "accepted ": "rejected ") + 
-			       given +	       			       "; has " +
-			       (entities==null ? ""+getAvailable() + " units": ""+entities.size() + " ba") +
-			       ";  totalReceivedResource=" +  getTotalReceivedResource()		       );
-
-	    System.out.println("cap=" + getCapacity()+"; r/o="+ getRefusesOffers());
-
-	    }
-	    */
-	    return z;
-	}
-
-	/** How much stuff is stored by this pool? 
-	    @return the total content of the pool (in units)
-	*/
-	public double getContentAmount()        {
-	    if (resource != null) {
-		return resource.getAmount();
-	    } else if (entities != null) {
-		/*
-		double sum = 0;
-		for(Entity e: entities) {
-		    sum +=  (e instanceof Batch)? ((Batch)e).getContentAmount() : e.getAmount();
-		}
-		if (sum!=currentStock) throw new AssertionError("currentStock=" + currentStock +", sum="+sum);
-		*/
-		return currentStock;
-
-	    }  else {
-		return 0;
-	    }
-	}
-
-	
-	String report(boolean showBatchSize)  {
-	    String s = getTypical().getName() +":" +
-		(getTypical() instanceof Batch? 
-		 getAvailable() + " ba" :
-		 getAvailable() + " u" );
-        
-	    //if (showBatchSize) s += "/" + inBatchSizes[j];
-	    if (discardedExpiredBatches>0) s += ". (Discarded expired=" + discardedExpired + " u = " + discardedExpiredBatches + " ba)";
-	    if (stolen>0) s += ". (Stolen=" + stolen+ " u = " + stolenBatches + " ba)";
-	    return s;
-	}
-
-	
-    }
-
 	
 
     /** Represents the storage of input materials (in Batches). They are already QA-tested by previous
@@ -414,13 +58,13 @@ public class Production extends sim.des.Macro
 
     private Charter charter;
      
-    private ProdDelay prodDelay;
+    ProdDelay prodDelay;
     /** Exists only in CMO tracks */
     private SimpleDelay transDelay = null;
     /** Models the delay taken by the QA testing at the output	*/
     private QaDelay qaDelay;
     
-    private final ProdThrottleQueue needProd;
+    final ProdThrottleQueue needProd;
     private final ThrottleQueue needTrans, needQa;
 
 
@@ -446,6 +90,8 @@ public class Production extends sim.des.Macro
     final Resource[] inResources;
     final Batch outResource; 
     final ParaSet para;
+    ParaSet getPara() { return para; }
+    
     /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
 	@param outResource batches of output (e.g. bulk drug)
      */
@@ -467,7 +113,7 @@ public class Production extends sim.des.Macro
 	// Storage for input ingredients
 	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
-	    inputStore[j] = new InputStore(state,inResources[j], inBatchSizes[j]);
+	    inputStore[j] = new InputStore(this, state,inResources[j], inBatchSizes[j]);
 	    if (this instanceof Macro)  addReceiver(inputStore[j], false); 
 	}
 	
@@ -623,16 +269,6 @@ public class Production extends sim.des.Macro
     public void step(SimState state) {
 
 	try {
-	    foo(state);
-
-	} finally {
-	    dailyChart();
-	}
-	
-    }
-
-    	    private void foo(SimState state) {
-	    
 	    disruptInputs( state);
 	    if (isHalted(state)) return;
 
@@ -668,16 +304,18 @@ public class Production extends sim.des.Macro
 	    }
 	    
 	    */
-	    //  the Queue.step() call resource offers to registered receivers
-	    //super.step(state);
-	    }
+	} finally {
+	    dailyChart();
+	}
+	
+    }
 
-
-    private static final boolean skipWork = false;
+ 
+    //private static final boolean skipWork = false;
     
     
     private void dailyChart() {
-	if (skipWork) return;
+	//if (skipWork) return;
 	
 	    double releasedAsOfToday = qaDelay.getReleasedGoodResource();
 	    double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
@@ -702,7 +340,7 @@ public class Production extends sim.des.Macro
 	FIXME: Must add number-of-batches (monthly planning) control, as
 	per Ben's formula, in addition to the supply-side control.
      */
-    private boolean mkBatch(SimState state) {
+    boolean mkBatch(SimState state) {
 
 	if (startPlan != null && startPlan <= 0) return false;
 	if (!hasEnoughInputs()) return false;

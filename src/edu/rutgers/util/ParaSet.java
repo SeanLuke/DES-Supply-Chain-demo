@@ -32,6 +32,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 
     /** This may refer to the "default" para set, or (for nested para sets)
 	to the enclosing para set */
+
     private ParaSet parent = null;
 
     void setParent( ParaSet _parent) { parent = _parent; }

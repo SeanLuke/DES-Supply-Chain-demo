@@ -59,16 +59,16 @@ public class GraphAnalysis {
 	    else if (_r instanceof Production) {
 		Production r = (Production)_r;
 		outputs.put(prod2no(r), new RData(1.0));
-	    } else if (_r instanceof Production.InputStore) {
-		Production r = ((Production.InputStore)_r).whose();
+	    } else if (_r instanceof InputStore) {
+		Production r = ((InputStore)_r).whose;
 		outputs.put(prod2no(r), new RData(1.0));
 	    } else if (_r instanceof Splitter) {
 		Splitter s  = (Splitter)_r;
 		double sf = s.computeSumF(s.data.keySet());
 		if (sf == 0) throw  new IllegalArgumentException("All fractions are 0");
 		for(Receiver _z: s.data.keySet()) {
-		    if (_z instanceof Production.InputStore) {
-			Production z = ((Production.InputStore)_z).whose();
+		    if (_z instanceof InputStore) {
+			Production z = ((InputStore)_z).whose;
 			RData q = s.data.get(_z);
 			outputs.put(prod2no(z), new RData(q.fraction/sf));
 		    } else throw new IllegalArgumentException("Splitter ought to feed to Production nodes only");
