@@ -20,16 +20,26 @@ import edu.rutgers.util.*;
     <p>
     The Pool class is the common base for various "warehouses", such as the
     Hospital/Pharmacies Pool or the Wholesale Pool.
+
+    <P>
+    A Pool typically stores a Batch product (thus, <tt>prototype</tt> is Batch),
+    but CountableResource (for fungible products, such as packing material)
+    is supported too.
+
+    <P>//FIXME: it may be better to refactor this class, having AbstractPool,
+    with more generic functionality,  as the common parent of 
+    Pool (for post-production pools) and SafetyStock
  */
 public class Pool extends sim.des.Queue
     implements Reporting, Named, BatchProvider {
 
     final double batchSize;
 
-    /** Similar to Provider.typical, but with information about the
-	underlying resource in its storage[]. In the Wholesaler Pool
-	etc, this represents batches of packaged drug. */
-    //protected final Batch prototype;
+    /** This can be Batch, or CountableResource. It is similar to
+	Provider.typical, but (in the Batch case) it also has information
+	about the underlying resource in its storage[]. In the
+	Wholesaler Pool etc, this represents batches of packaged
+	drug. */
     protected final Resource prototype;
 
     protected final ParaSet para;
@@ -39,7 +49,8 @@ public class Pool extends sim.des.Queue
     WholesalerPool,reorderQty,0.25
     */
     private boolean hasReorderPolicy = false;
-    private double reorderPoint=0, reorderQty=0;
+    protected double reorderPoint=0;
+    private double reorderQty=0;
 
     protected double everOrdered=0;
     
@@ -51,21 +62,24 @@ public class Pool extends sim.des.Queue
 	during the initialization process in the constructor)
      */
     double everReceived = 0;
-    final double  initial;
-
+    protected final double  initial;
+    
     protected Charter charter;
 
-    Pool(SimState state, String name, Config config,
-	 //Batch
-	 Resource resource) throws IllegalInputException,
+    /** How much stuff is stored here. The value should be the same as given by
+	getContentAmount(), but without scanning the entire buffer */
+    protected double currentStock=0;
+
+    Pool(SimState state, String name, Config config, Resource resource) throws IllegalInputException,
  IOException {
 	this( state,  name,  config, resource, new String[0]);
     }
-    
-    Pool(SimState state, String name, Config config,
-	 //Batch
-	 Resource resource, String[] moreHeaders) throws IllegalInputException,
- IOException {
+
+
+    /** @param moreHeaders The names of additional columns to be printed in the CSV time series file. If this array is not empty, you also need to provide the values of these additional variables in the doChart() calls.
+     */
+   Pool(SimState state, String name, Config config,
+	 Resource resource, String[] moreHeaders) throws IllegalInputException,  IOException {
 									    
 	super(state, resource);	
 	prototype = resource;
@@ -73,7 +87,7 @@ public class Pool extends sim.des.Queue
 
 	setName(name);
 	para = config.get(name);
-	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
+	if (para==null) throw new  IllegalInputException("No config parameters specified for pool named '" + name +"'");
 
 	initial = para.getDouble("initial");
 	batchSize = para.getDouble("batch");
@@ -89,9 +103,14 @@ public class Pool extends sim.des.Queue
 	if (r!=null) {
 	    hasReorderPolicy = true;
 	    reorderPoint = r;
-	    r =  para.getDouble("reorderQty", null);
-	    if (r==null)  throw new  IllegalInputException("Element named '" + name +"' has reorder point, but no reorder qty");
-	    reorderQty = r;
+
+	    if (this instanceof SafetyStock) {
+		// does not need reorderQty, since it's dynamic
+	    } else {	    
+		r =  para.getDouble("reorderQty", null);
+		if (r==null)  throw new  IllegalInputException("Element named '" + name +"' has reorder point, but no reorder qty");
+		reorderQty = r;
+	    }
 	}
 	charter=new Charter(state.schedule, this);
 	doChartHeader(moreHeaders);
@@ -120,7 +139,10 @@ public class Pool extends sim.des.Queue
     }
 
     /** An auxiliary structure that stores information about one of
-	the Pools from which this Pool gets replenished. */
+	the Pools from which this Pool gets replenished. It exists so
+	that we can configure connections between pools based on their
+	descriptions in the config file.
+    */
     private class Supplier {
 	final //Pool
 	    BatchProvider
@@ -154,11 +176,10 @@ public class Pool extends sim.des.Queue
     private Supplier backOrderSupplier = null;
     
     
-    /** Looks at the "from" parameters in the ParaSet to identify the pools from which this pool will
-	request resources.
+    /** Looks at the "from" parameters in the ParaSet to identify the pools from which this pool will	request resources.
 <pre>
-HospitalPool,from,WholesalerPool,0.95
-HospitalPool,from,Distributor,0.05
+WholesalerPool,from1,Distributor,0.9
+WholesalerPool,from2,UntrustedPool,0.1
 HospitalPool,backOrder,WholesalerPool
 </pre>
      */
@@ -205,7 +226,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     
 
     /** Keeps track of the amount of product that has been discarded because we discovered
-	that it was too close to expiration.  */
+	that it was too close to expiration. This variable is null for fungible products,
+	which have no expiration dates.
+    */
     ExpiredSink expiredProductSink;
   
 
@@ -261,7 +284,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     }
 
     /* // This was used to helpt to figure how Delay really works in some sticky
-       // situations
+       // situations. Not needed in production runs.
     private String reportDelayState(Delay delay) {
 	DelayNode[] nodes = delay.getDelayedResources();
 	Vector<String> v = new Vector();
@@ -276,35 +299,57 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	return String.join("\n", v);
     }
     */
-    
+
+    /** Moves stuff from this pool directly to another pool etc,
+	or to a Delay object that models shipping to someplace.
+
+	<p>
+	If we're offering multiple batches via a Delay, we switch the Delay to 
+	the "UsesLastDelay" mode, in order to simulate shipping multiple
+	pallets on the same truck or ship. (This is also good for 
+	computational efficiency).
+
+	@param r Can be a Pool or a SimpleDelay, or something else.
+    */
     public double feedTo(Receiver r, double amt, boolean doRecordDemand) {
-	final boolean consolidate = true;//false;
-	double sent = 0;
- 	Batch b;
-	Delay delay = (consolidate && (r instanceof Delay))? (Delay)r: null;
-	int n = 0;
+	final boolean consolidate = true;
 
-	if (delay!=null) {
-	    delay.setDropsResourcesBeforeUpdate(false);
-	    double now = state.schedule.getTime();
-	}
+	if (amt<=0) return 0;
+	double sent = 0, expired=0;
+
+	if (prototype instanceof Batch) {
 	
-	while(getAvailable()>0 && sent<amt &&
-	      (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
-	    if (!offerReceiver(r, b)) throw new IllegalArgumentException("Expected acceptance by " + r);
-	    n++;
-	    if (n==1 && delay!=null) {
-		//delay.setFreezingDelay(true);
-		delay.setUsesLastDelay(true);
+	    Batch b;
+	    Delay delay = (consolidate && (r instanceof Delay))? (Delay)r: null;
+	    int n = 0;
+	    
+	    if (delay!=null) {
+		delay.setDropsResourcesBeforeUpdate(false);
+		double now = state.schedule.getTime();
 	    }
-	    sent += b.getContentAmount();
-	    entities.remove(b);
-	}
-	if (delay!=null) {
-	    // delay.setFreezingDelay(false);
-	    delay.setUsesLastDelay(false);
-	}
 
+	    double expired0 = expiredProductSink.everConsumed;
+	    while(//getAvailable()>0 &&
+		  sent<amt &&
+		  (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
+		if (!offerReceiver(r, b)) throw new IllegalArgumentException("Expected acceptance by " + r);
+		n++;
+		if (n==1 && delay!=null) {
+		    //delay.setFreezingDelay(true);
+		    delay.setUsesLastDelay(true);
+		}
+		double a = b.getContentAmount();
+		sent += a;
+		entities.remove(b);
+	    }
+	    expired = expiredProductSink.everConsumed - expired0;
+	    if (delay!=null) {
+		delay.setUsesLastDelay(false);
+	    }
+	} else if (prototype instanceof CountableResource) {
+	    offerReceiver(r, amt);
+	} else throw new AssertionError();
+	currentStock -= (sent + expired);
 	everSent += sent;
 	sentToday += sent;
 	// FIXME: double-recording may occur in an un-fulfilled instant order followed by a back-order
@@ -329,6 +374,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     protected void fillBackOrders() {
 	for(Receiver rcv:  needToSend.keySet()) {
 	    double amt = needToSend.get(rcv);
+	    if (amt<=0) continue;
 	    double sent = feedTo(rcv,  amt, false);
 	    amt -= sent;
 	    if (amt<0) amt=0;
@@ -344,14 +390,15 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
         if (resource != null) {
             return resource.getAmount();
 	} else if (entities != null) {
+	    /*
 	    double sum = 0;
 	    for(Entity e: entities) {
 		sum +=  (e instanceof Batch)? ((Batch)e).getContentAmount() : e.getAmount();
 	    }
-            return sum;
-	}  else {
-            return 0;
-        }
+	    if (sum!=currentStock) throw new AssertionError("currentStock=" + currentStock);
+	    */
+            return currentStock;
+	}  else throw new  AssertionError("");
     }
 
 
@@ -366,45 +413,43 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     private double receivedToday=0;
 
     
-    /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  FIXME: it would be better to have separate vars for separate suppliers
+    /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
+      FIXME: it would be better to have separate vars for separate suppliers
  */
-    private double onOrder = 0;
+    protected double onOrder = 0;
 
     /** This is called from a supplier when it ships a batch over. 
+
+	Every piece of resource getting into this pool goes through this method;
+	this is why we have currentStock increment done in here.
 	@param amount a Batch object
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	if (((Demo)state).verbose) {
-	    String msg = "DS: At t=" + state.schedule.getTime() + ", " +  getName()+ " receiving "+
-		atLeast + " to " +  atMost + " units of " + amount;
-	    if (provider!=null) msg += ", while provider.ava=" + provider.getAvailable();
-	    System.out.println(msg);
-	}
 
-    //double s0 = getAvailable();
-	double a = ((Batch)amount).getContentAmount();
+	double a = Batch.getContentAmount(amount);
 	boolean z = super.accept(provider, amount, atLeast, atMost);
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
+	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Out pools ought not to do that!");
 
-	onOrder -= a;
-	if (onOrder < a) { // they have over-delivered
-	    onOrder=0;
+	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery
+	    onOrder -= a;
+	    if (onOrder < a) { // they have over-delivered
+		onOrder=0;
+	    }
 	}
 	everReceived += a;
 	receivedToday += a;
-
-	//msg = "DS: At t=" + state.schedule.getTime() + ", " +  getName()+ " received something";
-	//	if (provider!=null) msg += ", while provider.ava=" + provider.getAvailable();
-	//	System.out.println(msg);
-
+	
+	currentStock += a;
 	
 	return z;
     }
 
+    /** Reported in a time series chart file */
     double orderedToday = 0;
 
     /** Checks if this pool needs stuff reordered, and makes an order if needed */
-    private void reorderCheck() {
+    protected void reorderCheck() {
 	if (!hasReorderPolicy) return;
     	double t = state.schedule.getTime();
 	double lms = getLastMonthDemand();
@@ -444,12 +489,13 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     public String report() {	
 	String s = "[" + getName()+ " has received " + everReceived + " u (including initial="+initial+" u), has sent "+everSent+" u";
 
-	if (expiredProductSink.everConsumed >0) {	
+	if (expiredProductSink != null && expiredProductSink.everConsumed >0) {	
 	    s += ". Discarded as expired=" + expiredProductSink.everConsumedBatches +  " ba";
 	}
 	if (stolenProductSink.everConsumed >0) {
 	    s +=  ". Stolen=" + stolenProductSink.everConsumedBatches +  " ba";
 	}
+	s += ". Available=" + currentStock + " u";
 	s += "]";
        return wrap(s);
    }
@@ -460,7 +506,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     /** Simulates theft or destruction of some of the product stored in 
 	this pool
 	@param The amount of product (units) to destroy.
-	@param return The amount actually destroyed
+	@param return The amount actually destroyed. It may be smaller
+	than requested (because there wasn't this much), or a bit
+	larger (becasuse of batch-size rounding)
     */
     protected synchronized double deplete(double amt) {
 	double destroyed = 0;
@@ -469,17 +517,19 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 		Batch b=(Batch)entities.getFirst();
 		if (!offerReceiver( stolenProductSink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
 		entities.remove(b);
-		destroyed += b.getContentAmount();
-		//stolenBatches ++;
+		double a = b.getContentAmount();
+		destroyed += a;
+		currentStock -= a;
 	    }
 	} else {
 	    if (getAvailable()>0) {
 		double ga0 = getAvailable();
 		offerReceiver(stolenProductSink, amt);
-		destroyed = ga0 - getAvailable();
+		double a  = (ga0 - getAvailable());
+		destroyed += a;
+		currentStock -= a;
 	    }
 	}
-	//stolen += destroyed;
 	return  destroyed;		
     }
 

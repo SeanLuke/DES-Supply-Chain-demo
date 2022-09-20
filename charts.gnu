@@ -78,3 +78,16 @@ plot \
 set term png size 800,600
 set out 'ProductionPlans.png'
 replot
+
+set term qt 7
+
+set title 'Consumption of safety stocks' 
+plot \
+'ApiProduction.safety.RawMaterial.csv' using ($1):($7)   with lines title 'RM \@ ApiProd', \
+'DrugProduction.safety.Api.csv' using ($1):($7)   with lines title 'API \@ DrugProd', \
+'DrugProduction.safety.Excipient.csv' using ($1):($7)   with lines title 'Excipient \@ DrugProd', \
+'Packaging.safety.BulkDrug.csv' using ($1):($7)   with lines title 'Bulk drug \@ Packgn', \
+'Packaging.safety.PackagingMaterial.csv' using ($1):($7)   with lines title 'PacMat \@ Packgn'
+set term png size 800,600
+set out 'Safety.png'
+replot

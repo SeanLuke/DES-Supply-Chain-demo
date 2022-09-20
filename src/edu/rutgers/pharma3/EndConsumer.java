@@ -78,6 +78,7 @@ public class EndConsumer extends MSink implements Reporting {
 	} else {
 	    totalUnsatisfiedDemand  += (demand - sent);
 	}
+  	
     }
 
     /** In addition to the normal acceptance, counts bad pills mixed into 

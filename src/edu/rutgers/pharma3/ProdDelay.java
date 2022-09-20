@@ -28,20 +28,30 @@ public class ProdDelay extends SimpleDelay // Delay
     double totalStarted=0;
     public double getTotalStarted() { return totalStarted; }
 
+    /** Statistics used for reporting utilization rate */
+    double totalUsedTime = 0;
+
+    
     /** @param resource Whatever we produce.
      */
     ProdDelay(SimState state,  Resource resource) {
 	super(state, resource);
 	setName("ProdDelay of " + resource.getName());
     }
+
+    
+    
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
 	double amt = 
 	    (r instanceof Batch)?
 	    ((Batch)r).getContentAmount():
 	    r.getAmount();
-	if (r instanceof Batch) 	batchCnt++;
+	batchCnt++;
 	totalStarted+=amt;
 
+	totalUsedTime += getDelayTime();
+
+	
 	double t = state.schedule.getTime();
 
 	//System.out.println("At " + t +", "+getName() + " accepting " + r+", had=" + hasBatches());
@@ -60,7 +70,9 @@ public class ProdDelay extends SimpleDelay // Delay
     }
 	       
     public String report() {
-	return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"]";
+	double t = state.schedule.getTime();
+	double util = (t==0)? 1.0 : totalUsedTime/t;
+	return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+util+"]";
     }
 
     

@@ -22,11 +22,14 @@ class InputStore extends sim.des.Queue {
 
     /** A link back to the Production object whose part this InputStore is */
     final Production whose;
-    
-    /** Used to discard expired lots */
-    Sink expiredDump;
+
+
+    /** Keeps track of the amount of product that has been discarded because we discovered
+	that it was too close to expiration.  */
+    final ExpiredSink expiredProductSink;
+  
     /** Simulates theft or destruction (disruption type A4 etc) */
-    Sink stolenDump;
+    final Sink stolenDump;
     
     /** Dummy receiver used for the consumption of this
 	ingredient as it's used, with metering */
@@ -41,11 +44,22 @@ class InputStore extends sim.des.Queue {
     /** How much stuff is stored here. The value should be the same as given by
 	getContentAmount(), but without scanning the entire buffer */
     private double currentStock=0;
-    
-    InputStore(Production _whose, //ParaSet _para,
+
+    /** The safety stock for this input store. May be zero if not provided
+	for in the config file */
+    SafetyStock safety = null;
+
+    /** Creates the input buffer for one of the products consumed by 
+	a Production unit.
+	@param _whose The Production unit whose buffer this is
+	@param resource The resource stored in this buffer. It can be Batch of CountableResource
+	@param _batchSize The standard batch size for consumption of this resource.
+     */
+    InputStore(Production _whose, 
 	       SimState _state,
+	       Config config,
 	       Resource resource,
-	       double _batchSize) throws IllegalInputException {
+	       double _batchSize) throws IllegalInputException, IOException {
 	super(_state, resource);
 	whose = _whose;
 	prototype = resource;
@@ -57,14 +71,21 @@ class InputStore extends sim.des.Queue {
 	
 	setOffersImmediately(false); // the stuff sits here until taken
 	
-	expiredDump = new Sink(state, resource);
+	//expiredDump = new Sink(state, resource);
+
+	expiredProductSink = (resource instanceof Batch) ?
+	    new ExpiredSink(state,  (Batch)resource, 0) : null;
+
+	
 	stolenDump = new Sink(state, resource);
 	
 	sink = new MSink(state, getTypical());
 	// this is just for the purpose of the graphical display
 	addReceiver(sink);
-	addReceiver(expiredDump);
-	
+	if (expiredProductSink!=null) addReceiver(expiredProductSink);
+	safety = SafetyStock.mkSafetyStock( state, whose,
+					    config,  resource);
+
     }
 
     /** The name of the underlying resource */
@@ -72,8 +93,8 @@ class InputStore extends sim.des.Queue {
 	return (prototype instanceof Batch)? ((Batch)prototype).getUnderlyingName(): prototype.getName();
     }
 
-    double discardedExpired=0;
-    int discardedExpiredBatches=0;
+    //double discardedExpired=0;
+    //    int discardedExpiredBatches=0;
     double stolen=0;
     int stolenBatches=0;
     
@@ -86,7 +107,8 @@ class InputStore extends sim.des.Queue {
     }
     
     /** Removes a batch of stored input resource, to indicate that
-	it has been consumed to produce something else.
+	it has been consumed to produce something else. If necessary
+	and possible, falls back on the safety stock.
 	
 	This method should only called if hasEnough() has returned
 	true for all ingredients, because we don't want to consume
@@ -100,40 +122,64 @@ class InputStore extends sim.des.Queue {
 	
 	if (getTypical() instanceof Batch) {
 	    //z = p.provide(p.sink, 1);
-	    Batch b=getFirst();			
-	    if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-	    remove(b);
-	    currentStock -= b.getContentAmount();
-	    return b;
-	    
-	} else if (getTypical() instanceof CountableResource) {
-	    boolean z = provide(sink, batchSize);
-	    if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
-	    currentStock -= batchSize;
 
-
-	    if (sink.lastConsumed != batchSize) {
-		String msg = "Batch size mismatch on " + sink +": have " + sink.lastConsumed+", expected " + batchSize;
-		throw new IllegalArgumentException(msg);
-	    }
-
-	    return null;
+	    if (getAvailable()>0) {	    
+		Batch b=getFirst();			
+		if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
+		remove(b);
+		currentStock -= b.getContentAmount();
+		return b;
+	    } else if (safety!=null) {
+		//double sent = safety.feedTo(sink, batchSize);
+		//if (sent!=batchSize) {
+		//    String msg = "Batch size mismatch on " + sink +": have " + sink.lastConsumed+", expected " + batchSize;
+		//    throw new IllegalArgumentException(msg);
+		//}
+		return safety.consumeOneBatch(sink, batchSize);
+	    } else throw new AssertionError("consumeOneBatch() should not be called if the resource is not available");
 		
-	} else throw new IllegalArgumentException("Wrong input resource type");
+	} else if (getTypical() instanceof CountableResource) {
+	     
+	    double a1 = Math.min( getAvailable(), batchSize);
+	    double a2 =  batchSize - a1;
+
+	    if (a1>0) {
+		boolean z = provide(sink, a1);
+		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
+		currentStock -= batchSize;
+
+		if (sink.lastConsumed != a1) {
+		    String msg = "Batch size mismatch on " + sink +": have " + sink.lastConsumed+", expected " + batchSize;
+		    throw new IllegalArgumentException(msg);
+		}
+	    }
+	
+	    if (a2==0) 	    return null;
+	    else if (safety==null) throw new AssertionError("consumeOneBatch() should not be called if the resource is not available");
+	    else return safety.consumeOneBatch(sink, a2);       		
 	    
+	} else throw new IllegalArgumentException("Wrong input resource type");
+
+
+	
     }
 	
     /** Do we have enough input materials of this kind to make a batch? 
 	While checking the amount, this method also discards expired lots.
+	If there is not enough material in the InputStore itself, but 
+	a SafetyStock is available, check on that as well.
 
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
     */
     boolean hasEnough(double inBatchSize) {
 	if (getTypical() instanceof Batch) {
+	    double expiredAmt[]={0};
 	    double t = state.schedule.getTime();
-	    
-	    // Discard any expired batches
-	    Batch b; 
+
+	    Batch b = expiredProductSink.getNonExpiredBatch(this, entities, expiredAmt);
+	    currentStock -= expiredAmt[0];
+
+	    /*	    
 	    while (getAvailable()>0 &&
 		   (b=getFirst()).willExpireSoon(t, 0)) {
 		
@@ -145,10 +191,12 @@ class InputStore extends sim.des.Queue {
 		discardedExpired += a;
 		discardedExpiredBatches ++;		    
 	    }
-		
-	    return (getAvailable()>0);
+	    */
+	    
+	    return b!=null || (safety!=null && safety.hasEnough(inBatchSize));
 	} else if (getTypical()  instanceof CountableResource) {
-	    return getAvailable()>=inBatchSize;
+		double spare = getAvailable() -  inBatchSize;
+		return spare>=0 || (safety!=null && safety.hasEnough(-spare));
 	} else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
     }
 
@@ -231,14 +279,24 @@ class InputStore extends sim.des.Queue {
     }
 
 	
+    String reportAvailable()  {
+	String s = "(" +getAvailable();
+	if (safety!=null) s += "; S=" + safety.getAvailable();
+	s += ")";
+	return s;
+    }
+
     String report(boolean showBatchSize)  {
-	String s = getTypical().getName() +":" +
+	Vector<String> v= new Vector();
+	v.add(  getTypical().getName() +":" +
 	    (getTypical() instanceof Batch? 
 	     getAvailable() + " ba" :
-	     getAvailable() + " u" );
-        
-	if (discardedExpiredBatches>0) s += ". (Discarded expired=" + discardedExpired + " u = " + discardedExpiredBatches + " ba)";
-	if (stolen>0) s += ". (Stolen=" + stolen+ " u = " + stolenBatches + " ba)";
+	     getAvailable() + " u" ));
+
+	if (expiredProductSink!=null) v.add( expiredProductSink.reportShort());
+	if (stolen>0) v.add("(Stolen=" + stolen+ " u = " + stolenBatches + " ba)");
+	String s = Util.joinNonBlank(". ", v);
+	if (safety!=null) s += ". " + safety.report();			      
 	return s;
     }
 	

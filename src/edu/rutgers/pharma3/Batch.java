@@ -115,11 +115,22 @@ class Batch extends Entity {
 	return s;
     }
 
+    /** This is used for e.g. looking up resource-related properties 
+	in config files. This allows one to have config lines starting with
+<pre>
+Foo,
+</pre>
+for both a countable resource named "Foo" and for a Batch of "Foo".
+     */
+    static String getUnderlyingName(Resource r) {	
+	return (r instanceof Batch)?  ((Batch)r).getUnderlyingName() : r.getName();
+    }
+
     /** Retrieves the name of the underlying resource */
     String getUnderlyingName() {
 	return getUnderlying().getName();
     }
-
+    
     CountableResource getUnderlying() {
 	return (CountableResource)(getStorage()[0]);
     }
@@ -250,8 +261,19 @@ class Batch extends Entity {
 	return getContent().getAmount();
     }
 
+    /** How much of underlying resource are we are talking about.
+	@param r Either a Batch or a CountableResource.
+     */
+    static double getContentAmount(Resource r) {
+	return (r instanceof Batch)?  ((Batch)r).getContentAmount() : r.getAmount();
+    }
+
+   
     /** An alternative to Provider.getAvailable(), which
 	looks at the amount of content inside Batches.
+	This, of course, is inefficient, so if possible
+	one needs to use running-total accounting,
+	such as Pool.currentStock on InputStore.currentStock.
      */
     static double getAvailableContent(Provider p) {
 	Entity[] ee = p.getEntities();

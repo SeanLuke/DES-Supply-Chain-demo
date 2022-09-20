@@ -113,7 +113,7 @@ public class Production extends sim.des.Macro
 	// Storage for input ingredients
 	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
-	    inputStore[j] = new InputStore(this, state,inResources[j], inBatchSizes[j]);
+	    inputStore[j] = new InputStore(this, state, config, inResources[j], inBatchSizes[j]);
 	    if (this instanceof Macro)  addReceiver(inputStore[j], false); 
 	}
 	
@@ -270,7 +270,6 @@ public class Production extends sim.des.Macro
 
 	try {
 	    disruptInputs( state);
-	    if (isHalted(state)) return;
 
 	    double now = state.schedule.getTime();
 	    
@@ -313,7 +312,9 @@ public class Production extends sim.des.Macro
  
     //private static final boolean skipWork = false;
     
-    
+    /** Writes this days' time series values to the CSV file. 
+	Does that for the safety stocks too, if they exist.
+     */
     private void dailyChart() {
 	//if (skipWork) return;
 	
@@ -330,6 +331,12 @@ public class Production extends sim.des.Macro
 
 	    
 	    charter.print(data);
+
+
+	    for(InputStore p: inputStore) {
+		if (p.safety!=null) p.safety.doChart(new double[0]);
+	    }
+    	       
     }
 
     
@@ -337,12 +344,11 @@ public class Production extends sim.des.Macro
 	@return true if a batch was made; false if not enough input resources
 	was there to make one, or the current plan does not call for one
 
-	FIXME: Must add number-of-batches (monthly planning) control, as
-	per Ben's formula, in addition to the supply-side control.
-     */
+    */
     boolean mkBatch(SimState state) {
 
 	if (startPlan != null && startPlan <= 0) return false;
+	if (isHalted(state)) return false;
 	if (!hasEnoughInputs()) return false;
 	double now = state.schedule.getTime();
 		
@@ -351,14 +357,14 @@ public class Production extends sim.des.Macro
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    
 	    InputStore p = inputStore[j];
-	    //System.out.println("Available ("+p.getTypical()+")=" + p.getAvailable());
+	    //System.out.println("mkBatch: Available ("+p.getTypical()+")=" + p.reportAvailable());
 	    Batch b = p.consumeOneBatch();
 	    if (b!=null) 		usedBatches.add(b);
 
 	    
 	}
 
-	if (Demo.verbose)	    System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 	Batch onTheTruck = outResource.mkNewLot(outBatchSize, now, usedBatches);
 	Provider provider = null;  // why do we need it?		
@@ -378,8 +384,9 @@ public class Production extends sim.des.Macro
 	    super( _delay, cap,  _delayDistribution);
 	}
 
-	/** This is triggered from the SimpleDelay via the slackProvider
-	    mechanism */
+	/** This method ensures that whenever this queue is called
+	    upon to provide a batch for the ProdDelay (via its slackProvider
+	    mechanism) it will make itself non-empty, if at all possible. */
 	public boolean provide(Receiver receiver) {
   	    if (getAvailable()==0) {
 		mkBatch(getState());
@@ -425,10 +432,12 @@ public class Production extends sim.des.Macro
 	
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
 	    "Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
-	if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
+	//if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
 	s += " = (in prod=" +   needProd.hasBatches() +	    " ba;";
 	if (needTrans!=null) s +="  in trans=" +   needTrans.hasBatches() +")";
-	s +="  in QA=" +   needQa.hasBatches() +")";
+	s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
+	s += " " + qaDelay.report();
+	//s +="  in QA=" +   needQa.hasBatches() +")";
 	    
 	s += "\n" + prodDelay.report();
 

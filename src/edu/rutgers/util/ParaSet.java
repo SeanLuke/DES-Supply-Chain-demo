@@ -70,10 +70,11 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	String[] ops = {"/", "*", "+", "-"};
 	String[] rops = {"/", "\\*", "\\+", "\\-"};
 
-	int k=0;
-	for(String op: ops) {
+	for(int k=0; k<ops.length; k++) {
+	    String op =  ops[k];
+	    String rop = rops[k];
 	
-	    String tok[] = s.split(rops[k++]);
+	    String tok[] = s.split(rop);
 	
 	    if (tok.length!=2) continue;
 	    try {
@@ -82,7 +83,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 		    a[j]= new Double(tok[j].trim());
 		}
 		return op.equals("/")? a[0]/a[1]:
-		    op.equals("*")? a[0]/a[1]:
+		    op.equals("*")? a[0]*a[1]:
 		    op.equals("+")? a[0]+a[1]:
 		    op.equals("-")? a[0]-a[1] : null;
 	    } catch(Exception ex) {
@@ -235,5 +236,21 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     }
 
     
-    
+    //public class ParaSet extends HashMap<String, Vector<String>>
+
+    /** Given this set is based on all config lines that start with
+<tt>
+name,...
+</tt>
+, exract all lines that start with 
+<tt>
+name,subName,...
+</tt>
+    */
+    /*
+    ParaSet getSubset(String subName) {
+	ParaSet child = new ParaSet(getName() + "." + subName);
+///// .....	
+    }
+    */
 }
