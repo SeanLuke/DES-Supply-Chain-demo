@@ -457,7 +457,10 @@ public class Production extends sim.des.Macro
     }
     
     /** Stats for planning */
-    double computeAlpha() {
-	return qaDelay.computeAlpha();
+    double[] computeABG() {
+	return qaDelay.computeABG();
+    }
+    double computeGamma() {
+	return computeABG()[2];
     }
 }

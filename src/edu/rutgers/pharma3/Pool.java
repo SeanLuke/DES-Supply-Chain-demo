@@ -63,7 +63,10 @@ public class Pool extends sim.des.Queue
      */
     double everReceived = 0;
     protected final double  initial;
-    
+    public double getInitial() {
+	return initial;
+    }
+   
     protected Charter charter;
 
     /** How much stuff is stored here. The value should be the same as given by

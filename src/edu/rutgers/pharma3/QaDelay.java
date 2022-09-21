@@ -274,50 +274,24 @@ SimpleDelay
 	
     }
 
-    /**  binary search for the median of the faultyPortionDistribution */
-    double findMedian() {
+    /** Stats for planning. The  average output/input ratio can be computed as
+	<div align="center">
+	gamma = (1-alpha-beta)/(1-beta),
+	</div>
+	where alpha=faultRate, beta=reworkProbability.
 
-	//AbstractContinousDistribution u = (AbstractContinousDistribution)faultyPortionDistribution;
-	Uniform u = (Uniform)faultyPortionDistribution;
-	
-	final double eps = 1e-6;
-	
-	double a=0, b=1, c;
-	if (u.cdf(a)>0.5 ||
-	    u.cdf(b)<0.5) throw new IllegalArgumentException("Bad cdf for " + faultyPortionDistribution);
-	do {
-	    c = (a+b) /2;
-	    double val = u.cdf(c);
-	    if (val == 0.5) return c;
-	    else if (val < 0.5) a = c;
-	    else b = c;
-	} while(b-a > eps);
-	return c;
-    }
-
-    /** Stats for planning 
-	@param return The average output/input ratio
+	@param return (alpha, beta, gamma), where gamma=The average output/input ratio
      */
-    double computeAlpha() {
+    double[] computeABG() {
 
 	double mean = 0;
 	if (faultyPortionDistribution!=null) {
-	    if (faultyPortionDistribution instanceof ParaSet.MyUniform) {
-		ParaSet.MyUniform u = (ParaSet.MyUniform)faultyPortionDistribution;
-		mean = (u.getMin() + u.getMax())/2;
-	    } else if (faultyPortionDistribution instanceof ParaSet.MyTriangular) {
-		ParaSet.MyTriangular u = (ParaSet.MyTriangular)faultyPortionDistribution;
-		mean = (u.getMin() + u.getMax())/2;
-		if (Math.abs (u.getMode()-mean) > 1e-6) throw new IllegalArgumentException("No formula for skewed triangula distribution");
-	    } else {
-		// FIXME: if the distribution is not symmetric, the mean
-		// is not the same as the median
-		mean =  findMedian();
-	    }
+	    mean = ParaSet.computeMean(faultyPortionDistribution);
 	} else {
 	    mean = discardProb;
 	}
-	return (1-mean - reworkProb)/(1-reworkProb);
+	double[] abg = {mean, reworkProb, (1-mean - reworkProb)/(1-reworkProb)};
+	return abg;
 	
     }
     

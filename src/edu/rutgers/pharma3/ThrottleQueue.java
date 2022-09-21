@@ -12,17 +12,51 @@ import sim.des.portrayal.*;
 import edu.rutgers.util.*;
 import edu.rutgers.pharma3.Disruptions.Disruption;
 
-/** A ThrottleQueue controls the behavior of a SimpleDelay, to ensure that it holds
-    exactly one batch at a time, and the processing time of each batch is drawn
-    from a specified distribution. It is attached in front of the SimpleDelay
-    it controls.
+/** A ThrottleQueue is normally used in tandem with a
+    SimpleDelay. Taken together, they model a production
+    stage where only 1 batch of the material can be processed
+    at a given time, and not-yet-processed material is waiting
+    for its turn outside of the "work area". (The ThrottleQueue 
+    represents the waiting area, and the SimpleDelay, the
+    work area). This can model, for example, a bread oven
+    that can bake one batch of loaves at a time, or a forklift
+    that can move one pallet of stuff between warehouses.
+
+    <P>Each batch can have its own processing time (drawn from
+    a random distribution), but, since only one batch is processed
+    at a time, we can model the "work area" with a SimpleDelay
+    (modifying its delay time before processing each batch), rather
+    than a Delay. This is supposed to be more computationally
+    efficient.
+   
+    <P>In the  ThrottleQueue-SimpleDelay tandem, the ThrottleQueue
+    controls the behavior of the SimpleDelay, to ensure
+    that it holds exactly one batch at a time, and the processing time
+    of each batch is drawn from a specified distribution. It is
+    attached in front of the SimpleDelay it controls.
+
+    <p>The ThrottleQueue sets the capacity of the SimpleDelay to 1,
+    and sets itself as the slackProvider for the delay, so that every
+    time the delay is finished with a batch ("the bread has been baked")
+    it pulls one more batch ("a batch of raw loaves") from the queue. 
+    Additionally, when something is put into the Queue, its offerReceiver
+    checks whether the delay is empty ("the oven is idle"), and if it is, 
+    it offers resource to the delay. These two mechanism, in combination,
+    ensure that the delay ("the oven") is never idle, as long as there is
+    anything to be processed.
  */
 public class ThrottleQueue extends sim.des.Queue
     implements     Named//,	    Reporting
 {
 
     private AbstractDistribution delayDistribution;
-    /** The cap-1 SimpleDelay for which the ThrottleQueue serves as an inpu buffer */
+
+    public AbstractDistribution getDelayDistribution() {
+	return delayDistribution;
+    }
+    
+    /** The capacity-1 SimpleDelay for which the ThrottleQueue serves as an
+	input buffer */
     final private SimpleDelay delay;
     
 /** Creates a Queue to be attached in front of the Delay, and
@@ -84,9 +118,7 @@ public class ThrottleQueue extends sim.des.Queue
 			    
 	//double t = state.schedule.getTime();       
 
-
 	boolean z=super.offerReceiver(receiver, atMost);
-
 			    
 	return z;
     }
@@ -102,17 +134,16 @@ public class ThrottleQueue extends sim.des.Queue
 
     public void step(SimState state) throws IllegalArgumentException {
 	super.step(state);
-	//System.out.println(getName() + "=" + hasBatches());
     }
 
     /** Just for debugging */
     /*   
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
 	double t = state.schedule.getTime();
-	if (System.verbose && getName().indexOf("PackagingMat")>=0) 
+	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) 
 	    System.out.println("At " + t +", "+getName() + " accepting " + r+", had=" + hasBatches());
 	boolean z = super.accept( provider, r, atLeast, atMost);
-	if (System.verbose && getName().indexOf("PackagingMat")>=0) 
+	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) 
 	System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
 	return z;
     }

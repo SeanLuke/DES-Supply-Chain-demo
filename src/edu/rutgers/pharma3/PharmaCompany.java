@@ -142,8 +142,9 @@ public class PharmaCompany extends Sink
 		    
 	ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]));
 
-	fudgeFactor = 1.0 / ga.terminalAmt / rawMatSupplier.computeAlpha();
-	System.out.println(name + ": RM over-ordering fudgeFactor=" + fudgeFactor);
+	double gamma =rawMatSupplier.computeGamma(); 
+	fudgeFactor = 1.0 / ga.terminalAmt / gamma;
+	System.out.println(name + ": RM over-ordering factor=" + fudgeFactor);
 
 	for(Production p: myp) { p.setPlan(0); }
     }
@@ -253,9 +254,9 @@ public class PharmaCompany extends Sink
 
 	rawMatSupplier.receiveOrder(Math.round(amt * fudgeFactor));
 
-	pacMatFacility.receiveOrder(Math.round(amt * ga.getStartPlanFor(packaging) /pacMatFacility.computeAlpha()));
+	pacMatFacility.receiveOrder(Math.round(amt * ga.getStartPlanFor(packaging) /pacMatFacility.computeGamma()));
 
-	excipientFacility.receiveOrder(Math.round(amt * ga.getStartPlanFor(drugProduction)/ excipientFacility.computeAlpha()));
+	excipientFacility.receiveOrder(Math.round(amt * ga.getStartPlanFor(drugProduction)/ excipientFacility.computeGamma()));
 
 	Production [] myp = {apiProduction, drugProduction, packaging};
 	for(Production p: myp) {

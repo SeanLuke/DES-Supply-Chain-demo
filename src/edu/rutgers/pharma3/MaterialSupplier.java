@@ -367,10 +367,13 @@ public class MaterialSupplier extends Macro
     }
 
     /** Stats for planning */
-    double computeAlpha() {
-	return qaDelay.computeAlpha();
+    double[] computeABG() {
+	return qaDelay.computeABG();
     }
   
+   double computeGamma() {
+	return computeABG()[2];
+    }
 
 
 }

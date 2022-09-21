@@ -13,7 +13,7 @@ import edu.rutgers.util.*;
 import edu.rutgers.pharma3.Splitter.RData;
 import edu.rutgers.pharma3.SplitManager.HasQA;
 	
-/** This class exists so that we can figure in advance what would happen with a 1000 units of RM dumped into the system. Assuming that everything works as designed (with the split ratios, fault rates, etc, already in the system), how much of this RM will eventually arrive to the DC in the form of this finished product? On the way there, how much will pass through each production node? 
+/** This class exists so that we can figure in advance what would happen with a given amount (say, 1000 units) of RM that enters the system. Assuming that everything works as designed (with the split ratios, fault rates, etc, already in the system), how much of this RM will eventually arrive to the DC in the form of this finished product? On the way there, how much will pass through each production node? 
 
 We use these numbers to compute the amount of RM that needs to be ordered to produced a desired amount of the finished product. Additionally, we also use these numbers to provide intelligent work orders to production nodes that need orders (because they have safety stocks, and cannot be controlled just by the RM supply).
  */
@@ -24,33 +24,46 @@ public class GraphAnalysis {
     
     static private DecimalFormat df = new DecimalFormat("0.00##");
 	
-    
+    /** A Node typically represents a Production unit of the supply chain.
+	Additionally, we also have a Node object for the root of the 
+	production network, representing the RM entering the system.	
+     */
     class Node {
 	Production element;
 	/** If true, this node feeds to DC */
 	boolean terminal = false;
 	double terminalAmt = 0;
-	/** Output/input ratio of this node. Typically, it's (1- E(faultRate)).
+	/** Output/input ratio of this node. Typically, it's computed
+	    as (1-alpha-beta) / (1-beta), where alpha is the fault rate,
+	    and beta is the rework rate.
 	 */
-	double alpha;
+	double gamma;
+	/** To which other Nodes this Node feeds. The map maps the integer ID
+	    of each destsination node to an RData structure containing
+	    information on what fraction of the input goes to that destination
+	    node.    For a terminal node,
+	    this map is empty */
 	HashMap<Integer,RData> outputs = new HashMap<>();
 	/** How much of a 1.000 of the RM that enters the root will
 	    reach the input of that node */
 	double inputAmt = 0;
 
-	/** @param x Either a fully-configured Production element, or
+	/** Builds the Node from a Production element or (for the root node
+	    only) from the rawMaterialSupplier. 
+
+	    @param x Either a fully-configured Production element, or
 	    rawMaterialSupplier. It should have all its outputs etc
-	    already properly set
+	    already properly set.
 	 */
 	Node(//Production x
 	     HasQA _x) {
 	    Production x = (_x instanceof Production)? (Production)_x: null;
 	    if (x!=null) {
 		element = x;
-		alpha = x.computeAlpha();
+		gamma = x.computeGamma();
 	    } else {
 		element = null;
-		alpha = 1;
+		gamma = 1;
 	    }
 	    ArrayList<Receiver> rr = _x.getQaDelay().getReceivers();
 	    if (rr.size()!=1) throw new IllegalArgumentException("QA is expected to have exactly 1 receiver");
@@ -80,7 +93,7 @@ public class GraphAnalysis {
 	String report() {	    
 	    String s = (element==null)? "Root": element.getName();
 	    s += ": input=" + df.format(inputAmt) +
-		", alpha=" +df.format(alpha)+". Send: ";
+		", gamma=" +df.format(gamma)+". Send: ";
 	    if (terminal) s += "to Distributor: " + df.format(terminalAmt);
 	    else {	    
 		Vector<String> v = new Vector<>();
@@ -96,13 +109,14 @@ public class GraphAnalysis {
 	
     }
 
-
+    /** How much of a 1.0 quantity of RM at the input of the network reaches
+	the terminal (the DC), in the form of finished product. */
     public double terminalAmt = 0;
 
     private void analyze(Node root, double input) {
 	root.inputAmt += input;
 	if (root.terminal) {
-	    double sent = input * root.alpha;
+	    double sent = input * root.gamma;
 	    root.terminalAmt += sent;
 	    terminalAmt += sent;
 	    return;
@@ -110,7 +124,7 @@ public class GraphAnalysis {
 	for(int j: root.outputs.keySet()) {
 	    RData d = root.outputs.get(j);
 	    Node y = allNodes.get(j);
-	    double sent = input * root.alpha * d.fraction;
+	    double sent = input * root.gamma * d.fraction;
 	    d.given += sent;
 	    analyze(y, sent);
 	}

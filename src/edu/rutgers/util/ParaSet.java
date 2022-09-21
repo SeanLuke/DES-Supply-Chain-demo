@@ -149,7 +149,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     }
 
 
-  public Boolean getBoolean(String key, Boolean defVal) throws IllegalInputException {
+    public Boolean getBoolean(String key, Boolean defVal) throws IllegalInputException {
 	Vector<String> v = get(key);
 	if (v==null)  return defVal;
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
@@ -169,7 +169,9 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	}
 	public double getMin() { return min;}
 	public double getMax() { return max;}
-	
+	public double computeMean() {
+	    return  (getMin() + getMax())/2;
+	}	
     }
 
     public class MyTriangular extends sim.util.distribution.Triangular {
@@ -183,7 +185,49 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	public double getMin() { return _min;}
 	public double getMode() { return _mode;}
 	public double getMax() { return _max;}
+	public double computeMean() {
+	    double mean = (getMin() + getMax())/2;
+	    if (Math.abs (getMode()-mean) > 1e-6) throw new IllegalArgumentException("No formula for skewed triangula distribution");
+	    return mean;
+	}
+    }
+
+    /**  binary search for the median of the faultyPortionDistribution */
+    private static double findMedian(AbstractDistribution dis) {
+
+	//AbstractContinousDistribution u = (AbstractContinousDistribution)dis;
+	Uniform u = (Uniform)dis;
 	
+	final double eps = 1e-6;
+	
+	double a=0, b=1, c;
+	if (u.cdf(a)>0.5 ||
+	    u.cdf(b)<0.5) throw new IllegalArgumentException("Bad cdf for " + dis);
+	do {
+	    c = (a+b) /2;
+	    double val = u.cdf(c);
+	    if (val == 0.5) return c;
+	    else if (val < 0.5) a = c;
+	    else b = c;
+	} while(b-a > eps);
+	return c;
+    }
+
+
+    
+    public static double computeMean(AbstractDistribution dis) {
+	if (dis instanceof ParaSet.MyUniform) {
+	    MyUniform u = (MyUniform)dis;
+	    return  u.computeMean();
+	} else if (dis instanceof MyTriangular) {
+	    MyTriangular u = (MyTriangular)dis;
+	    return  u.computeMean();
+	} else {
+	    // FIXME: if the distribution is not symmetric, the mean
+	    // is not the same as the median
+	    //mean =  findMedian();
+	    throw new IllegalArgumentException("No formula for mean for distribution=" + dis);
+	}
     }
     
     
