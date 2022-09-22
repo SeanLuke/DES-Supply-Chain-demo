@@ -117,7 +117,9 @@ public class GraphAnalysis {
 	String report() {	    
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
 	    s += ": input=" + df.format(totalInputAmt()) +
-		", gamma=" +df.format(perfo.gamma)+". Send: ";
+		", gamma=" +df.format(perfo.gamma);
+	    if (backlog>0) ". Backlog=" + backlog;
+	    s += ". Send: ";
 	    if (terminal) s += "to Distributor: " + df.format(terminalAmt);
 	    else {	    
 		Vector<String> v = new Vector<>();
@@ -223,12 +225,22 @@ public class GraphAnalysis {
 	}
 	Node root = new Node(rawMatSupplier, -1);
 	root.inputAmt.put(-1, 1.0);
-	analyze(root, false, false);
+	//analyze(root, false, false);
+	analyze(root, true, false);
 
-	
 	System.out.println("========== Production Graph Report ===============");
 	System.out.println(report(root));
 	System.out.println("==================================================");
+
+	root.inputAmt.put(-1, 4e7);
+	analyze(root, true, false);
+
+	System.out.println("========== Production Graph Report 2 ===============");
+	System.out.println(report(root));
+	System.out.println("==================================================");
+	
+
+
 	//System.exit(0);
     }
 }
