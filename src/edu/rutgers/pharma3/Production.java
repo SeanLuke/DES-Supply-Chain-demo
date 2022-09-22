@@ -451,11 +451,83 @@ public class Production extends sim.des.Macro
     //--------- Managing the downstream operations
 
     SplitManager sm;
+       
     
     public void setQaReceiver(Receiver rcv, double fraction) {  
 	sm.setQaReceiver(rcv, fraction);
     }
+
+    /** Assuming that RM-API-BulkDrug-PackagedDrug is the main
+	production chain, which input buffer is the "main" one for
+	this production unit? This method is used as a help in simplified 
+	analysis.
+	
+    */
+    InputStore findTheMainInput(Batch[] theMainChainOfResources)  {
+	for(int j=0; j<inputStore.length; j++) {
+	    Resource r = inputStore[j].prototype;
+	    for(Batch b:  theMainChainOfResources) {
+		if (r==b) return  inputStore[j];
+	    }
+	}
+	return null;
+
+    }
     
+
+    /** The main performance parameters of this Production node, for
+	use in the overall system performance forecasting in 
+	GraphAnalysis. 
+	
+	FIXME: Same as in GraphAnalysis, the assumption here is that 
+	the outBatchSize = the inBatchSize for the "main" ingredient,
+	and there are no constraints for non-main ingredients.
+    */
+    static class Perfo {
+	double alpha=0, beta=0;
+	/** Output/input ratio of this node. Typically, it's computed
+	    as (1-alpha-beta) / (1-beta), where alpha is the fault rate,
+	    and beta is the rework rate.
+	 */
+	double gamma=1;
+	/** How many units can go per day through the
+	    production-transportation-QA chain? If this value is P,
+	    then this Producion node can, on average, take up
+	    (1-beta)*P units of the input material per day, and
+	    release up to (1-alpha-beta)*P units.
+	*/
+	double thruput=0;
+	/** Link to the Production node being analyzed */
+	Production  production=null;
+	boolean hasSafety=false;
+	Perfo() {}
+	Perfo(Production p, Batch[] theMainChainOfResources) {
+	    production=p;
+	    double[] abg = p.computeABG();
+	    alpha = abg[0];
+	    beta = abg[1];
+	    gamma = abg[2];
+
+	    InputStore input = p.findTheMainInput(theMainChainOfResources);
+	    if (input==null) throw new IllegalArgumentException("Don't know what the main input is in p=" + p);
+	    
+	    
+	    hasSafety = (input.safety!=null);
+	    //thruput = p.outBatchSize * ParaSet.computeMean(p.needProd.getDelayDistribution());
+	    if (input.batchSize != p.outBatchSize)  throw new IllegalArgumentException("Analysis not supported for different batch sizes;n p=" + p);
+	    double d =  ParaSet.computeMean(p.needProd.getDelayDistribution());
+	    if (p.needTrans!=null) {
+		double d2 =  ParaSet.computeMean(p.needProd.getDelayDistribution());
+		if (d2>d) d = d2;
+	    }
+	    
+	    double d2 =  ParaSet.computeMean(p.needQa.getDelayDistribution());
+	    if (d2>d) d = d2;
+	    thruput = p.outBatchSize / d;
+	}
+    }
+
+
     /** Stats for planning */
     double[] computeABG() {
 	return qaDelay.computeABG();
@@ -463,4 +535,6 @@ public class Production extends sim.des.Macro
     double computeGamma() {
 	return computeABG()[2];
     }
+
+    
 }

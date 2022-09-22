@@ -66,6 +66,11 @@ public class PharmaCompany extends Sink
     final double fudgeFactor;
 
     final GraphAnalysis ga;
+
+    /** This is used in GraphAnalysis to identify "main" inputs of
+	Production nodes */
+    final Batch[] theMainChainOfResources;
+
     
     PharmaCompany(SimState state, String name, Config config, Pool hospitalPool, Batch pacDrugBatch) throws IllegalInputException, IOException {
 	super(state, drugOrderResource);
@@ -139,11 +144,14 @@ public class PharmaCompany extends Sink
 	Vector<Production> vp = Util.array2vector(cmoTrack);
 	Production [] myp = {apiProduction, drugProduction, packaging};
 	vp.addAll( Util.array2vector(myp));
+
+	theMainChainOfResources = new Batch[] {rawMatBatch, apiBatch, bulkDrugBatch, pacDrugBatch};
+	    
 		    
-	ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]));
+	ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]), theMainChainOfResources);
 
 	double gamma =rawMatSupplier.computeGamma(); 
-	fudgeFactor = 1.0 / ga.terminalAmt / gamma;
+	fudgeFactor = 1.0 / ga.totalTerminalAmt() / gamma;
 	System.out.println(name + ": RM over-ordering factor=" + fudgeFactor);
 
 	for(Production p: myp) { p.setPlan(0); }

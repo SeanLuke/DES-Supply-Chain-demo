@@ -29,15 +29,22 @@ public class GraphAnalysis {
 	production network, representing the RM entering the system.	
      */
     class Node {
-	Production element;
+	/** The sequential number of node (0-based) in our table of all nodes.
+	    The root node is special, and had -1 in this field.
+	*/
+	int no;
+	// Production element;
+	Production.Perfo perfo;
 	/** If true, this node feeds to DC */
 	boolean terminal = false;
 	double terminalAmt = 0;
+	//double alpha, beta;
 	/** Output/input ratio of this node. Typically, it's computed
 	    as (1-alpha-beta) / (1-beta), where alpha is the fault rate,
 	    and beta is the rework rate.
 	 */
-	double gamma;
+	//double gamma;
+	double backlog = 0;
 	/** To which other Nodes this Node feeds. The map maps the integer ID
 	    of each destsination node to an RData structure containing
 	    information on what fraction of the input goes to that destination
@@ -45,8 +52,15 @@ public class GraphAnalysis {
 	    this map is empty */
 	HashMap<Integer,RData> outputs = new HashMap<>();
 	/** How much of a 1.000 of the RM that enters the root will
-	    reach the input of that node */
-	double inputAmt = 0;
+	    reach the input of that node thru each channel */
+	HashMap<Integer,Double> inputAmt = new HashMap<>();
+	private double totalInputAmt() {
+	    double sum = 0;
+	    for(Double x: inputAmt.values()) {
+		sum += x;
+	    }
+	    return sum;
+	}
 
 	/** Builds the Node from a Production element or (for the root node
 	    only) from the rawMaterialSupplier. 
@@ -56,15 +70,25 @@ public class GraphAnalysis {
 	    already properly set.
 	 */
 	Node(//Production x
-	     HasQA _x) {
+	     HasQA _x, int _no) {
+	    no = _no;
 	    Production x = (_x instanceof Production)? (Production)_x: null;
+	    double abg[] = {0,0,1};
 	    if (x!=null) {
-		element = x;
-		gamma = x.computeGamma();
-	    } else {
-		element = null;
-		gamma = 1;
+		//element = x;
+		//abg = x.computeABG();
+
+
+		perfo = new Production.Perfo(x,  theMainChainOfResources);
+
+		
+	    } else { // the root node
+		//element = null;
+		perfo = new Production.Perfo();
 	    }
+	    //alpha = abg[0];
+	    //beta = abg[1];
+	    //gamma = abg[2];
 	    ArrayList<Receiver> rr = _x.getQaDelay().getReceivers();
 	    if (rr.size()!=1) throw new IllegalArgumentException("QA is expected to have exactly 1 receiver");
 	    Receiver _r = rr.get(0);
@@ -91,9 +115,9 @@ public class GraphAnalysis {
 	}
 
 	String report() {	    
-	    String s = (element==null)? "Root": element.getName();
-	    s += ": input=" + df.format(inputAmt) +
-		", gamma=" +df.format(gamma)+". Send: ";
+	    String s = (perfo.production==null)? "Root": perfo.production.getName();
+	    s += ": input=" + df.format(totalInputAmt()) +
+		", gamma=" +df.format(perfo.gamma)+". Send: ";
 	    if (terminal) s += "to Distributor: " + df.format(terminalAmt);
 	    else {	    
 		Vector<String> v = new Vector<>();
@@ -111,27 +135,50 @@ public class GraphAnalysis {
 
     /** How much of a 1.0 quantity of RM at the input of the network reaches
 	the terminal (the DC), in the form of finished product. */
-    public double terminalAmt = 0;
+    public HashMap<Integer,Double> terminalAmt = new  HashMap<>();
 
-    private void analyze(Node root, double input) {
-	root.inputAmt += input;
+    double totalTerminalAmt() {
+	double sum = 0;
+	for(Double x: terminalAmt.values()) {
+	    sum += x;
+	}
+	return sum;
+    }
+
+    
+    private void analyze(Node root, boolean thruputConstrained,
+			 boolean useSafety		 ) {
+	double inAmt = root.totalInputAmt();
+	double inAmtUsed = inAmt;
+	
+	if (thruputConstrained && root.perfo.production!=null) {
+	    // how much of the input goes through?
+	    double maxIn = root.perfo.thruput * (1-root.perfo.beta);
+	    double maxOut = root.perfo.thruput * (1-root.perfo.beta - root.perfo.alpha);
+	    inAmtUsed = Math.min( inAmt, maxIn);
+	    root.backlog = 	inAmt - inAmtUsed;	    
+	} 
+	
+	double outAmt = inAmtUsed * root.perfo.gamma;
+
 	if (root.terminal) {
-	    double sent = input * root.gamma;
-	    root.terminalAmt += sent;
-	    terminalAmt += sent;
+	    double sent = outAmt;
+	    root.terminalAmt = sent;
+	    terminalAmt.put(root.no, sent);
 	    return;
 	}
 	for(int j: root.outputs.keySet()) {
 	    RData d = root.outputs.get(j);
-	    Node y = allNodes.get(j);
-	    double sent = input * root.gamma * d.fraction;
-	    d.given += sent;
-	    analyze(y, sent);
+	    Node y = allNodes[j];
+	    double sent = outAmt  * d.fraction;
+	    y.inputAmt.put(root.no, sent);
+	    d.given = sent;
+	    analyze(y, thruputConstrained, useSafety);
 	}
     }
 
     private final Production[] allProd;
-    private Vector<Node> allNodes = new Vector<>();
+    private Node[] allNodes;
     
     private int prod2no(Production p) {
 	for(int j=0; j<allProd.length; j++) {
@@ -144,9 +191,9 @@ public class GraphAnalysis {
 	Vector<String> v = new Vector<>();
 	v.add(root.report());
 	for(int j=0; j<allProd.length; j++) {
-	    v.add("["+j+"] " + allNodes.get(j).report());
+	    v.add("["+j+"] " + allNodes[j].report());
 	}
-	v.add("Distributor receives " + df.format(terminalAmt));
+	v.add("Distributor receives " + df.format(totalTerminalAmt()));
 	return String.join("\n", v);	
     }
 
@@ -155,19 +202,30 @@ public class GraphAnalysis {
     */
     double getStartPlanFor(Production p) {
 	int j = prod2no(p);
-	return allNodes.get(j).inputAmt / terminalAmt;
+	return allNodes[j].totalInputAmt() / totalTerminalAmt();
     }
 
-    
-    GraphAnalysis(MaterialSupplier rawMatSupplier, Distributor _distro, Production[] vp) {
+
+    private Batch[] theMainChainOfResources;
+
+    /**
+       @param rawMatSupplier The root node of the production network being analyzed
+       @param _theMainChainOfResources Used to identify "main" resources
+     */
+    GraphAnalysis(MaterialSupplier rawMatSupplier, Distributor _distro, Production[] vp, Batch[] _theMainChainOfResources) {
+	theMainChainOfResources = _theMainChainOfResources;
 	distro = _distro;
 	allProd = vp;
-	for(Production p: vp) {
-	    allNodes.add(new Node(p));
+	allNodes = new Node[vp.length];
+	for(int j=0; j<vp.length; j++) {
+	    Production p = vp[j];
+	    allNodes[j] = new Node(p, j);
 	}
-	Node root = new Node(rawMatSupplier);
-	analyze(root, 1.0);
-    
+	Node root = new Node(rawMatSupplier, -1);
+	root.inputAmt.put(-1, 1.0);
+	analyze(root, false, false);
+
+	
 	System.out.println("========== Production Graph Report ===============");
 	System.out.println(report(root));
 	System.out.println("==================================================");

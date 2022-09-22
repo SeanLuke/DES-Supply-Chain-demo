@@ -36,6 +36,10 @@ public class MaterialSupplier extends Macro
     implements     Named,	    Reporting, SplitManager.HasQA
 {
 
+    /** The number of units whose production we are ordered to start.
+	(The number of units that will successfully emerge from QA will
+	be smaller, so the FC is encouraged to over-order)
+     */
     private double outstandingOrderAmount=0;
     private double everOrdered=0;
     private long startedProdBatches = 0;
