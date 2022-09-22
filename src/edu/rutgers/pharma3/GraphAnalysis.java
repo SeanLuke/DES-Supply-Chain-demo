@@ -44,7 +44,8 @@ public class GraphAnalysis {
 	    and beta is the rework rate.
 	 */
 	//double gamma;
-	double backlog = 0;
+	double backlog = 0, bad=0;
+	Double utilization = null;
 	/** To which other Nodes this Node feeds. The map maps the integer ID
 	    of each destsination node to an RData structure containing
 	    information on what fraction of the input goes to that destination
@@ -118,7 +119,9 @@ public class GraphAnalysis {
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
 	    s += ": input=" + df.format(totalInputAmt()) +
 		", gamma=" +df.format(perfo.gamma);
-	    if (backlog>0) ". Backlog=" + backlog;
+	    if (backlog>0) s+= ". Backlog=" + backlog;
+	    if (utilization!=null) s+= ". Utilization=" + df.format(utilization*100) + "%";
+	    if (bad>0) s+= ". Bad=" + df.format(bad);
 	    s += ". Send: ";
 	    if (terminal) s += "to Distributor: " + df.format(terminalAmt);
 	    else {	    
@@ -158,10 +161,12 @@ public class GraphAnalysis {
 	    double maxIn = root.perfo.thruput * (1-root.perfo.beta);
 	    double maxOut = root.perfo.thruput * (1-root.perfo.beta - root.perfo.alpha);
 	    inAmtUsed = Math.min( inAmt, maxIn);
-	    root.backlog = 	inAmt - inAmtUsed;	    
+	    root.backlog = 	inAmt - inAmtUsed;
+	    root.utilization  = inAmtUsed /maxIn;
 	} 
 	
 	double outAmt = inAmtUsed * root.perfo.gamma;
+	root.bad = inAmtUsed * (1 - root.perfo.gamma);
 
 	if (root.terminal) {
 	    double sent = outAmt;
@@ -224,21 +229,30 @@ public class GraphAnalysis {
 	    allNodes[j] = new Node(p, j);
 	}
 	Node root = new Node(rawMatSupplier, -1);
+
+	// Pro forma analysis, w/o capacity constraints
+
 	root.inputAmt.put(-1, 1.0);
-	//analyze(root, false, false);
-	analyze(root, true, false);
+	analyze(root, false, false);
 
 	System.out.println("========== Production Graph Report ===============");
 	System.out.println(report(root));
 	System.out.println("==================================================");
 
-	root.inputAmt.put(-1, 4e7);
+	// Analysis, w capacity constraints
+
+	
+	root.inputAmt.put(-1, 3.7903250e7);
 	analyze(root, true, false);
 
 	System.out.println("========== Production Graph Report 2 ===============");
 	System.out.println(report(root));
 	System.out.println("==================================================");
-	
+
+
+	// pro forma numbers again, for later use
+	root.inputAmt.put(-1, 1.0);
+	analyze(root, false, false);
 
 
 	//System.exit(0);
