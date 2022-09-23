@@ -117,18 +117,18 @@ public class GraphAnalysis {
 
 	String report() {	    
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
-	    s += ": input=" + df.format(totalInputAmt()) +
+	    s += ": input=" + fa(totalInputAmt()) +
 		", gamma=" +df.format(perfo.gamma);
-	    if (backlog>0) s+= ". Backlog=" + backlog;
+	    if (backlog>0) s+= ". Backlog=" + fa(backlog);
 	    if (utilization!=null) s+= ". Utilization=" + df.format(utilization*100) + "%";
-	    if (bad>0) s+= ". Bad=" + df.format(bad);
+	    if (bad>0) s+= ". Bad=" + fa(bad);
 	    s += ". Send: ";
-	    if (terminal) s += "to Distributor: " + df.format(terminalAmt);
+	    if (terminal) s += "to Distributor: " + fa(terminalAmt);
 	    else {	    
 		Vector<String> v = new Vector<>();
 		for(int j: outputs.keySet()) {
 		    RData d = outputs.get(j);
-		    v.add("to " +allProd[j].getName()+ " "+ df.format(d.given)+
+		    v.add("to " +allProd[j].getName()+ " "+ fa(d.given)+
 			  " ("+(d.fraction*100)+"%)");
 		}
 		s += String.join("; ", v);
@@ -142,6 +142,7 @@ public class GraphAnalysis {
 	the terminal (the DC), in the form of finished product. */
     public HashMap<Integer,Double> terminalAmt = new  HashMap<>();
 
+    /** The total amount of stuff arriving to the DC from all sources */
     double totalTerminalAmt() {
 	double sum = 0;
 	for(Double x: terminalAmt.values()) {
@@ -150,7 +151,17 @@ public class GraphAnalysis {
 	return sum;
     }
 
+    /** The main method for the analysis */
+    void doAnalyze(double input, boolean thruputConstrained, boolean useSafety){
+	root.inputAmt.put(-1, input);
+	analyze(root, thruputConstrained, useSafety);
+    }
+
     
+    /** The recursive analysis function. Starting from a particular
+	node (the "root" of a subgraph), recursively updates the
+	numbers in all nodes reached from this node.
+     */
     private void analyze(Node root, boolean thruputConstrained,
 			 boolean useSafety		 ) {
 	double inAmt = root.totalInputAmt();
@@ -193,17 +204,36 @@ public class GraphAnalysis {
 	}
 	throw new IllegalArgumentException("Production element not registered: " + p);
     }
-					  
-    private String report(Node root) {
+
+    /** Used to control formatting of drug amounts in reporting */
+    private boolean useBatch=false;
+
+    private String report(boolean _useBatch) {
+	useBatch = _useBatch;
 	Vector<String> v = new Vector<>();
+	if (useBatch) {
+	    v.add("Below, 1 ba = " + (long)Math.round(batchSize));
+	}
 	v.add(root.report());
 	for(int j=0; j<allProd.length; j++) {
 	    v.add("["+j+"] " + allNodes[j].report());
 	}
-	v.add("Distributor receives " + df.format(totalTerminalAmt()));
+	v.add("Distributor receives " + fa(totalTerminalAmt()));
 	return String.join("\n", v);	
     }
 
+   
+    
+    /** Format an amount of product */
+    private String fa(double x) {
+	if (useBatch) {
+	    return df.format(x/batchSize) + " ba";
+	} else {
+	    return df.format(x);
+	}
+    }
+
+    
     /** If the output of the entire chain is 1.0, what should 
 	be the number of units started by the specified production node?
     */
@@ -214,12 +244,19 @@ public class GraphAnalysis {
 
 
     private Batch[] theMainChainOfResources;
+    private double batchSize;
 
+    /** Stands for the root of the entire production graph */
+    private final Node root;
+    
     /**
        @param rawMatSupplier The root node of the production network being analyzed
+       @param _distro the DC
        @param _theMainChainOfResources Used to identify "main" resources
      */
     GraphAnalysis(MaterialSupplier rawMatSupplier, Distributor _distro, Production[] vp, Batch[] _theMainChainOfResources) {
+	batchSize = rawMatSupplier.standardBatchSize;
+
 	theMainChainOfResources = _theMainChainOfResources;
 	distro = _distro;
 	allProd = vp;
@@ -228,34 +265,49 @@ public class GraphAnalysis {
 	    Production p = vp[j];
 	    allNodes[j] = new Node(p, j);
 	}
-	Node root = new Node(rawMatSupplier, -1);
+	root = new Node(rawMatSupplier, -1);
 
 	// Pro forma analysis, w/o capacity constraints
-
-	root.inputAmt.put(-1, 1.0);
-	analyze(root, false, false);
+	doAnalyze(1.0, false, false);
 
 	System.out.println("========== Production Graph Report ===============");
-	System.out.println(report(root));
+	System.out.println(report( false));
 	System.out.println("==================================================");
-
-	// Analysis, w capacity constraints
-
-	
-	root.inputAmt.put(-1, 3.7903250e7);
-	analyze(root, true, false);
-
-	System.out.println("========== Production Graph Report 2 ===============");
-	System.out.println(report(root));
-	System.out.println("==================================================");
-
-
-	// pro forma numbers again, for later use
-	root.inputAmt.put(-1, 1.0);
-	analyze(root, false, false);
-
 
 	//System.exit(0);
     }
+
+
+    /** Extracts a few command-line options we understand, and leaves
+	the rest of them to MASON.
+    */
+    public static void main(String[] argv) throws IOException, IllegalInputException {
+
+	Demo.MakesDemo maker = new Demo.MakesDemo(argv);
+	argv = maker.argvStripped;
+	
+	//doLoop(Demo.class, argv);
+	//doLoop(maker, argv);
+	Demo demo = (Demo)maker.newInstance(0L, argv);
+	demo.start();
+	
+	GraphAnalysis ga = demo.getPharmaCompany().getGraphAnalysis();
+
+	// Analysis, with capacity constraints	
+	ga.doAnalyze( 3.7903250e7, true, false);
+
+	System.out.println("========== Production Graph Report 2 =============");
+	System.out.println(ga.report(true));
+	System.out.println("==================================================");
+
+	// Restore the pro forma numbers, for later use
+	// ga.doAnalyze(1.0, false, false);
+
+
+       
+	System.exit(0);
+    }
+    
+    
 }
     

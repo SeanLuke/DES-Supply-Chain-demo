@@ -66,6 +66,9 @@ public class PharmaCompany extends Sink
     final double fudgeFactor;
 
     final GraphAnalysis ga;
+    GraphAnalysis getGraphAnalysis() {
+	return ga;
+    }
 
     /** This is used in GraphAnalysis to identify "main" inputs of
 	Production nodes */
@@ -141,21 +144,23 @@ public class PharmaCompany extends Sink
 
 	setupCmoTracks((Demo)state,  config);
 
-	Vector<Production> vp = Util.array2vector(cmoTrack);
-	Production [] myp = {apiProduction, drugProduction, packaging};
-	vp.addAll( Util.array2vector(myp));
 
 	theMainChainOfResources = new Batch[] {rawMatBatch, apiBatch, bulkDrugBatch, pacDrugBatch};
 	    
-		    
+
+	Vector<Production> vp = Util.array2vector(cmoTrack);
+	Production [] myp = {apiProduction, drugProduction, packaging};
+	vp.addAll( Util.array2vector(myp));
 	ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]), theMainChainOfResources);
 
 	double gamma =rawMatSupplier.computeGamma(); 
 	fudgeFactor = 1.0 / ga.totalTerminalAmt() / gamma;
 	System.out.println(name + ": RM over-ordering factor=" + fudgeFactor);
 
+
 	for(Production p: myp) { p.setPlan(0); }
     }
+
 
     /** Sets up the 4 CMO Tracks, based on the data in the config file */
     private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputException, IOException {

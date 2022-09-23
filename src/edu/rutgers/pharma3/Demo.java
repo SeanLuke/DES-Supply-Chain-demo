@@ -268,7 +268,7 @@ public class Demo extends SimState {
 
 	MakesDemo maker = new MakesDemo(argv);
 	argv = maker.argvStripped;
-	
+
 	//doLoop(Demo.class, argv);
 	doLoop(maker, argv);
 	
