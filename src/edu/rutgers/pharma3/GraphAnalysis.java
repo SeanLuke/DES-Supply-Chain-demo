@@ -22,7 +22,7 @@ public class GraphAnalysis {
 
     private final Distributor distro;
     
-    static private DecimalFormat df = new DecimalFormat("0.00##");
+    static private DecimalFormat df = new DecimalFormat("0.00#");
 	
     /** A Node typically represents a Production unit of the supply chain.
 	Additionally, we also have a Node object for the root of the 
@@ -117,10 +117,10 @@ public class GraphAnalysis {
 
 	String report() {	    
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
-	    s += ": input=" + fa(totalInputAmt()) +
+	    s += ": in=" + fa(totalInputAmt()) +
 		", gamma=" +df.format(perfo.gamma);
 	    if (backlog>0) s+= ". Backlog=" + fa(backlog);
-	    if (utilization!=null) s+= ". Utilization=" + df.format(utilization*100) + "%";
+	    if (utilization!=null) s+= ". Util=" + df.format(utilization*100) + "%";
 	    if (bad>0) s+= ". Bad=" + fa(bad);
 	    s += ". Send: ";
 	    if (terminal) s += "to Distributor: " + fa(terminalAmt);
@@ -129,7 +129,7 @@ public class GraphAnalysis {
 		for(int j: outputs.keySet()) {
 		    RData d = outputs.get(j);
 		    v.add("to " +allProd[j].getName()+ " "+ fa(d.given)+
-			  " ("+(d.fraction*100)+"%)");
+			  " ("+fpc(d.fraction)+")");
 		}
 		s += String.join("; ", v);
 	    }
@@ -230,9 +230,19 @@ public class GraphAnalysis {
 	    return df.format(x/batchSize) + " ba";
 	} else {
 	    return df.format(x);
-	}
+	}	
     }
 
+
+    boolean almostInt(double x) {
+	return Math.abs( x - Math.round(x)) < 1e-6;
+    }
+    
+    /** Converts a number to a percentage, and prints it appropriately */
+    private String fpc(double x) {
+	double pc = x*100;
+	return (almostInt(pc)? "" + Math.round(pc)  : df.format(pc)) + "%";
+    }
     
     /** If the output of the entire chain is 1.0, what should 
 	be the number of units started by the specified production node?
@@ -289,8 +299,8 @@ public class GraphAnalysis {
 	//doLoop(Demo.class, argv);
 	//doLoop(maker, argv);
 	Demo demo = (Demo)maker.newInstance(0L, argv);
-	demo.start();
-	
+	demo.initSupplyChain();
+
 	GraphAnalysis ga = demo.getPharmaCompany().getGraphAnalysis();
 
 	// Analysis, with capacity constraints	

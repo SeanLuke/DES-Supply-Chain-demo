@@ -36,6 +36,10 @@ class Charter {
 	
 	sch = schedule;
 
+	if (dir==null) {
+	    System.out.println("Charting turned off");
+	    return;
+	}
 	if (!dir.exists()) dir.mkdirs();
 
 	File f = new File(dir, c.getName() + ".csv");
@@ -44,6 +48,7 @@ class Charter {
     }
 
     public void printHeader(String... names) {
+	if (w==null) return;
 	w.println( "#time,"+		   String.join(",",   names));
     }
 
@@ -52,6 +57,7 @@ class Charter {
 	@param values The value(s) to print. Can also take double[]  
     */
     public void print(double... values) {
+	if (w==null) return;
 	w.println( ""+sch.getTime()+ ","+
 		   Util.joinNonBlank(",",   values)); // c.getValue());
 	//w.flush();

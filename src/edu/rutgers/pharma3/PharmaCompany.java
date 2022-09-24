@@ -117,10 +117,8 @@ public class PharmaCompany extends Sink
 				   new Resource[] {bulkDrugBatch, pacMaterial}, pacDrugBatch);
 
 	rawMatSupplier.sm.setQaReceiver(apiProduction.getEntrance(0), 0.90);
-
 	       
 	apiProduction.sm.setQaReceiver(drugProduction.getEntrance(0), 0.70);
-
 	
 	excipientFacility.sm.setQaReceiver(drugProduction.getEntrance(1));
 	
@@ -143,7 +141,6 @@ public class PharmaCompany extends Sink
 	state.schedule.scheduleRepeating(excipientFacility);
 
 	setupCmoTracks((Demo)state,  config);
-
 
 	theMainChainOfResources = new Batch[] {rawMatBatch, apiBatch, bulkDrugBatch, pacDrugBatch};
 	    

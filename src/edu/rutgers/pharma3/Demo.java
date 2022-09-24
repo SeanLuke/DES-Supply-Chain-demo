@@ -88,7 +88,18 @@ public class Demo extends SimState {
 	super.start();
 	System.out.println("Demo.start");
 	System.out.println("Disruptions=" + disruptions);
-     
+	initSupplyChain();
+	final int CENSUS_INTERVAL=360;
+	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
+	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
+	doReport("Start");
+    }
+
+    /** The main part of the start() method. It is taken into a separate
+	method so that it can also be used from auxiliary tools, such as 
+	GraphAnalysis.
+    */
+    void initSupplyChain() {
 	try {
 	    
 	    CountableResource drug = new CountableResource("PackagedDrug", 0);
@@ -134,12 +145,8 @@ public class Demo extends SimState {
 	    ex.printStackTrace(System.err);
 	    System.exit(1);
 	}
-	final int CENSUS_INTERVAL=360;
-	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
-	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
-	doReport("Start");
     }
-
+    
     /** Set up our network for display purposes 
      */
     void depict() {
@@ -235,8 +242,10 @@ public class Demo extends SimState {
 	    disruptions0 = (disruptPath == null) ? null:
 		 Disruptions.readList(new File(disruptPath));
 
-	    // The chart directory
-	    File logDir = new File(chartsPath);
+	    // The chart directory. (The value "null" means no charting)
+	    File logDir = (chartsPath.equals("/dev/null") ||
+			   chartsPath.equals("null")) ? null:
+		new File(chartsPath);
 	    Charter.setDir(logDir);
 
 	    
