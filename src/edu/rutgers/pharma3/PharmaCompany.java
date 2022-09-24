@@ -152,7 +152,7 @@ public class PharmaCompany extends Sink
 
 	double gamma =rawMatSupplier.computeGamma(); 
 	fudgeFactor = 1.0 / ga.totalTerminalAmt() / gamma;
-	System.out.println(name + ": RM over-ordering factor=" + fudgeFactor);
+	if (!Demo.quiet) System.out.println(name + ": RM over-ordering factor=" + fudgeFactor);
 
 
 	for(Production p: myp) { p.setPlan(0); }

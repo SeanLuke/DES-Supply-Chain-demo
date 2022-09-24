@@ -26,6 +26,8 @@ class Charter {
     
     private static File dir = new File(".");
 
+    /** @param _dir Directory into which all files will be written.
+	Passing null turns off charting. */
     public static void setDir(File _dir) {
 	dir = _dir;
     }
@@ -37,7 +39,7 @@ class Charter {
 	sch = schedule;
 
 	if (dir==null) {
-	    System.out.println("Charting turned off");
+	    if (Demo.verbose) System.out.println("Charting turned off");
 	    return;
 	}
 	if (!dir.exists()) dir.mkdirs();
@@ -63,12 +65,18 @@ class Charter {
 	//w.flush();
     }
 
-    synchronized void close() {
-	if (w!=null) {
+    /** Closes the file associated with this charter object, if it's still open open
+	@return true if the closing, in fact, needed to be done
+     */
+    synchronized boolean close() {
+	if (w==null) {
+	    return false;
+	} else {
 	    w.flush();
 	    w.close();
+	    w=null;
+	    return true;
 	}
-	w=null;
     }
 
     public void finalize() {
@@ -79,10 +87,10 @@ class Charter {
     public static void closeAll() {
 	int n= 0;
 	for(Charter x: allCharters) {
-	    x.close();
-	    n++;
+	    if (x.close())  n++;
 	}
-	System.out.println("Closed all " + n+ " logs");
+	allCharters.clear();
+	if (!Demo.quiet) System.out.println("Closed all " + n+ " logs");
     }
     
 }

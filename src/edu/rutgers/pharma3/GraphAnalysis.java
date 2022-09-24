@@ -280,9 +280,11 @@ public class GraphAnalysis {
 	// Pro forma analysis, w/o capacity constraints
 	doAnalyze(1.0, false, false);
 
-	System.out.println("========== Production Graph Report ===============");
-	System.out.println(report( false));
-	System.out.println("==================================================");
+	if (!Demo.quiet) {
+	    System.out.println("========== Production Graph Report ===============");
+	    System.out.println(report( false));
+	    System.out.println("==================================================");
+	}
 
 	//System.exit(0);
     }

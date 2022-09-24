@@ -31,7 +31,10 @@ import sim.des.portrayal.*;
 /** The main class for a  simple pharmaceutical supply chain simulation demo */
 public class Demo extends SimState {
 
+    /** Set this to true to print a lot of stuff */
     static boolean verbose=false;
+    /** Set this to true to print less stuff, and turn off all interactive things */
+    static boolean quiet=false;
 
     public DES2D field = new DES2D(200, 200);
 
@@ -60,7 +63,7 @@ public class Demo extends SimState {
     
     public Demo(long seed)    {
 	super(seed);
-	System.out.println("pharma3.Demo()");
+	if (verbose) System.out.println("pharma3.Demo()");
     }
     
     Pool hospitalPool;
@@ -86,13 +89,13 @@ public class Demo extends SimState {
     /** Here, the supply network elements are added to the Demo object */
     public void start(){
 	super.start();
-	System.out.println("Demo.start");
-	System.out.println("Disruptions=" + disruptions);
+	if (!quiet) System.out.println("Demo.start");
+	if (!quiet) System.out.println("Disruptions=" + disruptions);
 	initSupplyChain();
 	final int CENSUS_INTERVAL=360;
-	schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
+	if (!quiet) schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
 	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
-	doReport("Start");
+	if (!quiet) doReport("Start");
     }
 
     /** The main part of the start() method. It is taken into a separate
@@ -165,8 +168,8 @@ public class Demo extends SimState {
     }
     
     public void	finish() {
-	doReport("Finish");
-	System.out.println("Closing logs");
+	if (!quiet) doReport("Finish");
+	if (verbose) System.out.println("Closing logs");
 	Charter.closeAll();
     }
 
@@ -209,6 +212,9 @@ public class Demo extends SimState {
 	    interpreted by the constructor (such as -config XXX) will be put here. */
 	final String[] argvStripped;
 
+	/** For use in RepeatTest */
+	//	int repeat=1;
+	
 	/** Initializes the Config and Disruptions structures from their respective
 	    config files. 
 	    @param argv The actual command line array. The constructor will look for
@@ -231,6 +237,8 @@ public class Demo extends SimState {
 		    disruptPath= argv[++j];
 		} else if (a.equals("-charts") && j+1<argv.length) {
 		    chartsPath= argv[++j];
+		    //} else if (a.equals("-repeat") && j+1<argv.length) {
+		    // repeat = Integer.parseInt(argv[++j]);
 		} else {
 		    va.add(a);
 		}
@@ -260,12 +268,17 @@ public class Demo extends SimState {
 	public java.lang.reflect.Constructor[]	getConstructors() {
 	    return Demo.class.getConstructors();
 	}
-	public SimState	newInstance(long seed, java.lang.String[] args) {
-	    Demo demo = new Demo(seed);
+
+	protected void initDemo(Demo demo) {
 	    //demo.disruptions = new Disruptions();
 	    //demo.disruptions.add( Disruptions.Type.ShipmentLoss, "RawMaterialSupplier", 40, 30);
 	    demo.config = config0;
 	    demo.disruptions = disruptions0;
+	}
+	
+	public SimState	newInstance(long seed, java.lang.String[] args) {
+	    Demo demo = new Demo(seed);
+	    initDemo(demo);
 	    return demo;
 	}
     }
