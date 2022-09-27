@@ -131,7 +131,7 @@ public class MaterialSupplier extends Macro
 	prototype = resource;
 
 	setName(para.name);
-	if (!Demo.quiet) System.out.println("MS " + getName()+", proto=" +prototype);
+	if (Demo.verbose) System.out.println("MS " + getName()+", proto=" +prototype);
 
 	
 	standardBatchSize = para.getDouble("batch");

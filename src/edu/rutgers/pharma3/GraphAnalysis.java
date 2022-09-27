@@ -115,6 +115,33 @@ public class GraphAnalysis {
 	    } else throw  new IllegalArgumentException("Unexpected type for receiver: " + _r.getName());
 	}
 
+	/** Reports the parameters of the node, based on the config file */
+	String reportParam() {
+	    String s = (perfo.production==null)? "Root": perfo.production.getName();
+	    if (perfo.production!=null) {
+		s += ": alpha=" + df.format(perfo.alpha) +
+		    ", beta=" +df.format(perfo.beta) +
+		    ", gamma=" +df.format(perfo.gamma);
+		s += ". Max gross thruput=" + fa(perfo.thruput);
+		double maxIn = perfo.thruput * (1-perfo.beta);
+		double maxOut = perfo.thruput * (1-perfo.beta - perfo.alpha);
+		if (perfo.alpha!=0 || perfo.beta!=0)  s += ". MaxIn=" + fa(maxIn) +", MaxOut=" + fa(maxOut);
+	    }
+	    s += ". Send: ";
+	    if (terminal) s += "to DC";
+	    else {	    
+		Vector<String> v = new Vector<>();
+		for(int j: outputs.keySet()) {
+		    RData d = outputs.get(j);
+		    v.add("to " +allProd[j].getName()+ " "+fpc(d.fraction));
+		}
+		s += String.join(", ", v);
+	    }
+	    return s;					    
+	}
+
+	/** Reports the predicted performance of the node, i.e. what it's
+	    expected to do */
 	String report() {	    
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
 	    s += ": in=" + fa(totalInputAmt()) +
@@ -208,6 +235,21 @@ public class GraphAnalysis {
     /** Used to control formatting of drug amounts in reporting */
     private boolean useBatch=false;
 
+
+    private String reportParam(boolean _useBatch) {
+	useBatch = _useBatch;
+ 	Vector<String> v = new Vector<>();
+	if (useBatch) {
+	    v.add("Below, 1 ba = " + (long)Math.round(batchSize));
+	}
+	v.add(root.reportParam());
+	for(int j=0; j<allProd.length; j++) {
+	    v.add("["+j+"] " + allNodes[j].reportParam());
+	}
+	return String.join("\n", v);	
+   }
+
+    
     private String report(boolean _useBatch) {
 	useBatch = _useBatch;
 	Vector<String> v = new Vector<>();
@@ -222,9 +264,8 @@ public class GraphAnalysis {
 	return String.join("\n", v);	
     }
 
-   
     
-    /** Format an amount of product */
+    /** Format an amount of product, in units of batches */
     private String fa(double x) {
 	if (useBatch) {
 	    return df.format(x/batchSize) + " ba";
@@ -281,15 +322,37 @@ public class GraphAnalysis {
 	doAnalyze(1.0, false, false);
 
 	if (!Demo.quiet) {
-	    System.out.println("========== Production Graph Report ===============");
+	    System.out.println("===== Production Graph Paramters ===================================");
+	    System.out.println(reportParam( true));
+	    System.out.println("===== Production Graph Report (ignoring thruput constraints) =======");
 	    System.out.println(report( false));
-	    System.out.println("==================================================");
+	    System.out.println("====================================================================");
 	}
 
 	//System.exit(0);
     }
 
+    /** Parsed options from argv[] */
+    static double argvIn = 3.7903250e7;
+    
+    static String [] stripArgs(String[] argv) {
 
+	Vector<String> va = new Vector<String>();
+	for(int j=0; j<argv.length; j++) {
+	    String a = argv[j];
+	    if (a.equals("-in") && j+1<argv.length) {
+		argvIn= Double.parseDouble(argv[++j]);
+	    } else {
+		va.add(a);
+	    }
+	}
+	
+	return  va.toArray(new String[0]);
+	    
+    }
+
+
+    
     /** Extracts a few command-line options we understand, and leaves
 	the rest of them to MASON.
     */
@@ -297,6 +360,9 @@ public class GraphAnalysis {
 
 	Demo.MakesDemo maker = new Demo.MakesDemo(argv);
 	argv = maker.argvStripped;
+
+
+	argv = stripArgs(argv);
 	
 	//doLoop(Demo.class, argv);
 	//doLoop(maker, argv);
@@ -306,7 +372,7 @@ public class GraphAnalysis {
 	GraphAnalysis ga = demo.getPharmaCompany().getGraphAnalysis();
 
 	// Analysis, with capacity constraints	
-	ga.doAnalyze( 3.7903250e7, true, false);
+	ga.doAnalyze( argvIn, true, false);
 
 	System.out.println("========== Production Graph Report 2 =============");
 	System.out.println(ga.report(true));

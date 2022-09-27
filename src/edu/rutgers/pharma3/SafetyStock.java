@@ -107,7 +107,7 @@ public class SafetyStock extends Pool  {
 	    if (!rcv.accept(provider, b, amt, amt)) throw new AssertionError("Queue did not accept");
 	    sent += amt;
 	}
-	if (!Demo.quiet) System.out.println(getName() + " magicFeed gives " + sent);
+	if (Demo.verbose) System.out.println(getName() + " magicFeed gives " + sent);
 	return sent;
     }
 
