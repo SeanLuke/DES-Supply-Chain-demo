@@ -232,7 +232,7 @@ public class Production extends sim.des.Macro
 	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion, name);
 	    if (vd.size()==1) {
 		// deplete inventory
-		double amt = vd.get(0).magnitude * 1e7;
+		double amt = Math.round(vd.get(0).magnitude * 1e7);
 		p.deplete(amt);			    
 	    } else if (vd.size()>1) {
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
