@@ -208,6 +208,7 @@ class InputStore extends sim.des.Queue {
     */
     synchronized double deplete(double amt) {
 	double destroyed = 0;
+	amt = Math.round(amt); // because offerReceiver does not like fractions
 	if (getTypical() instanceof Batch) {
 	    while(destroyed<amt && getAvailable()>0) {
 		Batch b=getFirst();
