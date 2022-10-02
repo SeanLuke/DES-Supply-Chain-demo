@@ -160,7 +160,7 @@ public class PharmaCompany extends Sink
 
 
     /** Sets up the 4 CMO Tracks, based on the data in the config file */
-    private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputException, IOException {
+private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputException, IOException {
 	for(int j=0; j<cmoTrack.length; j++) {
 	    char c = (char)('A' +j);
 	    String name = "CmoTrack" + c;
@@ -175,21 +175,35 @@ public class PharmaCompany extends Sink
 	    SplitManager.HasQA inputNode = (SplitManager.HasQA) node;
 	    double fraction = Double.parseDouble(v.get(1));
 	    QaDelay inputQaDelay = inputNode.getQaDelay();
+	    if (inputQaDelay == null) throw new IllegalArgumentException("Cannot construct track " +name+ ", because its input node has no QA stage");
 
 	    // CmoTrackA,output,DrugProduction
 	    v = para.get("output");
 	    if (v.size()!=1) throw new IllegalArgumentException("Invalid data for " +name+ ".output");
-	    Steppable node2 = demo.lookupNode(v.get(0));
+	    String name2 = v.get(0);
+	    boolean toQa = name2.endsWith(".qa");
+	    if (toQa) name2 = name2.substring(0, name2.length()-3);
+	    
+	    Steppable node2 = demo.lookupNode(name2);
 	    if (node2==null) throw new IllegalArgumentException("Invalid output name for " +name+ ".input: " + v.get(0));
 	    Receiver rcv = null;
 	    Batch outResource;
 	    if (node2 instanceof Pool) {
 		rcv = (Pool)node2;
+		//outResource = (Batch)((Pool)rcv).prototype;
 		outResource = (Batch)((Pool)rcv).prototype;
+		if (toQa) throw new IllegalArgumentException("Cannot use .qa suffix on a pool name; pools don't have QA");
 	    } else if (node2 instanceof Production) {
-		// just assuming input buffer 0
-		rcv = ((Production)node2).getEntrance(0);
-		outResource = (Batch)((Production)node2).inResources[0];
+		Production prod = (Production)node2;
+		if (toQa) {
+		    rcv = prod.getNeedQa();
+		    outResource = prod.outResource; 
+		} else {
+		    // just assuming input buffer 0
+		    rcv =  prod.getEntrance(0);
+		    outResource = (Batch)prod.inResources[0];
+		}
+
 	    } else  throw new IllegalArgumentException("Cannot identify the output unit as given for " +name+ ".input: " + v.get(0));
 	    
 		    
@@ -203,6 +217,7 @@ public class PharmaCompany extends Sink
 		
 	}
     }
+    
     
 
     // (x,y)
@@ -273,19 +288,6 @@ public class PharmaCompany extends Sink
 	    double plan = Math.round(amt * ga.getStartPlanFor(p));
 	    p.addToPlan(plan);
 	}
-
-
-	/*
-	vp.addAll( Util.array2vector(myp));
-		    
-	GraphAnalysis ga = new GraphAnalysis(rawMatSupplier, distro, vp.toArray(new Production[0]));
-
-	fudgeFactor = 1.0 / ga.terminalAmount / rawMatSupplier.getQaDelay().computeAlpha();
-	System.out.println(name + ": RM over-ordering fudgeFactor=" + fudgeFactor);
-
-	for(Production p: myp) { p.setPlan(0); }
-	*/
-
 	
 	return z;
 

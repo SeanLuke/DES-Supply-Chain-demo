@@ -204,6 +204,8 @@ public class MaterialSupplier extends Macro
     }
 
     public QaDelay getQaDelay() {	return qaDelay;    }
+
+    public Provider getTheLastStage() { return qaDelay;    }
     
     final double standardBatchSize;
 

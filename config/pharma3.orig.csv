@@ -167,15 +167,16 @@ Distributor,interval,30
 # The new CMO system
 
 CmoTrackA,input,RawMaterialSupplier,0.05
-CmoTrackA,output,DrugProduction
+#CmoTrackA,output,DrugProduction
+CmoTrackA,output,ApiProduction.qa
 CmoTrackA,inBatch,5e5
 CmoTrackA,batch,5e5
 CmoTrackA,incomingTranDelay,Uniform,0.25/3.829,1.75/3.829
 CmoTrackA,prodDelay,Uniform,0.25/3.829,1.75/3.829
 CmoTrackA,transDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackA,qaDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackA,faulty,0.01
-CmoTrackA,rework,0.01
+#CmoTrackA,qaDelay,Uniform,0.25/3.829,1.75/3.829
+#CmoTrackA,faulty,0.01
+#CmoTrackA,rework,0.01
 
 
 CmoTrackB,input,RawMaterialSupplier,0.05

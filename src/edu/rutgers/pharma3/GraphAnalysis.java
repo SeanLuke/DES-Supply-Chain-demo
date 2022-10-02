@@ -23,7 +23,18 @@ public class GraphAnalysis {
     private final Distributor distro;
     
     static private DecimalFormat df = new DecimalFormat("0.00#");
-	
+
+    static class RData2 extends RData {
+	boolean toQa = false;
+	RData2(double f) { super(f); }
+	RData2(double f, boolean _toQa) {
+	    super(f);
+	    toQa = _toQa;
+	}
+
+    }
+
+    
     /** A Node typically represents a Production unit of the supply chain.
 	Additionally, we also have a Node object for the root of the 
 	production network, representing the RM entering the system.	
@@ -51,13 +62,21 @@ public class GraphAnalysis {
 	    information on what fraction of the input goes to that destination
 	    node.    For a terminal node,
 	    this map is empty */
-	HashMap<Integer,RData> outputs = new HashMap<>();
+	HashMap<Integer,RData2> outputs = new HashMap<>();
 	/** How much of a 1.000 of the RM that enters the root will
 	    reach the input of that node thru each channel */
 	HashMap<Integer,Double> inputAmt = new HashMap<>();
+	HashMap<Integer,Double> inputAmtToQa = new HashMap<>();
 	private double totalInputAmt() {
 	    double sum = 0;
 	    for(Double x: inputAmt.values()) {
+		sum += x;
+	    }
+	    return sum;
+	}
+	private double totalInputAmtToQa() {
+	    double sum = 0;
+	    for(Double x: inputAmtToQa.values()) {
 		sum += x;
 	    }
 	    return sum;
@@ -66,40 +85,34 @@ public class GraphAnalysis {
 	/** Builds the Node from a Production element or (for the root node
 	    only) from the rawMaterialSupplier. 
 
-	    @param x Either a fully-configured Production element, or
+	    @param _x Either a fully-configured Production element, or
 	    rawMaterialSupplier. It should have all its outputs etc
 	    already properly set.
 	 */
-	Node(//Production x
-	     HasQA _x, int _no) {
+	Node(HasQA _x, int _no) {
 	    no = _no;
 	    Production x = (_x instanceof Production)? (Production)_x: null;
 	    double abg[] = {0,0,1};
 	    if (x!=null) {
-		//element = x;
-		//abg = x.computeABG();
-
-
-		perfo = new Production.Perfo(x,  theMainChainOfResources);
-
-		
+		perfo = new Production.Perfo(x,  theMainChainOfResources);	
 	    } else { // the root node
-		//element = null;
 		perfo = new Production.Perfo();
 	    }
-	    //alpha = abg[0];
-	    //beta = abg[1];
-	    //gamma = abg[2];
-	    ArrayList<Receiver> rr = _x.getQaDelay().getReceivers();
+	    ArrayList<Receiver> rr = _x.getTheLastStage().getReceivers();
 	    if (rr.size()!=1) throw new IllegalArgumentException("QA is expected to have exactly 1 receiver");
 	    Receiver _r = rr.get(0);
 	    if (_r == distro) terminal = true;
 	    else if (_r instanceof Production) {
 		Production r = (Production)_r;
-		outputs.put(prod2no(r), new RData(1.0));
+		outputs.put(prod2no(r), new RData2(1.0));
 	    } else if (_r instanceof InputStore) {
 		Production r = ((InputStore)_r).whose;
-		outputs.put(prod2no(r), new RData(1.0));
+		outputs.put(prod2no(r), new RData2(1.0));
+	    } else if (_r instanceof ThrottleQueue) {
+		// the unusual case of CMO Track A, which feeds to somebody
+		// else's QA stage.
+		Production r = ((ThrottleQueue)_r).getWhose();
+		outputs.put(prod2no(r), new RData2(1.0, true));		
 	    } else if (_r instanceof Splitter) {
 		Splitter s  = (Splitter)_r;
 		double sf = s.computeSumF(s.data.keySet());
@@ -108,13 +121,16 @@ public class GraphAnalysis {
 		    if (_z instanceof InputStore) {
 			Production z = ((InputStore)_z).whose;
 			RData q = s.data.get(_z);
-			outputs.put(prod2no(z), new RData(q.fraction/sf));
+			outputs.put(prod2no(z), new RData2(q.fraction/sf));
 		    } else throw new IllegalArgumentException("Splitter ought to feed to Production nodes only");
 		}
 				 
 	    } else throw  new IllegalArgumentException("Unexpected type for receiver: " + _r.getName());
 	}
 
+	public String toString() { return reportParam(); }
+
+	
 	/** Reports the parameters of the node, based on the config file */
 	String reportParam() {
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
@@ -132,8 +148,9 @@ public class GraphAnalysis {
 	    else {	    
 		Vector<String> v = new Vector<>();
 		for(int j: outputs.keySet()) {
-		    RData d = outputs.get(j);
-		    v.add("to " +allProd[j].getName()+ " "+fpc(d.fraction));
+		    RData2 d = outputs.get(j);
+		    String name = allProd[j].getName()+	(d.toQa? ".qa" : "");
+		    v.add("to " +name + " "+fpc(d.fraction));
 		}
 		s += String.join(", ", v);
 	    }
@@ -144,21 +161,27 @@ public class GraphAnalysis {
 	    expected to do */
 	String report() {	    
 	    String s = (perfo.production==null)? "Root": perfo.production.getName();
-	    s += ": in=" + fa(totalInputAmt()) +
+	    double ti=totalInputAmt(), tiq=totalInputAmtToQa();
+	    s += ": in=" + fa(ti) +
+		(tiq!=0? ", extraInToQA=" + fa(tiq) :"") +
 		", gamma=" +df.format(perfo.gamma);
 	    if (backlog>0) s+= ". Backlog=" + fa(backlog);
 	    if (utilization!=null) s+= ". Util=" + df.format(utilization*100) + "%";
 	    if (bad>0) s+= ". Bad=" + fa(bad);
-	    s += ". Send: ";
-	    if (terminal) s += "to Distributor: " + fa(terminalAmt);
+	    s += ". Send ";
+	    if (terminal) s += "to DC: " + fa(terminalAmt);
 	    else {	    
 		Vector<String> v = new Vector<>();
+		double sum = 0;
 		for(int j: outputs.keySet()) {
-		    RData d = outputs.get(j);
-		    v.add("to " +allProd[j].getName()+ " "+ fa(d.given)+
-			  " ("+fpc(d.fraction)+")");
+		    RData2 d = outputs.get(j);
+		    String name = allProd[j].getName()+	(d.toQa? ".qa" : "");
+		    v.add("to " +name+" "+fa(d.given)+" ("+fpc(d.fraction)+")");
+		    sum += d.given;
 		}
+		if (outputs.size()>1) s += "" + fa(sum) + ": ";
 		s += String.join("; ", v);
+	       
 	    }
 	    return s;				
 	}
@@ -188,23 +211,33 @@ public class GraphAnalysis {
     /** The recursive analysis function. Starting from a particular
 	node (the "root" of a subgraph), recursively updates the
 	numbers in all nodes reached from this node.
+
+	FIXME: (1) we assume that QA capacity is high, and no backlog
+	ever forms in front of the QA step.
+	(2) we assume that inAmtQa is small enough, and won't cause
+	any backlogs by itself.
      */
     private void analyze(Node root, boolean thruputConstrained,
 			 boolean useSafety		 ) {
 	double inAmt = root.totalInputAmt();
+	double inAmtQa = root.totalInputAmtToQa();
 	double inAmtUsed = inAmt;
 	
 	if (thruputConstrained && root.perfo.production!=null) {
 	    // how much of the input goes through?
-	    double maxIn = root.perfo.thruput * (1-root.perfo.beta);
-	    double maxOut = root.perfo.thruput * (1-root.perfo.beta - root.perfo.alpha);
+	    double maxIn = root.perfo.thruput * (1-root.perfo.beta) - root.perfo.beta * inAmtQa;
+	    //double maxOut = (root.perfo.thruput + inAmtQa) * (1-root.perfo.beta - root.perfo.alpha);
 	    inAmtUsed = Math.min( inAmt, maxIn);
-	    root.backlog = 	inAmt - inAmtUsed;
-	    root.utilization  = inAmtUsed /maxIn;
+	    root.backlog = 	inAmt - inAmtUsed;	    
+	    root.utilization  = (inAmtUsed + root.perfo.beta * inAmtQa)/(root.perfo.thruput * (1-root.perfo.beta));
+		// inAmtUsed /maxIn;
 	} 
+
+
+	//System.out.println("Analyze(" + root+", in=" + inAmt);
 	
-	double outAmt = inAmtUsed * root.perfo.gamma;
-	root.bad = inAmtUsed * (1 - root.perfo.gamma);
+	double outAmt = (inAmtUsed + inAmtQa) * root.perfo.gamma;
+	root.bad = (inAmtUsed  + inAmtQa) * (1 - root.perfo.gamma);
 
 	if (root.terminal) {
 	    double sent = outAmt;
@@ -213,10 +246,15 @@ public class GraphAnalysis {
 	    return;
 	}
 	for(int j: root.outputs.keySet()) {
-	    RData d = root.outputs.get(j);
+	    RData2 d = root.outputs.get(j);
 	    Node y = allNodes[j];
 	    double sent = outAmt  * d.fraction;
-	    y.inputAmt.put(root.no, sent);
+
+	    if (d.toQa) {
+		y.inputAmtToQa.put(root.no, sent);
+	    } else {
+		y.inputAmt.put(root.no, sent);
+	    }
 	    d.given = sent;
 	    analyze(y, thruputConstrained, useSafety);
 	}
@@ -322,7 +360,7 @@ public class GraphAnalysis {
 	doAnalyze(1.0, false, false);
 
 	if (!Demo.quiet) {
-	    System.out.println("===== Production Graph Paramters ===================================");
+	    System.out.println("===== Production Graph Parameters ===================================");
 	    System.out.println(reportParam( true));
 	    System.out.println("===== Production Graph Report (ignoring thruput constraints) =======");
 	    System.out.println(report( false));
@@ -334,6 +372,7 @@ public class GraphAnalysis {
 
     /** Parsed options from argv[] */
     static double argvIn = 3.7903250e7;
+    static boolean argvUseBa = false;
     
     static String [] stripArgs(String[] argv) {
 
@@ -341,7 +380,13 @@ public class GraphAnalysis {
 	for(int j=0; j<argv.length; j++) {
 	    String a = argv[j];
 	    if (a.equals("-in") && j+1<argv.length) {
-		argvIn= Double.parseDouble(argv[++j]);
+		String s = argv[++j];
+		if (s.endsWith("ba")) {
+		    argvUseBa = true;
+		    s = s.substring(0, s.length()-2);
+		}
+		argvIn= Double.parseDouble(s);
+		//System.out.println("argvIn=" + argvIn);
 	    } else {
 		va.add(a);
 	    }
@@ -371,10 +416,13 @@ public class GraphAnalysis {
 
 	GraphAnalysis ga = demo.getPharmaCompany().getGraphAnalysis();
 
-	// Analysis, with capacity constraints	
-	ga.doAnalyze( argvIn, true, false);
+	// Analysis, with capacity constraints
+	double inAmt = argvIn;
+	if (argvUseBa) inAmt *= ga.batchSize;
+				  
+	ga.doAnalyze( inAmt, true, false);
 
-	System.out.println("========== Production Graph Report 2 =============");
+	System.out.println("========== Production Graph Report 2 (in="+inAmt+") =============");
 	System.out.println(ga.report(true));
 	System.out.println("==================================================");
 

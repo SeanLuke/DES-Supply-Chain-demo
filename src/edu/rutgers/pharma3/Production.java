@@ -61,17 +61,31 @@ public class Production extends sim.des.Macro
     ProdDelay prodDelay;
     /** Exists only in CMO tracks */
     private SimpleDelay transDelay = null;
-    /** Models the delay taken by the QA testing at the output	*/
+    /** Models the delay taken by the QA testing at the output. This
+	may be null if this production facility has no QA stage (such
+	as CMO Track A).
+    */
     private QaDelay qaDelay;
     
     final ProdThrottleQueue needProd;
     private final ThrottleQueue needTrans, needQa;
 
+    /** If an external producer sends it product for us to do QA, this
+	is where it should be sent */
+    ThrottleQueue getNeedQa() { return needQa;}
+    
 
     public ProdDelay getProdDelay() { return prodDelay; }
     public QaDelay getQaDelay() { return qaDelay; }
 
+    /** Returns the last existing stage of this production unit. Typically
+	this is the qaDelay, but some units (CMO Track A) don't have QA. */
+    public Provider getTheLastStage() {
+	return qaDelay!=null? qaDelay:
+	    transDelay!=null? transDelay: prodDelay;
+    }
 
+	
     /** How many units of each input need to be taken to start cooking a batch? */
     final double[] inBatchSizes;
     /** How big is the output batch? */
@@ -125,14 +139,19 @@ public class Production extends sim.des.Macro
 	double cap = (outResource instanceof Batch) ? 1:    outBatchSize;	
 
 	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
-	if (this instanceof Macro)  addProvider(qaDelay, false);
-	needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random)); 
+	if (qaDelay != null) {
+	    if (this instanceof Macro)  addProvider(qaDelay, false);
+	    needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random));
+	    needQa.setWhose(this);
+	} else {
+	    needQa = null;
+	}
 
 	if (para.get("transDelay")!=null) {
 	    transDelay = new SimpleDelay(state, outResource);
 	    transDelay.setName("TransDelay of " + outResource.getName());
 	    needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random)); 
-	    transDelay.addReceiver(needQa);
+	    if (needQa!=null) transDelay.addReceiver(needQa);
 	} else {
 	    transDelay = null;
 	    needTrans = null;
@@ -142,12 +161,12 @@ public class Production extends sim.des.Macro
 	prodDelay.addReceiver(needTrans!=null? needTrans: needQa);
 	needProd = new ProdThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
 	
-	if (qaDelay.reworkProb >0) {
+	if (qaDelay !=null && qaDelay.reworkProb >0) {
 	    qaDelay.setRework( needProd);
 	}
 
-	sm = new SplitManager(this, outResource, qaDelay);
-	
+	sm = new SplitManager(this, outResource, getTheLastStage());
+
 	charter=new Charter(state.schedule, this);
 	String moreHeaders[] = new String[2 + inResources.length];
 	moreHeaders[0] = "releasedToday";
@@ -183,9 +202,11 @@ public class Production extends sim.des.Macro
 	if (transDelay!=null) {
 	    macroField.add(transDelay, x +=dx, y+=dy);
 	}
-	macroField.add(qaDelay, x +=dx, y+=dy);
-	if (sm.outputSplitter!=null) {
-	    macroField.add(sm.outputSplitter, x += dx, y += dy);
+	if (qaDelay!=null) {
+	    macroField.add(qaDelay, x +=dx, y+=dy);
+	    if (sm.outputSplitter!=null) {
+		macroField.add(sm.outputSplitter, x += dx, y += dy);
+	    }
 	}
 
 
@@ -310,35 +331,33 @@ public class Production extends sim.des.Macro
     }
 
  
-    //private static final boolean skipWork = false;
-    
-    /** Writes this days' time series values to the CSV file. 
+     /** Writes this days' time series values to the CSV file. 
 	Does that for the safety stocks too, if they exist.
      */
     private void dailyChart() {
-	//if (skipWork) return;
+
+	double releasedAsOfToday =getReleased();
+
+	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
+	releasedAsOfYesterday = releasedAsOfToday;
 	
-	    double releasedAsOfToday = qaDelay.getReleasedGoodResource();
-	    double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
-	    releasedAsOfYesterday = releasedAsOfToday;
-
-	    double[] data = new double[2 + inputStore.length];
-	    data[0] = releasedToday;
-	    data[1] = (startPlan==null)? 0 : startPlan;
-	    for(int j=0; j<inputStore.length; j++) {
-		data[j+2] = inputStore[j].getContentAmount();
-	    }	
-
+	double[] data = new double[2 + inputStore.length];
+	data[0] = releasedToday;
+	data[1] = (startPlan==null)? 0 : startPlan;
+	for(int j=0; j<inputStore.length; j++) {
+	    data[j+2] = inputStore[j].getContentAmount();
+	}	
+	
 	    
-	    charter.print(data);
-
-
-	    for(InputStore p: inputStore) {
-		if (p.safety!=null) p.safety.doChart(new double[0]);
-	    }
-    	       
+	charter.print(data);
+	
+	
+	for(InputStore p: inputStore) {
+	    if (p.safety!=null) p.safety.doChart(new double[0]);
+	}
+    	
     }
-
+    
     
     /** Tries to make a batch, if resources are available
 	@return true if a batch was made; false if not enough input resources
@@ -420,24 +439,31 @@ public class Production extends sim.des.Macro
 
 
     public double getDiscarded() {
-	return qaDelay.badResource;
+	return (qaDelay!=null) ? qaDelay.badResource : 0;
     }
 
 
+    /** FIXME: this is not entirely correct if qaDelay is absent. It would be
+	better to report how many units have come out of transDelay, or
+	if absent, from prodDelay. But typically we are just off by 1 batch.
+     */
     public double getReleased() {
-	return qaDelay.releasedGoodResource;
+	return  (qaDelay!=null) ? qaDelay.getReleasedGoodResource():
+	    prodDelay.getTotalStarted();
     }
 
     public String report() {
 	
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
 	    "Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
-	//if (qaDelay.reworkProb>0) s += " + (rework="+qaDelay.reworkResource+")";
+
 	s += " = (in prod=" +   needProd.hasBatches() +	    " ba;";
 	if (needTrans!=null) s +="  in trans=" +   needTrans.hasBatches() +")";
-	s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
-	s += " " + qaDelay.report();
+	if (qaDelay!=null) {
+	    s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
+	    s += " " + qaDelay.report();	    
 	//s +="  in QA=" +   needQa.hasBatches() +")";
+	}
 	    
 	s += "\n" + prodDelay.report();
 
@@ -451,8 +477,9 @@ public class Production extends sim.des.Macro
     //--------- Managing the downstream operations
 
     SplitManager sm;
-       
-    
+
+    /** Adds a destination to the output of this production unit (typically, the
+	QA delay) */
     public void setQaReceiver(Receiver rcv, double fraction) {  
 	sm.setQaReceiver(rcv, fraction);
     }
@@ -520,9 +547,11 @@ public class Production extends sim.des.Macro
 		double d2 =  ParaSet.computeMean(p.needProd.getDelayDistribution());
 		if (d2>d) d = d2;
 	    }
-	    
-	    double d2 =  ParaSet.computeMean(p.needQa.getDelayDistribution());
-	    if (d2>d) d = d2;
+
+	    if (p.needQa!=null) {
+		double d2 =  ParaSet.computeMean(p.needQa.getDelayDistribution());
+		if (d2>d) d = d2;
+	    }
 	    thruput = p.outBatchSize / d;
 	}
     }
@@ -530,7 +559,7 @@ public class Production extends sim.des.Macro
 
     /** Stats for planning */
     double[] computeABG() {
-	return qaDelay.computeABG();
+	return qaDelay!=null? qaDelay.computeABG() : new double[] {0,0,1};
     }
     double computeGamma() {
 	return computeABG()[2];

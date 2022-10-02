@@ -49,6 +49,11 @@ public class ThrottleQueue extends sim.des.Queue
     implements     Named//,	    Reporting
 {
 
+    /** Part of which production unit am I? This is needed in GraphAnalysis */
+    private Production whose=null;
+    void setWhose(Production _whose) {whose = _whose;}
+    Production getWhose() { return whose; }
+    
     private AbstractDistribution delayDistribution;
 
     public AbstractDistribution getDelayDistribution() {
@@ -58,7 +63,7 @@ public class ThrottleQueue extends sim.des.Queue
     /** The capacity-1 SimpleDelay for which the ThrottleQueue serves as an
 	input buffer */
     final private SimpleDelay delay;
-    
+
 /** Creates a Queue to be attached in front of the Delay, and
 	links it up appropriately. This is done so that we can model a
 	production facility (or a transportation service, etc) which can

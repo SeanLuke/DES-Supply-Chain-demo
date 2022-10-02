@@ -18,7 +18,9 @@ class SplitManager //implements Named
     interface HasQA {
 	void setQaReceiver(Receiver rcv, double fraction);
 	QaDelay getQaDelay();
-
+	/** Returns the last existing stage of this production unit. Typically
+	    this is the qaDelay, but some units (CMO Track A) don't have QA. */
+	Provider getTheLastStage();
     }
 
     
@@ -26,7 +28,12 @@ class SplitManager //implements Named
     Steppable parent;
     Resource outResource;
     String getName() { return((Named) parent).getName(); }
-    
+
+    /**
+       @param The last stage of the Productin of MaterialSupplier node that
+       sends its output through this SplitManager. This is usually, but not
+       always, the qaDelay.
+     */
     SplitManager(Steppable _parent, Resource _outResource, Provider _qaDelay) {
 	parent = _parent;
 	qaDelay =  _qaDelay;
@@ -44,7 +51,12 @@ class SplitManager //implements Named
     void setQaReceiver(Receiver rcv) {
 	setQaReceiver( rcv, 1.0);
     }
-    
+
+    /** Creates a path from the last stage of the production unit to a
+	specified Receiver. This may be a direct connection (if fraction==1)
+	or a connection via a Splitter (if fraction!=1, implying multiple
+	receivers).
+     */
     void setQaReceiver(Receiver rcv, double fraction) {
 	
 	ArrayList<Receiver> has = qaDelay.getReceivers();

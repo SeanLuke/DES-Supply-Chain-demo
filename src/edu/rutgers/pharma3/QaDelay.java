@@ -88,7 +88,10 @@ SimpleDelay
 	} 
     }
 
-    /** Creates a QaDelay based on the parameters from a specified ParaSet */
+    /** Creates a QaDelay based on the parameters from a specified ParaSet.
+	@return a new QaDelay object, or null if the para set contains no 
+	parameters for one.
+     */
     static public QaDelay mkQaDelay(ParaSet para, SimState state, Resource outResource) throws IllegalInputException {	
 	// See if "faulty" in the config file is a number or
 	// a distribution....
@@ -96,7 +99,8 @@ SimpleDelay
 	AbstractDistribution faultyPortionDistribution=null;
 
 	if (para.get("faulty")==null) {
-	    throw  new IllegalInputException("Found no value for  " + para.name +".faulty");
+	    return null;
+	    //throw  new IllegalInputException("Found no value for  " + para.name +".faulty");
 	} else if (para.get("faulty").size()==1) {
 	    faultyProb = para.getDouble("faulty");
 	} else {
