@@ -173,7 +173,8 @@ SimpleDelay
 		double atMost1 = atMost - faulty;
 		if (atMost1<0) {
 		    throw new AssertionError("Error in atMost arithmetic");
-		} else if (atMost1==0) { // everything was discarded
+		} else if (atMost1==0 || cr.getAmount()==0) {
+		    // everything was discarded, no good product left to send
 		    z = true;
 		} else {		    		
 		    z = super.offerReceiver(receiver, atMost1);
