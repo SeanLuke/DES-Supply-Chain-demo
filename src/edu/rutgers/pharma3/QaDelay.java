@@ -165,12 +165,20 @@ SimpleDelay
 
 		double t = state.schedule.getTime();
 		double rEffective = Math.min(r + faultRateIncrease.getValue(t), 1.0);
-
 		
 		faulty = Math.round( amt * rEffective);
 		// The faulty product is destroyed, so we decrease the resource now
 		cr.decrease(faulty);
-		z = super.offerReceiver(receiver, atMost-faulty);
+
+		double atMost1 = atMost - faulty;
+		if (atMost1<0) {
+		    throw new AssertionError("Error in atMost arithmetic");
+		} else if (atMost1==0) { // everything was discarded
+		    z = true;
+		} else {		    		
+		    z = super.offerReceiver(receiver, atMost1);
+		}
+		
 	    } else {
 		// throw new IllegalArgumentException("pharma3.QaDelay with faultyPortionDistribution only works with fungibles, because we don't support variable-size batches!");
 		
