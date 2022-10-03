@@ -200,12 +200,18 @@ SimpleDelay
 	    double amt = b.getContentAmount();
 	    
 	    boolean willDiscard=false, willRework=false;
+	    // The probability that the lot must be discarded
 	    double dp = discardProb + b.getLot().increaseInFaultRate;
+	    dp = Math.min(dp, 1);
 
-	    if ( dp + reworkProb >0) {
-		boolean isBad = state.random.nextBoolean(dp + reworkProb);
+	    // The probability that the lot is "not good", i.e must be
+	    // either discarded or reworked
+	    double notGoodProb = Math.min( dp + reworkProb, 1);
+	    if ( notGoodProb  >0) {
+		
+		boolean isBad = state.random.nextBoolean(notGoodProb);
 		if (isBad) {
-		    willRework = state.random.nextBoolean( reworkProb/(dp + reworkProb));
+		    willRework = state.random.nextBoolean( reworkProb/notGoodProb);
 		    willDiscard = !willRework;
 		}
 	    }
