@@ -39,8 +39,8 @@ public class Demo extends SimState {
     public DES2D field = new DES2D(200, 200);
 
     /** Should be set by MakeDemo.newInstance(), and then used in start() */
-    private Config config=null;
-    private Disruptions disruptions = null;
+    protected Config config=null;
+    protected Disruptions disruptions = null;
     Vector<Disruption> hasDisruptionToday(Disruptions.Type type, String unit) {
 	if (disruptions == null) return new Vector<Disruption>();
 	double time = schedule.getTime();
