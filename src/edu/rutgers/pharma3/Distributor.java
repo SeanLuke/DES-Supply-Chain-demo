@@ -26,6 +26,7 @@ public class Distributor extends Pool
 	setOffersImmediately(false); // shipping to be done only on the proper schedule
 
 	interval = (int)para.getLong("interval");
+	doChartHeader("anomaly");
     }
 
  
@@ -34,6 +35,9 @@ public class Distributor extends Pool
     private double lastOrderedAt = 0;
     private int batchesOrdered = 0;
 
+    private SimpleDetector detector = new SimpleDetector();
+
+    private boolean anomalyNow = false;
     
     /** Makes monthly product orders from the FC */
     public void step​(sim.engine.SimState state) {
@@ -67,10 +71,18 @@ public class Distributor extends Pool
 	// instead of super.step(), just do what's needed in this class
 	fillBackOrders();
 	orderedToday = orderSize;
-	doChart();
+
+	anomalyNow = detectAnomaly();
+
+	doChart(anomalyNow? 1:0);
+    }
+
+    
+    boolean detectAnomaly() {
+	double t = state.schedule.getTime();
+	return  detector.test(t, everReceived, false);
     }
     
-
     private void disrupt(SimState state) {
 	Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion,getName());
 	if (vd.size()==1) {
@@ -98,5 +110,20 @@ public class Distributor extends Pool
        return wrap(s);
     }
     */
+
+
+
     
+
+    /*
+    AnomalyDetector attachDetector() {
+    
+	AnomalyDetector ad = new AnomalyDetector(getState, Resource typical, 
+		double window, double anomalyDrop, double normalityResume, 
+						 double startupTime, double smoothingAlpha);
+
+    } 
+    */   
 }
+
+

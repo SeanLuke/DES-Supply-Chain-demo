@@ -413,7 +413,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	doChart(new double[0]);
     }
 
-    private double receivedToday=0;
+    /** The amount of stuff received since the most recent daily
+	chart-writing.  This is incremented at every accept, and
+	reduced to 0 at the chart-writing step.
+    */
+    protected double receivedToday=0;
 
     
     /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
@@ -548,7 +552,10 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	charter.printHeader(b);
     }
 
-    /** Writes a line to the time series file. Call this from step() */
+    /** Writes a line to the time series file. Call this from step().
+	After the values of the "today's" variables (receivedToday etc)
+	have been written out, those variables are reset to 0, for reuse.
+     */
     void doChart(double... moreValues) {
 	double stock =  getContentAmount();
 	double stillOnOrder = everOrdered - everReceived;

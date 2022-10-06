@@ -168,11 +168,15 @@ public class Production extends sim.des.Macro
 	sm = new SplitManager(this, outResource, getTheLastStage());
 
 	charter=new Charter(state.schedule, this);
-	String moreHeaders[] = new String[2 + inResources.length];
-	moreHeaders[0] = "releasedToday";
-	moreHeaders[1] = "outstandingPlan";
+	String moreHeaders[] = new String[2 + 2*inResources.length];
+	int k = 0;
+	moreHeaders[k++] = "releasedToday";
+	moreHeaders[k++] = "outstandingPlan";
 	for(int j=0; j<inputStore.length; j++) {
-	    moreHeaders[j+2] = "Stock." + inputStore[j].getUnderlyingName();
+	    moreHeaders[k++] = "Stock." + inputStore[j].getUnderlyingName();
+	}
+	for(int j=0; j<inputStore.length; j++) {
+	    moreHeaders[k++] = "Anomaly." + inputStore[j].getUnderlyingName();
 	}
 	charter.printHeader(moreHeaders);
 	 
@@ -312,18 +316,6 @@ public class Production extends sim.des.Macro
 	    // mechanism
 	    needProd.provide(prodDelay);
 
-	    /*
-	    if (!hasEnoughInputs()) {
-		for(int j=0; j<inBatchSizes.length; j++) {
-		    boolean has =  inputStore[j].hasEnough(inBatchSizes[j]);
-		    String msg = "Starvation report at t="+now+": for " + getName()+".input["+j+"], hasEnough("+inBatchSizes[j]+")=" + has;
-		    if (!has) msg += ". Typical=" + inputStore[j].getTypical() +", avail="+inputStore[j].getAvailable();
-		    System.out.println(msg);
-
-		}
-	    }
-	    
-	    */
 	} finally {
 	    dailyChart();
 	}
@@ -341,17 +333,20 @@ public class Production extends sim.des.Macro
 	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	releasedAsOfYesterday = releasedAsOfToday;
 	
-	double[] data = new double[2 + inputStore.length];
-	data[0] = releasedToday;
-	data[1] = (startPlan==null)? 0 : startPlan;
+	double[] data = new double[2 + 2*inputStore.length];
+	int k=0;
+	data[k++] = releasedToday;
+	data[k++] = (startPlan==null)? 0 : startPlan;
 	for(int j=0; j<inputStore.length; j++) {
-	    data[j+2] = inputStore[j].getContentAmount();
+	    data[k++] = inputStore[j].getContentAmount();
 	}	
 	
-	    
+	for(int j=0; j<inputStore.length; j++) {
+	    data[k++] = inputStore[j].detectAnomaly()? 1:0;
+	}
+   
 	charter.print(data);
-	
-	
+		
 	for(InputStore p: inputStore) {
 	    if (p.safety!=null) p.safety.doChart(new double[0]);
 	}

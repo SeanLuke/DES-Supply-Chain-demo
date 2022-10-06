@@ -80,6 +80,27 @@ set out 'ProductionPlans.png'
 replot
 
 set term qt 7
+set title 'DC - Receipts and anomalies'
+plot [1:*] \
+'Distributor.csv'  using  ($1):($4*30)  with lines title 'DC.DailyReceived*30', \
+'Distributor.csv'  using  ($1):($5)  with lines title 'DC.StillOnOrder', \
+'Distributor.csv'  using  ($1):(1/$8)  w p lc 'red'  title 'Anomaly'
+set term png size 800,600
+set out 'DistributorAnomalies.png'
+replot
+
+
+set term qt 8
+set title 'RM\@ApiProduction: inventory and receipt anomalies' 
+plot \
+'ApiProduction.csv' using ($1):($4)   with lines title 'Inventory', \
+'ApiProduction.csv' using ($1):(1/$5)  w p lc 'red' title 'Receipt anomaly'
+set term png size 800,600
+set out 'ApiProduction.RM.png'
+replot
+
+
+set term qt 9
 
 set title 'Consumption of safety stocks' 
 plot \
@@ -91,3 +112,4 @@ plot \
 set term png size 800,600
 set out 'Safety.png'
 replot
+

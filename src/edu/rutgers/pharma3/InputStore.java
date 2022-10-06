@@ -7,16 +7,14 @@ import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
-//import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
-//import edu.rutgers.pharma3.Disruptions.Disruption;
 
 
 /** This is an auxiliary class for Production. It represents a Queue
-    for storing an input ingredient. It has a facility for discarding
-    expired lots, as well as a facility for destroying "stolen" lots
-    during a disruption.
+    for storing one of the input ingredients used by the Production
+    unit. It has a facility for discarding expired lots, as well as a
+    facility for destroying "stolen" lots during a disruption.
  */
 class InputStore extends sim.des.Queue {
 
@@ -44,10 +42,14 @@ class InputStore extends sim.des.Queue {
     /** How much stuff is stored here. The value should be the same as given by
 	getContentAmount(), but without scanning the entire buffer */
     private double currentStock=0;
+    double everReceived=0;
 
     /** The safety stock for this input store. May be zero if not provided
 	for in the config file */
     SafetyStock safety = null;
+
+    private SimpleDetector detector = new SimpleDetector();
+
 
     /** Creates the input buffer for one of the products consumed by 
 	a Production unit.
@@ -66,16 +68,12 @@ class InputStore extends sim.des.Queue {
 	batchSize = _batchSize;
 	
 	String name = "Input("+getUnderlyingName() +")";
-	//name = whose.getName() + "/Input store for " + resource.getName();
 	setName(name);
 	
 	setOffersImmediately(false); // the stuff sits here until taken
 	
-	//expiredDump = new Sink(state, resource);
-
 	expiredProductSink = (resource instanceof Batch) ?
 	    new ExpiredSink(state,  (Batch)resource, 0) : null;
-
 	
 	stolenDump = new Sink(state, resource);
 	
@@ -93,8 +91,6 @@ class InputStore extends sim.des.Queue {
 	return (prototype instanceof Batch)? ((Batch)prototype).getUnderlyingName(): prototype.getName();
     }
 
-    //double discardedExpired=0;
-    //    int discardedExpiredBatches=0;
     double stolen=0;
     int stolenBatches=0;
     
@@ -178,20 +174,6 @@ class InputStore extends sim.des.Queue {
 
 	    Batch b = expiredProductSink.getNonExpiredBatch(this, entities, expiredAmt);
 	    currentStock -= expiredAmt[0];
-
-	    /*	    
-	    while (getAvailable()>0 &&
-		   (b=getFirst()).willExpireSoon(t, 0)) {
-		
-		// System.out.println(getName() + ", has expired batch; created=" + b.getLot().manufacturingDate +", expires at="+b.getLot().expirationDate+"; now=" +t);
-		if (!offerReceiver( expiredDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
-		remove(b);
-		double a = b.getContentAmount();
-		currentStock -= a;
-		discardedExpired += a;
-		discardedExpiredBatches ++;		    
-	    }
-	    */
 	    
 	    return b!=null || (safety!=null && safety.hasEnough(inBatchSize));
 	} else if (getTypical()  instanceof CountableResource) {
@@ -240,6 +222,7 @@ class InputStore extends sim.des.Queue {
 	boolean z = super.accept(provider,  amount, atLeast,  atMost);
 	if (!z) throw new AssertionError();
 	currentStock += a;
+	everReceived  += a;
 	
 	// See if the production system is empty, and needs to be "primed"
 	// to start.
@@ -301,5 +284,12 @@ class InputStore extends sim.des.Queue {
 	return s;
     }
 	
+    
+    boolean detectAnomaly() {
+	double t = state.schedule.getTime();
+	return  detector.test(t, everReceived, false);
+    }
+   
+
 }
 

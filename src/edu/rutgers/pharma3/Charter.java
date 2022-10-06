@@ -42,7 +42,9 @@ class Charter {
 	    if (Demo.verbose) System.out.println("Charting turned off");
 	    return;
 	}
-	if (!dir.exists()) dir.mkdirs();
+	if (!dir.exists()) {
+	    if (!dir.mkdirs()) throw new IOException("Failed to create dir=" + dir);
+	}
 
 	File f = new File(dir, c.getName() + ".csv");
 	w = new PrintWriter(new FileWriter(f));

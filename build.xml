@@ -90,7 +90,7 @@
 
 <target name="javadoc" depends="init,compile">
  
-  <javadoc sourcepath="src" packagenames="edu.*"
+  <javadoc sourcepath="src" packagenames="edu.*,sim.des"
 	   classpathref="classpath"
 	   destdir="web/api"
            use="true"
