@@ -1,0 +1,211 @@
+#----------------------------------------------------------------------
+# This is the configuration file for the pharma3 application.
+#
+# Lines that begin with a hash mark are comments
+#
+# Data lines have the format:
+#Element Name,Parameter name,val1,val2...
+#
+# The values may describe a scalar or a distribution
+#
+# All product amounts (including batch sizes) are in  doses
+#----------------------------------------------------------------------
+default,batch,5e5
+
+#----------------------------------------------------------------------
+#--- Properties of inputs (ingredients we use)
+#----------------------------------------------------------------------
+
+RawMaterial,expiration,3650
+Excipient,expiration,1095
+PackagingMaterial,expiration,+Infinity
+
+
+#----------------------------------------------------------------------
+#--- Properties of products we produce. Some products have their shelf life
+#--- measured from the manufacturing date (regardless of the expiration
+#--- date of the ingredients); others (packaged drug) inherit the expiration
+#--- date of the input resource.
+#----------------------------------------------------------------------
+Api,expiration,2555
+BulkDrug,expiration,1095
+PackagedDrug,inheritsExpiration,true
+#-- this is used for initial supply, which is not produced internally but appears "ex nihilo"
+PackagedDrug,backupExpiration,1095
+
+
+#-----------------------------------------------------------------------
+#-- Top-level units
+#-----------------------------------------------------------------------
+EndConsumer,dailyDemand,Triangular,37.688e6,37.690e6,37.692e6
+
+#HospitalPool,orderSize,1.9e3
+#HospitalPool,order,Normal,1146404953,2887
+
+#HospitalPool,intervalBetweenOrders,30
+#HospitalPool,order,Triangular,1209021340,1209030000,1209038660
+HospitalPool,initial,1.146e9
+HospitalPool,batch,5e5
+HospitalPool,reorderPoint,0.75
+HospitalPool,reorderQty,0.25
+
+WholesalerPool,initial,1.146e9
+WholesalerPool,reorderPoint,0.75
+WholesalerPool,reorderQty,0.25
+
+
+UntrustedPool,illicit,Triangular,0,0.02,0.04
+#-----------------------------------------------------------------------
+#-- Links between pools
+#-----------------------------------------------------------------------
+EndConsumerPool,from1,HospitalPool,1.0
+EndConsumerPool,backOrder,HospitalPool,1.0
+
+HospitalPool,from1,WholesalerPool,1.00
+#HospitalPool,from2,Distributor,0.00
+HospitalPool,backOrder,WholesalerPool,1.0
+HospitalPool,delay1,Triangular,7,10,15
+HospitalPool,delay2,Triangular,7,10,15
+HospitalPool,delayBackOrder,Triangular,7,10,15
+
+
+WholesalerPool,from1,Distributor,1.0
+WholesalerPool,from2,UntrustedPool,0.0
+WholesalerPool,delay1,Triangular,7,10,15
+WholesalerPool,delay2,Triangular,7,10,15
+#WholesalerPool,delay1,Uniform,1,2
+#WholesalerPool,delay2,Uniform,1,2
+
+
+
+PharmaCompany,orderDelay,Uniform,1,1
+PharmaCompany,fudgeFactor,1.10
+
+#----------------------------------------------------------------------
+#--- Properties of supplier units 
+#----------------------------------------------------------------------
+RawMaterialSupplier,batch,5e5
+RawMaterialSupplier,prodDelay,Uniform,0.25/80.602,1.75/80.602
+RawMaterialSupplier,transDelay,Uniform,0.25/80.602,1.75/80.602
+RawMaterialSupplier,qaDelay,Uniform,0.25/80.602,1.75/80.602
+RawMaterialSupplier,faulty,0.05
+
+
+PacMatSupplier,batch,5e5
+PacMatSupplier,prodDelay,Uniform,0.25/25.717,1.75/25.717
+#PacMatSupplier,prodDelay,Uniform,0.99/25,1.01/25
+PacMatSupplier,transDelay,Uniform,0.25/25.717,1.75/25.717
+PacMatSupplier,qaDelay,Uniform,0.25/25.717,1.75/25.717
+PacMatSupplier,faulty,Triangular,0.0,0.02,0.04
+
+ExcipientSupplier,batch,5e5
+ExcipientSupplier,prodDelay,Uniform,0.25/52.490,1.75/52.490
+ExcipientSupplier,transDelay,Uniform,0.25/52.490,1.75/52.490
+ExcipientSupplier,qaDelay,Uniform,0.25/52.490,1.75/52.490
+ExcipientSupplier,faulty,0.03
+
+#----------------------------------------------------------------------
+#--- Production units
+#----------------------------------------------------------------------
+ApiProduction,inBatch,5e5
+ApiProduction,batch,5e5
+ApiProduction,batchesPerDay,69
+#-- faulty + rework
+ApiProduction,faulty,0.01
+ApiProduction,rework,0.01
+ApiProduction,prodDelay,Uniform,0.25/68.915,1.75/68.915
+ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
+#ApiProduction,qaDelay,1/73.741
+#-- safety stocks
+#ApiProduction.safety.RawMaterial,initial,80450*5e5
+#ApiProduction.safety.RawMaterial,reorderPoint,53634*5e5
+#ApiProduction.safety.RawMaterial,delay,Triangular,7,10,15
+
+DrugProduction,inBatch,5e5,5e5
+DrugProduction,batch,5e5
+DrugProduction,batchesPerDay,51
+DrugProduction,faulty,0.01
+DrugProduction,prodDelay,Uniform,0.25/50.915,1.75/50.915
+#DrugProduction,qaDelay,1/50.915
+DrugProduction,qaDelay,Uniform,0.25/50.915,1.75/50.915
+#-- safety stocks
+#DrugProduction.safety.Api,initial,55752*5e5
+#DrugProduction.safety.Api,reorderPoint,37168*5e5
+#DrugProduction.safety.Api,delay,Triangular,7,10,15
+
+#DrugProduction.safety.Excipient,initial,3055*5e5
+#DrugProduction.safety.Excipient,reorderPoint,1527*5e5
+#DrugProduction.safety.Excipient,delay,Triangular,7,10,15
+
+#
+#Excipient,expiration,1095
+#PackagingMaterial,expiration,+Infinity
+
+
+Packaging,inBatch,5e5,5e5
+Packaging,batch,5e5
+Packaging,batchesPerDay,26
+Packaging,faulty,Triangular,0,0.02,0.04
+Packaging,prodDelay,Uniform,0.25/25.077,1.75/25.077
+Packaging,qaDelay,Uniform,0.25/25.077,1.75/25.077
+#-- Safety stocks
+#Packaging.safety.BulkDrug,initial,1512*5e5
+#Packaging.safety.BulkDrug,reorderPoint,756*5e5
+#Packaging.safety.BulkDrug,delay,Triangular,7,10,15
+#Packaging.safety.PackagingMaterial,initial,1512*5e5
+#Packaging.safety.PackagingMaterial,reorderPoint,756*5e5
+#Packaging.safety.PackagingMaterial,delay,Triangular,7,10,15
+
+
+Distributor,batch,5e5
+Distributor,initial,1.146e9
+Distributor,interval,30
+
+#Distributor,shipOutDelay,Uniform,1,2
+
+#=======================================================================
+# The new CMO system
+
+CmoTrackA,input,RawMaterialSupplier,0.05
+#CmoTrackA,output,DrugProduction
+CmoTrackA,output,ApiProduction.qa
+CmoTrackA,inBatch,5e5
+CmoTrackA,batch,5e5
+CmoTrackA,incomingTranDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackA,prodDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackA,transDelay,Uniform,0.25/3.829,1.75/3.829
+#CmoTrackA,qaDelay,Uniform,0.25/3.829,1.75/3.829
+#CmoTrackA,faulty,0.01
+#CmoTrackA,rework,0.01
+
+
+CmoTrackB,input,RawMaterialSupplier,0.05
+CmoTrackB,output,Distributor
+CmoTrackB,inBatch,5e5
+CmoTrackB,batch,5e5
+CmoTrackB,incomingTranDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackB,prodDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackB,transDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackB,qaDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackB,faulty,Triangular,0.005,0.025,0.045
+
+
+CmoTrackC,input,ApiProduction,0.30
+CmoTrackC,output,Distributor
+CmoTrackC,inBatch,5e5
+CmoTrackC,batch,5e5
+CmoTrackC,incomingTranDelay,Uniform,0.25/21.821,1.75/21.821
+CmoTrackC,prodDelay,Uniform,0.25/21.821,1.75/21.821
+CmoTrackC,transDelay,Uniform,0.25/21.821,1.75/21.821
+CmoTrackC,qaDelay,Uniform,0.25/21.821,1.75/21.821
+CmoTrackC,faulty,Triangular,0.0,0.015,0.03
+
+CmoTrackD,input,DrugProduction,0.50
+CmoTrackD,output,Distributor
+CmoTrackD,inBatch,5e5
+CmoTrackD,batch,5e5
+CmoTrackD,incomingTranDelay,Uniform,0.25/25.203,1.75/25.203
+CmoTrackD,prodDelay,Uniform,0.25/25.203,1.75/25.203
+CmoTrackD,transDelay,Uniform,0.25/25.203,1.75/25.203
+CmoTrackD,qaDelay,Uniform,0.25/25.203,1.75/25.203
+CmoTrackD,faulty,Triangular,0.01,0.03,0.05
