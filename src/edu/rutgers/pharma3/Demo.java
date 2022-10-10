@@ -80,7 +80,7 @@ public class Demo extends SimState {
 	return pharmaCompany.listMacros(); 
     }
 
-    public String version = "2.009";
+    public String version = "2.010";
 
     EndConsumer endConsumer;
     public EndConsumer getEndConsumer() {return  endConsumer;    }

@@ -48,6 +48,7 @@ class InputStore extends sim.des.Queue {
 	for in the config file */
     SafetyStock safety = null;
 
+    /** Used to detect anomalies in the in-flow of resource into this buffer */
     private SimpleDetector detector = new SimpleDetector();
 
 
@@ -175,7 +176,9 @@ class InputStore extends sim.des.Queue {
 	    Batch b = expiredProductSink.getNonExpiredBatch(this, entities, expiredAmt);
 	    currentStock -= expiredAmt[0];
 	    
-	    return b!=null || (safety!=null && safety.hasEnough(inBatchSize));
+	    return b!=null || (safety!=null &&
+			       (anomalyToday || !safety.needsAnomaly) &&
+			       safety.hasEnough(inBatchSize));
 	} else if (getTypical()  instanceof CountableResource) {
 		double spare = getAvailable() -  inBatchSize;
 		return spare>=0 || (safety!=null && safety.hasEnough(-spare));
@@ -283,11 +286,16 @@ class InputStore extends sim.des.Queue {
 	if (safety!=null) s += ". " + safety.report();			      
 	return s;
     }
-	
+
+
+    /** Set daily by  detectAnomaly, if an anomaly is in effect today. */
+    private boolean anomalyToday=false;
     
+
+    /** Have we had a resource inflow anomaly during the precedingh 24 hrs period? */
     boolean detectAnomaly() {
 	double t = state.schedule.getTime();
-	return  detector.test(t, everReceived, false);
+	return  anomalyToday=detector.test(t, everReceived, false);
     }
    
 

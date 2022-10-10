@@ -322,10 +322,13 @@ public class Production extends sim.des.Macro
 	
     }
 
- 
-     /** Writes this days' time series values to the CSV file. 
+
+    /** Writes this days' time series values to the CSV file. 
 	Does that for the safety stocks too, if they exist.
-     */
+	Here we also check for the inflow anomalies in all
+	buffers.  This method needs to be called from Production.step(),
+	to ensure daily execution.
+    */
     private void dailyChart() {
 
 	double releasedAsOfToday =getReleased();

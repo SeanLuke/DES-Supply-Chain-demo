@@ -33,7 +33,7 @@ class SimpleDetector {
 	//}
     }
 
-    /** How much, on average, we received per day over the last "window" days? */
+    /** How much, on average, we received per day over the last W ("window") non-anomaly days? */
     double averageBaseline() throws  NoRecentDataException {
 	int j0 = everReceivedHistory.size() - 1;
 	double sum = 0;
@@ -56,8 +56,10 @@ class SimpleDetector {
     }
     
 
-    /** @param _now current time
+    /** Decides if today should be declared an "anomaly" day.
+	@param _now current time
 	@param everReceived the current value of everReceived in the pool or buffer being monitored
+	@param excludable If true, this day's flow won't be included in any future calculations, and this day itself won't be declated anomalous. You can set it if you know that no flow is expected today due to some legitimate reasons.
     */
     boolean test(double _now, double everReceived, boolean excludable) {
 	int now = (int)Math.round(_now + 0.001); // just in case

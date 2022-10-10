@@ -49,6 +49,10 @@ public class SafetyStock extends Pool  {
 
     /** Used for replenishing the safety stock from the magic supplier */
     private Delay refillDelay = null;
+
+    /** If true, this safety stock can only be used if the associated
+	InputStore has currently detected an anomaly. */
+    final boolean needsAnomaly;
     
     SafetyStock(SimState state, String name, Config config,
 	 Resource resource) throws IllegalInputException, IOException {
@@ -63,8 +67,9 @@ public class SafetyStock extends Pool  {
 	// to ensure multi-batch shipments are consolidasted safely
 	refillDelay.setDropsResourcesBeforeUpdate(false);
 
+	needsAnomaly = para.getBoolean("needsAnomaly", false);
 
-	// Initialize the safety stock
+      // Initialize the safety stock
 	magicFeed(this, initial);
 	everReceived = 0; // not counting the initial supply
 
