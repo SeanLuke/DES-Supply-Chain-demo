@@ -494,7 +494,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     
 
     public String report() {	
-	String s = "[" + getName()+ " has received " + everReceived + " u (including initial="+initial+" u), has sent "+everSent+" u";
+	String s = "[" + getName()+ " has received " + everReceived + " u (not counting initial="+initial+" u), has sent "+everSent+" u";
 
 	if (expiredProductSink != null && expiredProductSink.everConsumed >0) {	
 	    s += ". Discarded as expired=" + expiredProductSink.everConsumedBatches +  " ba";

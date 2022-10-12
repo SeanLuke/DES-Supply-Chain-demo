@@ -85,23 +85,23 @@ PharmaCompany,fudgeFactor,1.10
 #--- Properties of supplier units 
 #----------------------------------------------------------------------
 RawMaterialSupplier,batch,5e5
-RawMaterialSupplier,prodDelay,Uniform,0.25/80.602,1.75/80.602
-RawMaterialSupplier,transDelay,Uniform,0.25/80.602,1.75/80.602
-RawMaterialSupplier,qaDelay,Uniform,0.25/80.602,1.75/80.602
+RawMaterialSupplier,prodDelay,Uniform,0.90/80.602,1.10/80.602
+RawMaterialSupplier,transDelay,Uniform,0.90/80.602,1.10/80.602
+RawMaterialSupplier,qaDelay,Uniform,0.90/80.602,1.10/80.602
 RawMaterialSupplier,faulty,0.05
 
 
 PacMatSupplier,batch,5e5
-PacMatSupplier,prodDelay,Uniform,0.25/25.717,1.75/25.717
+PacMatSupplier,prodDelay,Uniform,0.90/25.717,1.10/25.717
 #PacMatSupplier,prodDelay,Uniform,0.99/25,1.01/25
-PacMatSupplier,transDelay,Uniform,0.25/25.717,1.75/25.717
-PacMatSupplier,qaDelay,Uniform,0.25/25.717,1.75/25.717
-PacMatSupplier,faulty,Triangular,0.0,0.02,0.04
+PacMatSupplier,transDelay,Uniform,0.90/25.717,1.10/25.717
+PacMatSupplier,qaDelay,Uniform,0.90/25.717,1.10/25.717
+PacMatSupplier,faulty,Triangular,0.02,0.02,0.02
 
 ExcipientSupplier,batch,5e5
-ExcipientSupplier,prodDelay,Uniform,0.25/52.490,1.75/52.490
-ExcipientSupplier,transDelay,Uniform,0.25/52.490,1.75/52.490
-ExcipientSupplier,qaDelay,Uniform,0.25/52.490,1.75/52.490
+ExcipientSupplier,prodDelay,Uniform,0.90/52.490,1.10/52.490
+ExcipientSupplier,transDelay,Uniform,0.90/52.490,1.10/52.490
+ExcipientSupplier,qaDelay,Uniform,0.90/52.490,1.10/52.490
 ExcipientSupplier,faulty,0.03
 
 #----------------------------------------------------------------------
@@ -113,8 +113,8 @@ ApiProduction,batchesPerDay,69
 #-- faulty + rework
 ApiProduction,faulty,0.01
 ApiProduction,rework,0.01
-ApiProduction,prodDelay,Uniform,0.25/68.915,1.75/68.915
-ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
+ApiProduction,prodDelay,Uniform,0.90/68.915,1.10/68.915
+ApiProduction,qaDelay,Uniform,0.90/68.915,1.10/68.915
 #ApiProduction,qaDelay,1/73.741
 #-- safety stocks
 #ApiProduction.safety.RawMaterial,initial,80450*5e5
@@ -125,9 +125,9 @@ DrugProduction,inBatch,5e5,5e5
 DrugProduction,batch,5e5
 DrugProduction,batchesPerDay,51
 DrugProduction,faulty,0.01
-DrugProduction,prodDelay,Uniform,0.25/50.915,1.75/50.915
+DrugProduction,prodDelay,Uniform,0.90/50.915,1.10/50.915
 #DrugProduction,qaDelay,1/50.915
-DrugProduction,qaDelay,Uniform,0.25/50.915,1.75/50.915
+DrugProduction,qaDelay,Uniform,0.90/50.915,1.10/50.915
 #-- safety stocks
 #DrugProduction.safety.Api,initial,55752*5e5
 #DrugProduction.safety.Api,reorderPoint,37168*5e5
@@ -145,9 +145,9 @@ DrugProduction,qaDelay,Uniform,0.25/50.915,1.75/50.915
 Packaging,inBatch,5e5,5e5
 Packaging,batch,5e5
 Packaging,batchesPerDay,26
-Packaging,faulty,Triangular,0,0.02,0.04
-Packaging,prodDelay,Uniform,0.25/25.077,1.75/25.077
-Packaging,qaDelay,Uniform,0.25/25.077,1.75/25.077
+Packaging,faulty,Triangular,0.02,0.02,0.02
+Packaging,prodDelay,Uniform,0.90/25.077,1.10/25.077
+Packaging,qaDelay,Uniform,0.90/25.077,1.10/25.077
 #-- Safety stocks
 #Packaging.safety.BulkDrug,initial,1512*5e5
 #Packaging.safety.BulkDrug,reorderPoint,756*5e5
@@ -171,10 +171,10 @@ CmoTrackA,input,RawMaterialSupplier,0.05
 CmoTrackA,output,ApiProduction.qa
 CmoTrackA,inBatch,5e5
 CmoTrackA,batch,5e5
-CmoTrackA,incomingTranDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackA,prodDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackA,transDelay,Uniform,0.25/3.829,1.75/3.829
-#CmoTrackA,qaDelay,Uniform,0.25/3.829,1.75/3.829
+CmoTrackA,incomingTranDelay,Uniform,0.90/3.829,1.10/3.829
+CmoTrackA,prodDelay,Uniform,0.90/3.829,1.10/3.829
+CmoTrackA,transDelay,Uniform,0.90/3.829,1.10/3.829
+#CmoTrackA,qaDelay,Uniform,0.90/3.829,1.10/3.829
 #CmoTrackA,faulty,0.01
 #CmoTrackA,rework,0.01
 
@@ -183,29 +183,29 @@ CmoTrackB,input,RawMaterialSupplier,0.05
 CmoTrackB,output,Distributor
 CmoTrackB,inBatch,5e5
 CmoTrackB,batch,5e5
-CmoTrackB,incomingTranDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackB,prodDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackB,transDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackB,qaDelay,Uniform,0.25/3.829,1.75/3.829
-CmoTrackB,faulty,Triangular,0.005,0.025,0.045
+CmoTrackB,incomingTranDelay,Uniform,0.90/3.829,1.10/3.829
+CmoTrackB,prodDelay,Uniform,0.90/3.829,1.10/3.829
+CmoTrackB,transDelay,Uniform,0.90/3.829,1.10/3.829
+CmoTrackB,qaDelay,Uniform,0.90/3.829,1.10/3.829
+CmoTrackB,faulty,Triangular,0.025,0.025,0.025
 
 
 CmoTrackC,input,ApiProduction,0.30
 CmoTrackC,output,Distributor
 CmoTrackC,inBatch,5e5
 CmoTrackC,batch,5e5
-CmoTrackC,incomingTranDelay,Uniform,0.25/21.821,1.75/21.821
-CmoTrackC,prodDelay,Uniform,0.25/21.821,1.75/21.821
-CmoTrackC,transDelay,Uniform,0.25/21.821,1.75/21.821
-CmoTrackC,qaDelay,Uniform,0.25/21.821,1.75/21.821
-CmoTrackC,faulty,Triangular,0.0,0.015,0.03
+CmoTrackC,incomingTranDelay,Uniform,0.90/21.821,1.10/21.821
+CmoTrackC,prodDelay,Uniform,0.90/21.821,1.10/21.821
+CmoTrackC,transDelay,Uniform,0.90/21.821,1.10/21.821
+CmoTrackC,qaDelay,Uniform,0.90/21.821,1.10/21.821
+CmoTrackC,faulty,Triangular,0.015,0.015,0.015
 
 CmoTrackD,input,DrugProduction,0.50
 CmoTrackD,output,Distributor
 CmoTrackD,inBatch,5e5
 CmoTrackD,batch,5e5
-CmoTrackD,incomingTranDelay,Uniform,0.25/25.203,1.75/25.203
-CmoTrackD,prodDelay,Uniform,0.25/25.203,1.75/25.203
-CmoTrackD,transDelay,Uniform,0.25/25.203,1.75/25.203
-CmoTrackD,qaDelay,Uniform,0.25/25.203,1.75/25.203
-CmoTrackD,faulty,Triangular,0.01,0.03,0.05
+CmoTrackD,incomingTranDelay,Uniform,0.90/25.203,1.10/25.203
+CmoTrackD,prodDelay,Uniform,0.90/25.203,1.10/25.203
+CmoTrackD,transDelay,Uniform,0.90/25.203,1.10/25.203
+CmoTrackD,qaDelay,Uniform,0.90/25.203,1.10/25.203
+CmoTrackD,faulty,Triangular,0.03,0.03,0.03

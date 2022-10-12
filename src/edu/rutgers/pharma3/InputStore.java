@@ -175,10 +175,11 @@ class InputStore extends sim.des.Queue {
 
 	    Batch b = expiredProductSink.getNonExpiredBatch(this, entities, expiredAmt);
 	    currentStock -= expiredAmt[0];
-	    
-	    return b!=null || (safety!=null &&
-			       (anomalyToday || !safety.needsAnomaly) &&
-			       safety.hasEnough(inBatchSize));
+
+	    if (b!=null) return true;
+	    return (safety!=null) &&
+		safety.accessAllowed(t, anomalySince) &&
+		safety.hasEnough(inBatchSize);
 	} else if (getTypical()  instanceof CountableResource) {
 		double spare = getAvailable() -  inBatchSize;
 		return spare>=0 || (safety!=null && safety.hasEnough(-spare));
@@ -288,14 +289,22 @@ class InputStore extends sim.des.Queue {
     }
 
 
-    /** Set daily by  detectAnomaly, if an anomaly is in effect today. */
-    private boolean anomalyToday=false;
+    /** The time when the current anomaly was first detected, or null
+	if there is no anomaly now. This var is set daily by  detectAnomaly.
+     */
+    private Double anomalySince=null;
     
 
     /** Have we had a resource inflow anomaly during the precedingh 24 hrs period? */
     boolean detectAnomaly() {
 	double t = state.schedule.getTime();
-	return  anomalyToday=detector.test(t, everReceived, false);
+	boolean anomalyToday=detector.test(t, everReceived, false);
+	if (anomalyToday) {
+	    if (anomalySince==null) anomalySince=t;
+	} else {
+	    anomalySince = null;
+	}
+	return  anomalyToday;
     }
    
 

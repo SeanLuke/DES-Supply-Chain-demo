@@ -93,9 +93,9 @@ public class Demo extends SimState {
 	if (!quiet) System.out.println("Disruptions=" + disruptions);
 	initSupplyChain();
 	final int CENSUS_INTERVAL=360;
-	if (!quiet) schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
+	if (verbose) schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
 	System.out.println("Pharma3 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
-	if (!quiet) doReport("Start");
+	if (verbose) doReport("Start");
     }
 
     /** The main part of the start() method. It is taken into a separate

@@ -50,9 +50,14 @@ public class SafetyStock extends Pool  {
     /** Used for replenishing the safety stock from the magic supplier */
     private Delay refillDelay = null;
 
-    /** If true, this safety stock can only be used if the associated
-	InputStore has currently detected an anomaly. */
-    final boolean needsAnomaly;
+    /** Are we allowed to access this safety stock only when a
+	supply-flowe anomaly has been detected? If non-null, this
+	safety stock can only be used if the associated InputStore has
+	currently detected an anomaly. The double value indicates the
+	actuation delay (i.e. the anomaly must have been in effect for
+	so many days before the safety stock can be accessed.
+    */
+    final Double needsAnomaly;
     
     SafetyStock(SimState state, String name, Config config,
 	 Resource resource) throws IllegalInputException, IOException {
@@ -67,7 +72,9 @@ public class SafetyStock extends Pool  {
 	// to ensure multi-batch shipments are consolidasted safely
 	refillDelay.setDropsResourcesBeforeUpdate(false);
 
-	needsAnomaly = para.getBoolean("needsAnomaly", false);
+	Double q = para.getDouble("needsAnomaly", null);
+	needsAnomaly = (q==null || q<0) ? null: q;
+
 
       // Initialize the safety stock
 	magicFeed(this, initial);
@@ -180,6 +187,16 @@ public class SafetyStock extends Pool  {
 	return b;	    
     }
 
-
+    /** Are we allowed to access this safety stock by the "anomaly since"
+	policy, if it exists?
+	@param anomalyStart Null if there is no anomaly has been presently
+	detected, or the time when the current anomaly was first detected.
+	@return true if there is no restriction, or if the anomaly has been 
+	in effect for a sufficiently long time
+    */
+    boolean accessAllowed(double now, Double anomalyStart) {
+	return (needsAnomaly==null) ||
+	    (anomalyStart!=null  && anomalyStart <= now - needsAnomaly);
+    }
 
 }

@@ -120,6 +120,7 @@ ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
 ApiProduction.safety.RawMaterial,initial,80450*5e5
 ApiProduction.safety.RawMaterial,reorderPoint,53634*5e5
 ApiProduction.safety.RawMaterial,delay,Triangular,7,10,15
+ApiProduction.safety.RawMaterial,needsAnomaly,-1
 
 DrugProduction,inBatch,5e5,5e5
 DrugProduction,batch,5e5
@@ -132,10 +133,12 @@ DrugProduction,qaDelay,Uniform,0.25/50.915,1.75/50.915
 DrugProduction.safety.Api,initial,55752*5e5
 DrugProduction.safety.Api,reorderPoint,37168*5e5
 DrugProduction.safety.Api,delay,Triangular,7,10,15
+DrugProduction.safety.Api,needsAnomaly,-1
 
 DrugProduction.safety.Excipient,initial,3055*5e5
 DrugProduction.safety.Excipient,reorderPoint,1527*5e5
 DrugProduction.safety.Excipient,delay,Triangular,7,10,15
+DrugProduction.safety.Excipient,needsAnomaly,-1
 
 #
 #Excipient,expiration,1095
@@ -152,9 +155,11 @@ Packaging,qaDelay,Uniform,0.25/25.077,1.75/25.077
 Packaging.safety.BulkDrug,initial,1512*5e5
 Packaging.safety.BulkDrug,reorderPoint,756*5e5
 Packaging.safety.BulkDrug,delay,Triangular,7,10,15
+Packaging.safety.BulkDrug,needsAnomaly,-1
 Packaging.safety.PackagingMaterial,initial,1512*5e5
 Packaging.safety.PackagingMaterial,reorderPoint,756*5e5
 Packaging.safety.PackagingMaterial,delay,Triangular,7,10,15
+Packaging.safety.PackagingMaterial,needsAnomaly,-1
 
 
 Distributor,batch,5e5

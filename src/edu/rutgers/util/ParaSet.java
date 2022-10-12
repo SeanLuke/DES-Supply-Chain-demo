@@ -76,7 +76,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	
 	    String tok[] = s.split(rop);
 	
-	    if (tok.length!=2) continue;
+	    if (tok.length!=2 || tok[0].length()==0) continue;
 	    try {
 		Double a[] = new Double[tok.length];
 		for(int j=0; j<tok.length; j++) {
