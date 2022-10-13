@@ -54,9 +54,9 @@ public class Config extends HashMap<String,ParaSet> {
 	exists, changes its value.
 	@param name The para set name
 	@param key the name of the new parameter in that para set
-	@param val the value for the new parameter
+	@param v the value for the new parameter. 
     */
-    public void addNewParameter(String name, String key, String val){
+    public void addNewParameter(String name, String key, Vector<String> v){
     
     	ParaSet para = this.get(name);
     	
@@ -69,13 +69,14 @@ public class Config extends HashMap<String,ParaSet> {
 	    if (defaultPara!=null) {
 		para.setParent( defaultPara);
 	    }
-	}
-		
-	Vector<String> v  = new Vector<>();
-	v.add( val );
-	para.put( key, v);    
-	
-    
+	}		
+	para.put( key, v);               
     }
+    
+    public void addNewParameter(String name, String key, String val){
+	addNewParameter( name, key, Util.array2vector(val));    
+    }
+
+    
     
 }
