@@ -17,3 +17,31 @@ A18 LEN
 A19 DEC
 A20 QTY
 
+===================
+dis.A02.csv:DAY,RawMaterialSupplier,ShipmentLoss,LEN
+dis.A03.csv:DAY,RawMaterialSupplier,Adulteration,DEC
+dis.A04.csv:DAY,RawMaterial,Depletion,QTY
+dis.A05.csv:DAY,Api,Depletion,QTY
+dis.A06.csv:DAY,ApiProduction,Halt,LEN
+dis.A07.csv:DAY,ApiProduction,Adulteration,DEC
+dis.A08.csv:DAY,ExcipientSupplier,ShipmentLoss,LEN
+dis.A09.csv:DAY,ExcipientSupplier,Adulteration,DEC
+dis.A10.csv:DAY,Excipient,Depletion,QTY
+dis.A11.csv:DAY,BulkDrug,Depletion,QTY
+dis.A12.csv:DAY,DrugProduction,Halt,LEN
+dis.A13.csv:DAY,DrugProduction,Adulteration,DEC
+dis.A14.csv:DAY,PacMatSupplier,ShipmentLoss,LEN
+dis.A15.csv:DAY,PacMatSupplier,Adulteration,DEC
+dis.A16.csv:DAY,PackagingMaterial,Depletion,QTY
+dis.A18.csv:DAY,Packaging,Halt,LEN
+dis.A19.csv:DAY,Packaging,Adulteration,DEC
+dis.A20.csv:DAY,Distributor,Depletion,QTY
+========================
+
+grep -vh time dis.A*.csv | cut -d , -f 3 | sort | uniq -c
+      6 Adulteration
+      6 Depletion
+      3 Halt
+      3 ShipmentLoss
+===================
+

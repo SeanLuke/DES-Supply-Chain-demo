@@ -48,5 +48,34 @@ public class Config extends HashMap<String,ParaSet> {
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	return para;
     }
+
+    /** Adds a new parameter (and, if necessary, a new parameter set
+	for it), to this Config. If the named parameter already
+	exists, changes its value.
+	@param name The para set name
+	@param key the name of the new parameter in that para set
+	@param val the value for the new parameter
+    */
+    public void addNewParameter(String name, String key, String val){
+    
+    	ParaSet para = this.get(name);
+    	
+	if (para==null){
+	    this.put(name, para=new ParaSet(name));
+
+	    // Attach the default para set as the fallback, for
+	    // "common" parameters such as "batch"
+	    ParaSet defaultPara = get("default");
+	    if (defaultPara!=null) {
+		para.setParent( defaultPara);
+	    }
+	}
+		
+	Vector<String> v  = new Vector<>();
+	v.add( val );
+	para.put( key, v);    
+	
+    
+    }
     
 }
