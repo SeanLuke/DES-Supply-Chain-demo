@@ -49,10 +49,12 @@ public class ThrottleQueue extends sim.des.Queue
     implements     Named//,	    Reporting
 {
 
-    /** Part of which production unit am I? This is needed in GraphAnalysis */
-    private Production whose=null;
-    void setWhose(Production _whose) {whose = _whose;}
-    Production getWhose() { return whose; }
+    /** Part of which production unit am I? This is needed in GraphAnalysis, as well as for auto-reloading */
+    private //Production
+	SplitManager.HasQA 	whose=null;
+    void setWhose(SplitManager.HasQA  _whose) {whose = _whose;}
+    //    Production
+	SplitManager.HasQA 	getWhose() { return whose; }
     
     private AbstractDistribution delayDistribution;
 
@@ -171,8 +173,27 @@ public class ThrottleQueue extends sim.des.Queue
     protected boolean offerReceivers() {
 	return super.offerReceivers();
     }
-   	
 
+    boolean autoReloading = false;
+    void setAutoReloading(boolean x) {
+	 autoReloading = x;
+	 if (x && whose==null) {
+	     throw new IllegalArgumentException("Must set 'whose' before enabling auto-reloading");
+	 }
+    }
+    
+
+    /** This method ensures that whenever this queue is called
+	upon to provide a batch for the ProdDelay (via its slackProvider
+	mechanism) it will make itself non-empty, if at all possible. */
+    public boolean provide(Receiver receiver) {
+	if (getAvailable()==0 && autoReloading) {
+	    whose.mkBatch(getState());
+	}
+	return super.provide(receiver);
+    }
+
+ 
     
 }
      

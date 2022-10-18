@@ -88,7 +88,11 @@ class Batch extends Entity {
 		exp = now + shelfLife;
 	    }
 
-	    return  LotInfo.newLot(now, exp);
+	    double earliestOrigin =
+		(inputs==null)? now:
+		Math.min(now, earliestAncestorManufacturingDate(inputs));
+   	  	    
+	    return  LotInfo.newLot(now, exp, earliestOrigin);
 	}
 
 	public String toString() {
@@ -249,6 +253,14 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return d;
     }
 
+    private static double earliestAncestorManufacturingDate(Vector<Batch> batches) {
+	double d = Double.POSITIVE_INFINITY;
+	for(Batch b: batches) {
+	    d = Math.min(d, b.getLot().earliestAncestorManufacturingDate);
+	}
+	return d;
+    }
+  
 
     /** Accesses the underlying resource (drug etc) "packaged" in this batch */
     CountableResource getContent() {

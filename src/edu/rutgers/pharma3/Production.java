@@ -67,7 +67,8 @@ public class Production extends sim.des.Macro
     */
     private QaDelay qaDelay;
     
-    final ProdThrottleQueue needProd;
+    final //Prod
+	ThrottleQueue needProd;
     private final ThrottleQueue needTrans, needQa;
 
     /** If an external producer sends it product for us to do QA, this
@@ -159,7 +160,10 @@ public class Production extends sim.des.Macro
 	
 	prodDelay = new ProdDelay(state,outResource);
 	prodDelay.addReceiver(needTrans!=null? needTrans: needQa);
-	needProd = new ProdThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
+	needProd = new //Prod
+	    ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
+	needProd.setWhose(this);
+	needProd.setAutoReloading(true);
 	
 	if (qaDelay !=null && qaDelay.reworkProb >0) {
 	    qaDelay.setRework( needProd);
@@ -362,7 +366,7 @@ public class Production extends sim.des.Macro
 	was there to make one, or the current plan does not call for one
 
     */
-    boolean mkBatch(SimState state) {
+    public boolean mkBatch(SimState state) {
 
 	if (startPlan != null && startPlan <= 0) return false;
 	if (isHalted(state)) return false;
@@ -396,30 +400,23 @@ public class Production extends sim.des.Macro
 
     /** It's like ThrottleQueue, except that it does not actually hold much 
 	product in, but "makes" it on the fly */
-    class ProdThrottleQueue extends ThrottleQueue {
+    /*
+   class ProdThrottleQueue extends ThrottleQueue {
 	public ProdThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
 	    super( _delay, cap,  _delayDistribution);
 	}
 
-	/** This method ensures that whenever this queue is called
-	    upon to provide a batch for the ProdDelay (via its slackProvider
-	    mechanism) it will make itself non-empty, if at all possible. */
+	// This method ensures that whenever this queue is called
+	//    upon to provide a batch for the ProdDelay (via its slackProvider
+	//    mechanism) it will make itself non-empty, if at all possible. 
 	public boolean provide(Receiver receiver) {
   	    if (getAvailable()==0) {
 		mkBatch(getState());
 	    }
 	    return super.provide(receiver);
 	}
-
-	/*
-	protected boolean offerReceiver(Receiver receiver, double atMost) {
-	    if (getAvailable()==0) {
-		mkBatch(getState());
-	    }
-	    return super.offerReceiver(receiver, atMost);
-	}	
-	*/
     }
+    */
     
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();

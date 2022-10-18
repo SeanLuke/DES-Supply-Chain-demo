@@ -328,7 +328,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    
 	    if (delay!=null) {
 		delay.setDropsResourcesBeforeUpdate(false);
-		double now = state.schedule.getTime();
+		//double now = state.schedule.getTime();
 	    }
 
 	    double expired0 = expiredProductSink.everConsumed;
@@ -419,6 +419,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     */
     protected double receivedToday=0;
 
+    /** Used in computing the average age of batches coming in on a given day */
+    protected double batchesReceivedToday=0, sumOfAgesReceivedToday=0;
     
     /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
       FIXME: it would be better to have separate vars for separate suppliers
@@ -448,6 +450,13 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	receivedToday += a;
 	
 	currentStock += a;
+
+	if (amount instanceof Batch) {
+	    double now = state.schedule.getTime();
+	    batchesReceivedToday ++;
+	    sumOfAgesReceivedToday += (now - ((Batch)amount).getLot().earliestAncestorManufacturingDate);
+	}
+
 	
 	return z;
     }
@@ -569,6 +578,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	demandedToday=0;
 	sentToday=0;
 	orderedToday=0;
+	batchesReceivedToday = sumOfAgesReceivedToday = 0;
+
     }
     
 }

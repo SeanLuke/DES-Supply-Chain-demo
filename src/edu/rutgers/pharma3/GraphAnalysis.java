@@ -111,7 +111,7 @@ public class GraphAnalysis {
 	    } else if (_r instanceof ThrottleQueue) {
 		// the unusual case of CMO Track A, which feeds to somebody
 		// else's QA stage.
-		Production r = ((ThrottleQueue)_r).getWhose();
+		Production r = (Production)((ThrottleQueue)_r).getWhose();
 		outputs.put(prod2no(r), new RData2(1.0, true));		
 	    } else if (_r instanceof Splitter) {
 		Splitter s  = (Splitter)_r;

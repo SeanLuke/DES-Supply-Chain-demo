@@ -133,20 +133,17 @@ public class MaterialSupplier extends Macro
 	setName(para.name);
 	if (Demo.verbose) System.out.println("MS " + getName()+", proto=" +prototype);
 
-	
 	standardBatchSize = para.getDouble("batch");
 
 	double cap = (prototype instanceof Batch) ? 1:    standardBatchSize;	
 
 	prodDelay = new ProdDelay(state, resource);
-	//prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
-	//needProd = controlInput(prodDelay, cap);
+
 	needProd = new ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
+	needProd.setWhose(this);
+	needProd.setAutoReloading(true);
 
 	stolenGoodsSink = new SometimesSink(state, resource);
-	//transDelay = new Delay(state, resource);
-	//transDelay.setDelayDistribution( transDelayDistribution = para.getDistribution("transDelay",state.random));
-	//needTrans = throttleTrans? controlInput(transDelay, cap) : null;
 
 	transDelay = new SimpleDelay(state, resource);
 	needTrans = new ThrottleQueue(transDelay, cap,
@@ -228,7 +225,14 @@ public class MaterialSupplier extends Macro
     void receiveOrder(double amt) {
 	outstandingOrderAmount += amt;
 	everOrdered += amt;
-	startAllProduction();
+	//startAllProduction();
+	
+	// This will "prime the system" by starting the first
+	// mkBatch(), if needed and possible. After that, the
+	// production cycle will repeat via the slackProvider
+	// mechanism
+	needProd.provide(prodDelay);
+	
     }
 
     /** Initiate the production process on as many batches as needed
@@ -236,37 +240,52 @@ public class MaterialSupplier extends Macro
 	FIXME: we always use the standard batch size, and don't use 
 	the last short batch, in order to simplify Production.
     */
+    /*
     private boolean startAllProduction() {
 	int bcnt = 0;
-	double x = standardBatchSize;
-	double t = state.schedule.getTime();
-	while (outstandingOrderAmount>0) {
+	while (true) {
 	//double x = Math.min(outstandingOrderAmount ,  standardBatchSize);
-
-	    Resource batch = (prototype instanceof Batch) ? ((Batch)prototype).mkNewLot(x, t) :
-	    new CountableResource((CountableResource)prototype, x);
-
-	    Provider provider = null;
-
-	    double a = batch.getAmount();
-
-	    double y = (batch instanceof Batch)? ((Batch)batch).getContentAmount() : ((CountableResource)batch).getAmount();
-
-	    boolean z = needProd.accept( provider, batch, a, a);
-
-	    if (!z) throw new AssertionError("needProd is supposed to accept everything, but it didn't!");
-
-	    if (Demo.verbose)	    System.out.println( "Now needProd has="+needProd.hasBatches());
-
-	    outstandingOrderAmount -= y;
-
-	    startedProdBatches++;
-	    bcnt ++;
+	    if (mkBatch( state)) bcnt ++;
+	    else break;
 	}
-	if (Demo.verbose)
-	System.out.println( "At t=" + t+", " + getName() + " has put "+bcnt + " batches to needProd; needProd: " + needProd.hasBatches());
+	double t = state.schedule.getTime();
+	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " has put "+bcnt + " batches to needProd; needProd: " + needProd.hasBatches());
 	needProd.step(state); // causes offerReceivers() to the prodDelay
 	return (bcnt>0);
+    }
+    */
+    
+    /** Tries to make a batch, if not disabled, and if the plans allow that
+	@return true if a batch was made; false if not enough input resources
+	was there to make one, or the current plan does not call for one
+
+    */
+    public boolean mkBatch(SimState state) {
+	if (outstandingOrderAmount<=0) return false;
+
+	double x = standardBatchSize;
+	double t = state.schedule.getTime();
+
+	
+	Resource batch = (prototype instanceof Batch) ? ((Batch)prototype).mkNewLot(x, t) :
+	    new CountableResource((CountableResource)prototype, x);
+
+	Provider provider = null;
+	
+	double a = batch.getAmount();
+	
+	double y = (batch instanceof Batch)? ((Batch)batch).getContentAmount() : ((CountableResource)batch).getAmount();
+	
+	boolean z = needProd.accept( provider, batch, a, a);
+	
+	if (!z) throw new AssertionError("needProd is supposed to accept everything, but it didn't!");
+	
+	if (Demo.verbose)	    System.out.println( "Now needProd has="+needProd.hasBatches());
+	
+	outstandingOrderAmount -= y;
+	
+	startedProdBatches++;
+	return true;
     }
     
     public String report() {
@@ -315,7 +334,6 @@ public class MaterialSupplier extends Macro
     
     /** Does nothing other than logging. */
     public void step(SimState state) throws IllegalArgumentException {
-
 	Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Delay, getName());
 	if (vd.size()==1) {
 	    // activate modified delay distribution
@@ -359,6 +377,7 @@ public class MaterialSupplier extends Macro
 	} else if (vd.size()>1) {
 	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	}
+
 
 	
 	//    double dp = discardProb + b.getLot().increaseInFaultRate;

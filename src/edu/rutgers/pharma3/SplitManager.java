@@ -21,6 +21,15 @@ class SplitManager //implements Named
 	/** Returns the last existing stage of this production unit. Typically
 	    this is the qaDelay, but some units (CMO Track A) don't have QA. */
 	Provider getTheLastStage();
+	
+	/** Tries to make a batch, if resources are available
+	    @return true if a batch was made; false if not enough input resources
+	    was there to make one, or the current plan does not call for one
+
+	*/
+	boolean mkBatch(SimState state);
+
+
     }
 
     

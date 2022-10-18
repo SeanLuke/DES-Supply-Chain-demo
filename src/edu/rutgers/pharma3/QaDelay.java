@@ -59,7 +59,7 @@ SimpleDelay
 	(CountableResource); for Batch products, it's preferable to
 	use the similar method in ProdDelay, so that the "poor
 	quality" will be associated with the manufacturing date,
-	rathere than the QA date.
+	rather than the QA date.
     */
      void setFaultRateIncrease(double x, Double _untilWhen) {
 	faultRateIncrease.setValueUntil(x,_untilWhen);
@@ -151,12 +151,9 @@ SimpleDelay
 	
 	boolean z;
 
+
 	if (faultyPortionDistribution!=null) {
 	    double amt, faulty;
-
-	    double r = faultyPortionDistribution.nextDouble();
-	    if (r<0) r=0;
-	    if (r>1) r=1;
 
 	    if (entities == null) {
 		CountableResource cr = (CountableResource) resource;
@@ -164,6 +161,13 @@ SimpleDelay
 		if (amt==0) return false; // this happens sometimes, triggered by SimpleDelay.step()
 
 		double t = state.schedule.getTime();
+
+		double r = faultyPortionDistribution.nextDouble();
+		if (r<0) r=0;
+		if (r>1) r=1;
+
+
+
 		double rEffective = Math.min(r + faultRateIncrease.getValue(t), 1.0);
 		
 		faulty = Math.round( amt * rEffective);
@@ -183,8 +187,23 @@ SimpleDelay
 	    } else {
 		// throw new IllegalArgumentException("pharma3.QaDelay with faultyPortionDistribution only works with fungibles, because we don't support variable-size batches!");
 		
+		
 		Batch e = (Batch)entities.getFirst();
+
+		if (!Demo.quiet) {
+		    double now = state.schedule.getTime();
+		    double age =  (now - e.getLot().earliestAncestorManufacturingDate);
+		    System.out.println(getName() + " at " + now + " testing batch aged " + age);
+		}
+				     
+  		
 		amt = e.getContentAmount();
+
+		double r = faultyPortionDistribution.nextDouble() + e.getLot().increaseInFaultRate;
+		if (r<0) r=0;
+		if (r>1) r=1;
+
+
 		faulty = Math.round( amt * r);
 		e.getContent().decrease(faulty);
 		z = super.offerReceiver(receiver, e);
@@ -208,6 +227,15 @@ SimpleDelay
 	    Batch b = (Batch)entities.getFirst();
 	    double amt = b.getContentAmount();
 	    
+
+	    if (!Demo.quiet) {
+		double now = state.schedule.getTime();
+		double age =  (now - b.getLot().earliestAncestorManufacturingDate);
+		System.out.println(getName() + " at " + now + " testing batch aged " + age);
+	    }
+				     
+
+
 	    boolean willDiscard=false, willRework=false;
 	    // The probability that the lot must be discarded
 	    double dp = discardProb + b.getLot().increaseInFaultRate;

@@ -114,6 +114,10 @@ class InputStore extends sim.des.Queue {
 	
 	@return the consumed batch (so that its data can be used
 	for later analysis) if Batch product, or null if fungible
+
+	@throws AssertionError If called when product is not availabile in this
+	buffer.
+
     */
     Batch consumeOneBatch() {
 	
@@ -278,7 +282,7 @@ class InputStore extends sim.des.Queue {
 	Vector<String> v= new Vector();
 	v.add(  getTypical().getName() +":" +
 	    (getTypical() instanceof Batch? 
-	     getAvailable() + " ba" :
+	     (long)getAvailable() + " ba" :
 	     getAvailable() + " u" ));
 
 	if (expiredProductSink!=null) v.add( expiredProductSink.reportShort());

@@ -33,10 +33,19 @@ public class LotInfo {
     final long lotNo;
 
     final double manufacturingDate;
+
+    
     /** The expiration date of this lot. If the product never expire,
 	we store Double.POSITIVE_INFINITY here */
     final double expirationDate;
 
+    /** The earliest of the dates on which the "ancestors" of this lot
+	were manufactured, or, absent any, the lots own manufacturing date.
+	This is used for flow time stats.
+    */
+    final double earliestAncestorManufacturingDate;
+
+    
     /** Some lots may have this value set to non-zero, e.g. as a result
 	of a disruption that causes a deterioration of product quality */
     double increaseInFaultRate=0;
@@ -46,16 +55,17 @@ public class LotInfo {
     }
        
 	
-    private LotInfo(long _lotNo, double now, double _expirationDate) {
+    private LotInfo(long _lotNo, double now, double _expirationDate, double _earliestAncestorManufacturingDate) {
 	lotNo = _lotNo;
 	manufacturingDate = now;
-	expirationDate = _expirationDate;	
+	expirationDate = _expirationDate;
+	earliestAncestorManufacturingDate  = _earliestAncestorManufacturingDate;
     }
 
     /** Creates a the LotInfo object for a lot with a new unique ID number 
      */
-    static LotInfo newLot(double now, double _expirationDate) {
-	LotInfo x = new LotInfo( nextLotNo(), now,  _expirationDate);
+    static LotInfo newLot(double now, double _expirationDate, double _earliestAncestorManufacturingDate) {
+	LotInfo x = new LotInfo( nextLotNo(), now,  _expirationDate, _earliestAncestorManufacturingDate);
 	return x;
     }
 

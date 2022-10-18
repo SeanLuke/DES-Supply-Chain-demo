@@ -22,12 +22,11 @@ public class Distributor extends Pool
     Distributor(SimState state, String name, Config config,
 		Batch resource) throws IllegalInputException, IOException {
 	
-	super(state, name, config, resource, new String[0]);	
+	super(state, name, config, resource, new String[]{"anomaly", "avgBatchAge"});	
 	setOffersImmediately(false); // shipping to be done only on the proper schedule
 
 	interval = (int)para.getLong("interval");
-	doChartHeader("anomaly");
-    }
+   }
 
  
     private int lastMonthShippedAt= -1;
@@ -40,7 +39,7 @@ public class Distributor extends Pool
     private boolean anomalyNow = false;
     
     /** Makes monthly product orders from the FC */
-    public void step​(sim.engine.SimState state) {
+    public void step(SimState state) {
 
 	disrupt(state);
 		    
@@ -73,8 +72,9 @@ public class Distributor extends Pool
 	orderedToday = orderSize;
 
 	anomalyNow = detectAnomaly();
-
-	doChart(anomalyNow? 1:0);
+	double avgBatchAge = (batchesReceivedToday==0)? 0: sumOfAgesReceivedToday / batchesReceivedToday;
+	
+	doChart(anomalyNow? 1:0, avgBatchAge);
     }
 
     
@@ -111,19 +111,7 @@ public class Distributor extends Pool
     }
     */
 
-
-
-    
-
-    /*
-    AnomalyDetector attachDetector() {
-    
-	AnomalyDetector ad = new AnomalyDetector(getState, Resource typical, 
-		double window, double anomalyDrop, double normalityResume, 
-						 double startupTime, double smoothingAlpha);
-
-    } 
-    */   
+   
 }
 
 
