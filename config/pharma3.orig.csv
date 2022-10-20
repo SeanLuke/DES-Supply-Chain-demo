@@ -109,13 +109,12 @@ ExcipientSupplier,faulty,0.03
 #----------------------------------------------------------------------
 ApiProduction,inBatch,5e5
 ApiProduction,batch,5e5
-ApiProduction,batchesPerDay,69
+#ApiProduction,batchesPerDay,69
 #-- faulty + rework
 ApiProduction,faulty,0.01
 ApiProduction,rework,0.01
 ApiProduction,prodDelay,Uniform,0.25/68.915,1.75/68.915
-ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
-#ApiProduction,qaDelay,1/73.741
+ApiProduction,qaDelay,Uniform,0.25/73.741,1.75/73.741
 #-- safety stocks
 ApiProduction.safety.RawMaterial,initial,80450*5e5
 ApiProduction.safety.RawMaterial,reorderPoint,53634*5e5
@@ -124,7 +123,7 @@ ApiProduction.safety.RawMaterial,needsAnomaly,-1
 
 DrugProduction,inBatch,5e5,5e5
 DrugProduction,batch,5e5
-DrugProduction,batchesPerDay,51
+#DrugProduction,batchesPerDay,51
 DrugProduction,faulty,0.01
 DrugProduction,prodDelay,Uniform,0.25/50.915,1.75/50.915
 #DrugProduction,qaDelay,1/50.915
@@ -179,10 +178,6 @@ CmoTrackA,batch,5e5
 CmoTrackA,incomingTranDelay,Uniform,0.25/3.829,1.75/3.829
 CmoTrackA,prodDelay,Uniform,0.25/3.829,1.75/3.829
 CmoTrackA,transDelay,Uniform,0.25/3.829,1.75/3.829
-#CmoTrackA,qaDelay,Uniform,0.25/3.829,1.75/3.829
-#CmoTrackA,faulty,0.01
-#CmoTrackA,rework,0.01
-
 
 CmoTrackB,input,RawMaterialSupplier,0.05
 CmoTrackB,output,Distributor

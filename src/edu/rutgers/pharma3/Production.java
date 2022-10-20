@@ -380,9 +380,7 @@ public class Production extends sim.des.Macro
 	    InputStore p = inputStore[j];
 	    //System.out.println("mkBatch: Available ("+p.getTypical()+")=" + p.reportAvailable());
 	    Batch b = p.consumeOneBatch();
-	    if (b!=null) 		usedBatches.add(b);
-
-	    
+	    if (b!=null) usedBatches.add(b);    
 	}
 
 	if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());

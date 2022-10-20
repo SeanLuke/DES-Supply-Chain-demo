@@ -92,7 +92,15 @@ class Batch extends Entity {
 		(inputs==null)? now:
 		Math.min(now, earliestAncestorManufacturingDate(inputs));
    	  	    
-	    return  LotInfo.newLot(now, exp, earliestOrigin);
+	    LotInfo li = LotInfo.newLot(now, exp, earliestOrigin);
+
+	    if (!Demo.quiet && inputs!=null) {
+		for(Batch b: inputs) {
+		    li.addToMsg( b.getLot());
+		}
+	    }
+	    
+	    return li;
 	}
 
 	public String toString() {
@@ -315,6 +323,12 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     boolean willExpireSoon(double now, double within) {
 	return  hasExpired(now+within);
     }
+
+    void addToMsg(String s) {
+	LotInfo li = getLot();
+	if (li!=null) li.addToMsg(s);
+    }
+	
     
 }
     

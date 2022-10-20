@@ -144,17 +144,19 @@ public class ThrottleQueue extends sim.des.Queue
     }
 
     /** Just for debugging */
-    /*   
+    /*
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
-	double t = state.schedule.getTime();
-	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) 
-	    System.out.println("At " + t +", "+getName() + " accepting " + r+", had=" + hasBatches());
 	boolean z = super.accept( provider, r, atLeast, atMost);
-	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) 
-	System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
+	if (Demo.verbose) {
+	    if (r instanceof Batch) {
+		double t = state.schedule.getTime();       		
+		((Batch)r).addToMsg("["+getName()+".acc@"+t+", hb="+hasBatches()+"]");
+	    }
+	}
 	return z;
     }
     */
+
     
     /** Just for debugging */
     /*

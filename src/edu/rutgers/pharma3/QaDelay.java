@@ -148,7 +148,8 @@ SimpleDelay
     protected boolean offerReceiver(Receiver receiver, double atMost) {
 
 	if (Demo.verbose)   System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+")");
-	
+
+	boolean showAge = false; // !Demo.quiet;
 	boolean z;
 
 
@@ -190,10 +191,11 @@ SimpleDelay
 		
 		Batch e = (Batch)entities.getFirst();
 
-		if (!Demo.quiet) {
+		if (showAge) {
 		    double now = state.schedule.getTime();
-		    double age =  (now - e.getLot().earliestAncestorManufacturingDate);
-		    System.out.println(getName() + " at " + now + " testing batch aged " + age);
+		    LotInfo li = e.getLot();
+		    double age =  (now - li.earliestAncestorManufacturingDate);
+		    System.out.println(getName() + " at " + now + " testing batch aged " + age + "; " + li);
 		}
 				     
   		
@@ -228,14 +230,6 @@ SimpleDelay
 	    double amt = b.getContentAmount();
 	    
 
-	    if (!Demo.quiet) {
-		double now = state.schedule.getTime();
-		double age =  (now - b.getLot().earliestAncestorManufacturingDate);
-		System.out.println(getName() + " at " + now + " testing batch aged " + age);
-	    }
-				     
-
-
 	    boolean willDiscard=false, willRework=false;
 	    // The probability that the lot must be discarded
 	    double dp = discardProb + b.getLot().increaseInFaultRate;
@@ -269,6 +263,17 @@ SimpleDelay
 	    //ArrayList<Resource> lao = getLastAcceptedOffers();
 	    //if (lao==null || lao.size()!=1) throw new IllegalArgumentException("Unexpected result from shipOutDelay.getLastAcceptedOffers()");
 	    //Batch b = (Batch)lao.get(0);
+
+	    if (showAge) {
+		double now = state.schedule.getTime();
+		LotInfo li = b.getLot();
+		String code = willRework? "r" :willDiscard? "b" : "g";
+		li.addToMsg("[tested " + code + " @" + now +" ]");
+		double age =  (now - li.earliestAncestorManufacturingDate);
+		
+		System.out.println(getName() + " at " + now + " testing batch aged " + age + "; " + li );
+	    }
+				     
 	    
 	    if (willRework) {
 		reworkResource += amt;
@@ -341,5 +346,20 @@ SimpleDelay
 	return abg;
 	
     }
+
+    /** Just for extra tracing */
+    /*
+    public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
+	boolean z =super.accept( provider, r, atLeast, atMost);
+
+	if (Demo.verbose) {
+	    if (r instanceof Batch) {
+		double t = state.schedule.getTime();	
+		((Batch)r).addToMsg("[QaDelay.acc@"+t+", hb="+hasBatches()+"]");
+	    }
+	}	
+	return z;
+    }
+    */
     
 }

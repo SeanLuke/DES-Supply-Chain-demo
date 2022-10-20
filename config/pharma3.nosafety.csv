@@ -114,7 +114,7 @@ ApiProduction,batchesPerDay,69
 ApiProduction,faulty,0.01
 ApiProduction,rework,0.01
 ApiProduction,prodDelay,Uniform,0.25/68.915,1.75/68.915
-ApiProduction,qaDelay,Uniform,0.25/68.915,1.75/68.915
+ApiProduction,qaDelay,Uniform,0.25/73.741,1.75/73.741
 #ApiProduction,qaDelay,1/73.741
 #-- safety stocks
 #ApiProduction.safety.RawMaterial,initial,80450*5e5

@@ -39,13 +39,9 @@ public class ProdDelay extends SimpleDelay // Delay
 	setName("ProdDelay of " + resource.getName());
     }
 
-    
-    
+        
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
-	double amt = 
-	    (r instanceof Batch)?
-	    ((Batch)r).getContentAmount():
-	    r.getAmount();
+	double amt = Batch.getContentAmount(r);
 	batchCnt++;
 	totalStarted+=amt;
 
@@ -58,6 +54,13 @@ public class ProdDelay extends SimpleDelay // Delay
 
 	boolean z = super.accept( provider, r, atLeast, atMost);
 
+	if (!Demo.quiet) {
+	    if (r instanceof Batch) {
+		((Batch)r).addToMsg("[ProdDelay.acc@"+t+", hb="+hasBatches()+"]");
+	    }
+	}
+
+	
 	if (Demo.verbose && getName().indexOf("PackagingMat")>=0) 
 	    System.out.println("At " + t +", "+getName() + " accepted " + r+"? Result=" + z +"; has=" + hasBatches());
 	return z;

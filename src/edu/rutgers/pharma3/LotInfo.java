@@ -45,13 +45,28 @@ public class LotInfo {
     */
     final double earliestAncestorManufacturingDate;
 
-    
+    /** Some additional text info that may be stored in the lot. Used
+	primarily for studying various fine properties of the supply
+	chain, such as the distribution of batch ages.
+     */
+    String message = "";
+
+    void addToMsg(String s) {
+	message +=  (message.length()>0?"; ":"") + s;
+    }
+
+    void addToMsg(LotInfo precursor) {
+	addToMsg("[Precursor: mfg="+precursor.manufacturingDate+"; "+ precursor.message + "]");
+    }
+     
     /** Some lots may have this value set to non-zero, e.g. as a result
 	of a disruption that causes a deterioration of product quality */
     double increaseInFaultRate=0;
+    
 
     public String toString() {
-	return "(Lot No. "+lotNo+", made@" + manufacturingDate +", expire@"+expirationDate+")";
+	String s = "(Lot No. "+lotNo+", made@" + manufacturingDate +", expire@"+expirationDate + (message.length()>0?"; "+message:"") +")";
+	return s;
     }
        
 	
