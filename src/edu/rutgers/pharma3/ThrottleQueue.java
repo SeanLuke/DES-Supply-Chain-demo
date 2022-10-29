@@ -190,7 +190,7 @@ public class ThrottleQueue extends sim.des.Queue
 	mechanism) it will make itself non-empty, if at all possible. */
     public boolean provide(Receiver receiver) {
 	if (getAvailable()==0 && autoReloading) {
-	    whose.mkBatch(getState());
+	    whose.mkBatch();
 	}
 	return super.provide(receiver);
     }

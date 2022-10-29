@@ -260,7 +260,8 @@ public class MaterialSupplier extends Macro
 	was there to make one, or the current plan does not call for one
 
     */
-    public boolean mkBatch(SimState state) {
+    public boolean mkBatch(//SimState state
+) {
 	if (outstandingOrderAmount<=0) return false;
 
 	double x = standardBatchSize;

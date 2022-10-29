@@ -45,13 +45,17 @@ class Disruptions {
     /** The schedule of disruption event */
     Vector<Disruption> data = new Vector<>();
 
-    /** Are there any disruptions of this type scheduled for today? */
+    /** Are there any disruptions of this type scheduled for today?
+	For simplicity, both the current time and the scheduled disruption
+	time are rounded to integers; i.e. we have 1-day granularity.
+     */
     Vector<Disruption> hasToday(Type type, String unitName, double time) {
 	Vector<Disruption> v = new Vector<>();
 	for(Disruption d: data) {
 	    if (d.type == type &&
-		d.time >= time && d.time < time + 1.0 &&
+		Math.round(d.time) == Math.round(time) &&
 		d.unitName.equals(unitName)		) v.add(d);
+
 	}
 	//System.out.println("Disruptions.hasToday("  +type+"@" +unitName + ", at " + time +") gives " + v.size());
 	return v;

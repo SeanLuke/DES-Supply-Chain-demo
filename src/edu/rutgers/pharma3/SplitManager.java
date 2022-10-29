@@ -27,7 +27,8 @@ class SplitManager //implements Named
 	    was there to make one, or the current plan does not call for one
 
 	*/
-	boolean mkBatch(SimState state);
+	boolean mkBatch(//SimState state
+);
 
 
     }

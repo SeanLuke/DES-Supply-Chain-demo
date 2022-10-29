@@ -242,7 +242,8 @@ class InputStore extends sim.des.Queue {
 	    // mkBatch(), if needed and possible. After that, the
 	    // production cycle will repeat via the slackProvider
 	    // mechanism
-	    whose.mkBatch(getState());
+	    whose.mkBatch(//getState()
+              );
 	}
 
 	return z;

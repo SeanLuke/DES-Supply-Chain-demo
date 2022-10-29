@@ -106,15 +106,17 @@ public class Production extends sim.des.Macro
     final Batch outResource; 
     final ParaSet para;
     ParaSet getPara() { return para; }
+
+    private SimState state;
     
     /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
 	@param outResource batches of output (e.g. bulk drug)
-     */
-
-    Production(SimState state, String name, Config config,
+     */    
+    Production(SimState _state, String name, Config config,
 	       Resource[] _inResources,
 	       Batch _outResource ) throws IllegalInputException, IOException
     {
+	state = _state;
 	inResources =  _inResources;
 	outResource = _outResource;
 	setName(name);
@@ -272,12 +274,11 @@ public class Production extends sim.des.Macro
     }
 
     Timer haltedUntil = new Timer();
+
+
     
     /** Checks if there is a "Halt" disruption in effect for this unit. */
-    private boolean isHalted(SimState state) {
-	Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Halt, getName());
-	double now = state.schedule.getTime();
-	for(Disruption d: vd) haltedUntil.enableUntil( now+d.magnitude );
+    private boolean isHalted(double now) {
 	return haltedUntil.isOn( now );
     }
 
@@ -307,6 +308,12 @@ public class Production extends sim.des.Macro
 		// reduce quality of newly produced lots, in effect for 1 day
 		prodDelay.setFaultRateIncrease(0.1 * d.magnitude, now+1);
 	    }
+
+
+	    for(Disruption d: ((Demo)state).hasDisruptionToday(Disruptions.Type.Halt, getName())) { 
+		haltedUntil.enableUntil( now+d.magnitude );
+	    }
+   
 	    
 	    if (!hasEnoughInputs()) {
 		if (Demo.verbose)
@@ -366,12 +373,19 @@ public class Production extends sim.des.Macro
 	was there to make one, or the current plan does not call for one
 
     */
-    public boolean mkBatch(SimState state) {
+    public boolean mkBatch() {
 
 	if (startPlan != null && startPlan <= 0) return false;
-	if (isHalted(state)) return false;
-	if (!hasEnoughInputs()) return false;
+
 	double now = state.schedule.getTime();
+
+	
+	if (isHalted(now)) {
+	    //System.out.println("H");
+	    return false;
+	}
+	//System.out.println("W");
+	if (!hasEnoughInputs()) return false;
 		
 	Vector<Batch> usedBatches = new Vector<>();
 	
