@@ -80,7 +80,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	    try {
 		Double a[] = new Double[tok.length];
 		for(int j=0; j<tok.length; j++) {
-		    a[j]= new Double(tok[j].trim());
+		    a[j]= Double.parseDouble(tok[j].trim());
 		}
 		return op.equals("/")? a[0]/a[1]:
 		    op.equals("*")? a[0]*a[1]:
@@ -92,7 +92,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	}
 
 	try {
-	    return new Double(s);
+	    return Double.parseDouble(s);
 	} catch(Exception ex) {
 	    throwII(key, "Cannot parse as a real number: " + s);
 	}	
@@ -140,7 +140,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
 	try {
-	    return new Long(s);
+	    return Long.parseLong(s);
 	} catch(Exception ex) {
 	    throwII(key, "Cannot parse as a long int: " + s);
 	    return null; // never reached
