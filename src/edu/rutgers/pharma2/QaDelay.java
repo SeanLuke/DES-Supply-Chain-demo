@@ -69,7 +69,7 @@ public class QaDelay extends Delay {
     protected boolean offerReceiver(Receiver receiver, double atMost) {
 
 	
-	CountableResource cr = (CountableResource) resource;
+	CountableResource cr = resource;
 	double amt = Math.min( cr.getAmount(), atMost);
 	final double amt0 = amt;
 	

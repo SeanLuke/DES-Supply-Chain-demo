@@ -64,10 +64,9 @@
 	 includes="edu/**,sim/**"  optimize="on"
 	 debug="on" debuglevel="lines,vars,source"	 
 	 includeantruntime="false"
-	 target="1.8" source="1.8"
-	 >
+	 target="1.8" source="1.8">
     <classpath refid="classpath"/>
-    <!-- compilerarg value="-Xlint"/ -->
+    <compilerarg value="-Xlint"/>
   </javac>
   <copy todir="${classes}">
     <fileset dir="${src}">

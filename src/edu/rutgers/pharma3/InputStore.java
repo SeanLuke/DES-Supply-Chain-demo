@@ -280,7 +280,7 @@ class InputStore extends sim.des.Queue {
     }
 
     String report(boolean showBatchSize)  {
-	Vector<String> v= new Vector();
+	Vector<String> v= new Vector<>();
 	v.add(  getTypical().getName() +":" +
 	    (getTypical() instanceof Batch? 
 	     (long)getAvailable() + " ba" :

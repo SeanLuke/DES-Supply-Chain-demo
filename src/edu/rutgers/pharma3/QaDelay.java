@@ -157,7 +157,7 @@ SimpleDelay
 	    double amt, faulty;
 
 	    if (entities == null) {
-		CountableResource cr = (CountableResource) resource;
+		CountableResource cr = resource;
 		amt = Math.min( cr.getAmount(), atMost);		
 		if (amt==0) return false; // this happens sometimes, triggered by SimpleDelay.step()
 

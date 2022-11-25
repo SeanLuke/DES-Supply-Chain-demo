@@ -278,7 +278,7 @@ public class GraphAnalysis {
 	useBatch = _useBatch;
  	Vector<String> v = new Vector<>();
 	if (useBatch) {
-	    v.add("Below, 1 ba = " + (long)Math.round(batchSize));
+	    v.add("Below, 1 ba = " + Math.round(batchSize));
 	}
 	v.add(root.reportParam());
 	for(int j=0; j<allProd.length; j++) {
@@ -292,7 +292,7 @@ public class GraphAnalysis {
 	useBatch = _useBatch;
 	Vector<String> v = new Vector<>();
 	if (useBatch) {
-	    v.add("Below, 1 ba = " + (long)Math.round(batchSize));
+	    v.add("Below, 1 ba = " + Math.round(batchSize));
 	}
 	v.add(root.report());
 	for(int j=0; j<allProd.length; j++) {

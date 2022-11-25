@@ -48,7 +48,7 @@ public class Population extends SimState {
 	
     int census() {
 	int now = (int)schedule.getTime();
-	TreeMap<String,Integer> surnameCnt=new TreeMap();
+	TreeMap<String,Integer> surnameCnt=new TreeMap<>();
 	int marriedCnt=0, maleCnt=0, femaleCnt=0, sumAge=0;
 	for(Person p: allPersons) {
 	    if (p.male) maleCnt++; else femaleCnt++;

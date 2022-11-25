@@ -68,7 +68,7 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	if (nothingInSupplyQueue() &&
 	    resource.getAmount() < threshold) {
 	    double neededAmount = Math.min(restock, getCapacity() - resource.getAmount());
-	    if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypical());
+	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypical());
 	    Resource onTheTruck = new CountableResource((CountableResource)getTypical(), neededAmount);
 	    Provider provider = null;  // FIXME: replace with a bottomless Source
 	    supplierDelay.accept(provider, onTheTruck, neededAmount, neededAmount);
