@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.*;
 import java.io.*;
 
@@ -10,7 +12,7 @@ import sim.des.*;
 import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Disruptions.Disruption;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 /** A Production plant receives QA-inspected ingredients pushed to it
     from upstream suppliers, puts them through production and QA
@@ -273,7 +275,7 @@ public class Production extends sim.des.Macro
 	
     }
 
-    Timer haltedUntil = new Timer();
+    Timed haltedUntil = new Timed();
 
 
     

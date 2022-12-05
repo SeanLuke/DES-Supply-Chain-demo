@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.*;
 import java.io.*;
 
@@ -10,7 +12,7 @@ import sim.util.distribution.*;
 import sim.des.*;
 
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Disruptions.Disruption;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 /** The main Queue is the storage facility; additionally a Delay is used to ship things out */
 public class Distributor extends Pool

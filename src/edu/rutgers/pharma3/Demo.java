@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.io.*;
 import java.util.*;
 import java.text.*;
@@ -12,7 +14,7 @@ import sim.des.*;
 import ec.util.MersenneTwisterFast;
 
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Disruptions.Disruption;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 import sim.portrayal.grid.*;
 
@@ -80,7 +82,7 @@ public class Demo extends SimState {
 	return pharmaCompany.listMacros(); 
     }
 
-    public String version = "2.011";
+    public String version = "2.012";
 
     EndConsumer endConsumer;
     public EndConsumer getEndConsumer() {return  endConsumer;    }

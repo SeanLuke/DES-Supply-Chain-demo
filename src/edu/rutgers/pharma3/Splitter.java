@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import sim.des.*;
 
 import sim.engine.*;

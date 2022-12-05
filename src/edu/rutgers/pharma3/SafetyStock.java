@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.*;
 import java.io.*;
 import java.text.*;
@@ -176,8 +178,8 @@ public class SafetyStock extends Pool  {
 	    if (getAvailable()<inBatchSize)  throw new IllegalArgumentException(getName() + ".consumeOneBatch(): have="+getAvailable()+", need=" +  (long)inBatchSize);
 	    boolean z = provide(sink, inBatchSize);
 	    if (!z) throw new AssertionError("Sinks ought not to refuse stuff!");
-	    if (sink.lastConsumed != inBatchSize) {
-		String msg = "Batch size mismatch on " + sink +": have " + (long)sink.lastConsumed+", expected " + (long)inBatchSize;
+	    if (sink.getLastConsumed() != inBatchSize) {
+		String msg = "Batch size mismatch on " + sink +": have " + (long)sink.getLastConsumed()+", expected " + (long)inBatchSize;
 		throw new IllegalArgumentException(msg);
 	    }		
 	} else throw new IllegalArgumentException("Wrong input resource type");

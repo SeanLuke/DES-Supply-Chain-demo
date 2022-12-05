@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.*;
 import java.io.*;
 
@@ -149,8 +151,8 @@ class InputStore extends sim.des.Queue {
 		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
 		currentStock -= batchSize;
 
-		if (sink.lastConsumed != a1) {
-		    String msg = "Batch size mismatch on " + sink +": have " + sink.lastConsumed+", expected " + batchSize;
+		if (sink.getLastConsumed() != a1) {
+		    String msg = "Batch size mismatch on " + sink +": have " + sink.getLastConsumed()+", expected " + batchSize;
 		    throw new IllegalArgumentException(msg);
 		}
 	    }

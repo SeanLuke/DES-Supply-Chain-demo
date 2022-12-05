@@ -1,4 +1,4 @@
-package  edu.rutgers.pharma3;
+package  edu.rutgers.supply;
 
 import java.util.*;
 import java.text.*;
@@ -30,7 +30,7 @@ import edu.rutgers.util.*;
     contains information (rules) that is used in generating the latter.
 
 */
-class Batch extends Entity {
+public class Batch extends Entity {
 
     /** A PrototypeInfo instance, stored in each prototype lot (but
 	not in actual lots) describes some properties of a
@@ -94,11 +94,11 @@ class Batch extends Entity {
    	  	    
 	    LotInfo li = LotInfo.newLot(now, exp, earliestOrigin);
 
-	    if (!Demo.quiet && inputs!=null) {
-		for(Batch b: inputs) {
-		    li.addToMsg( b.getLot());
-		}
-	    }
+	    //if (!Demo.quiet && inputs!=null) {
+	    //for(Batch b: inputs) {
+	    //li.addToMsg( b.getLot());
+	    //}
+	    //}
 	    
 	    return li;
 	}
@@ -134,16 +134,16 @@ Foo,
 </pre>
 for both a countable resource named "Foo" and for a Batch of "Foo".
      */
-    static String getUnderlyingName(Resource r) {	
+    public static String getUnderlyingName(Resource r) {	
 	return (r instanceof Batch)?  ((Batch)r).getUnderlyingName() : r.getName();
     }
 
     /** Retrieves the name of the underlying resource */
-    String getUnderlyingName() {
+    public String getUnderlyingName() {
 	return getUnderlying().getName();
     }
     
-    CountableResource getUnderlying() {
+    public CountableResource getUnderlying() {
 	return (CountableResource)(getStorage()[0]);
     }
     
@@ -171,7 +171,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	@param para A ParaSet that has a parameter named "expiration", to get
 	the shelf life from.
      */
-    static Batch mkPrototype(CountableResource typicalUnderlying,
+    public static Batch mkPrototype(CountableResource typicalUnderlying,
 			     Config config 	     )
 	throws IllegalInputException     {
 	String uname = typicalUnderlying.getName();
@@ -271,12 +271,12 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
   
 
     /** Accesses the underlying resource (drug etc) "packaged" in this batch */
-    CountableResource getContent() {
+    public CountableResource getContent() {
 	return (CountableResource)getStorage()[0];
     }
 
     /** How much drug etc this batch contains */
-    double getContentAmount() {
+    public double getContentAmount() {
 	if (getStorage()==null) throw new IllegalArgumentException("Bad batch: storage==null!");
 	return getContent().getAmount();
     }
@@ -284,7 +284,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     /** How much of underlying resource are we are talking about.
 	@param r Either a Batch or a CountableResource.
      */
-    static double getContentAmount(Resource r) {
+    public static double getContentAmount(Resource r) {
 	return (r instanceof Batch)?  ((Batch)r).getContentAmount() : r.getAmount();
     }
 
@@ -309,22 +309,22 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
   
     }
     
-    LotInfo getLot() {
+    public LotInfo getLot() {
 	Object info = getInfo();
 	if (info==null || !(info instanceof LotInfo)) throw new IllegalArgumentException("Cannot do getLot on what appears to be a prototype lot");
 	return (LotInfo)info;
     }
 
-    boolean hasExpired(double now) {
+    public boolean hasExpired(double now) {
 	return getLot().hasExpired(now);
     }
 
     /** Will this lot expire within a specified number of days from now? */
-    boolean willExpireSoon(double now, double within) {
+    public boolean willExpireSoon(double now, double within) {
 	return  hasExpired(now+within);
     }
 
-    void addToMsg(String s) {
+    public void addToMsg(String s) {
 	LotInfo li = getLot();
 	if (li!=null) li.addToMsg(s);
     }

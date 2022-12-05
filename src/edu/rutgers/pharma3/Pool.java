@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.*;
 import java.io.*;
 import java.text.*;
@@ -331,7 +333,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 		//double now = state.schedule.getTime();
 	    }
 
-	    double expired0 = expiredProductSink.everConsumed;
+	    double expired0 = expiredProductSink.getEverConsumed();
 	    while(//getAvailable()>0 &&
 		  sent<amt &&
 		  (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
@@ -345,7 +347,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 		sent += a;
 		entities.remove(b);
 	    }
-	    expired = expiredProductSink.everConsumed - expired0;
+	    expired = expiredProductSink.getEverConsumed() - expired0;
 	    if (delay!=null) {
 		delay.setUsesLastDelay(false);
 	    }
@@ -454,7 +456,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (amount instanceof Batch) {
 	    double now = state.schedule.getTime();
 	    batchesReceivedToday ++;
-	    sumOfAgesReceivedToday += (now - ((Batch)amount).getLot().earliestAncestorManufacturingDate);
+	    sumOfAgesReceivedToday += (now - ((Batch)amount).getLot().getEarliestAncestorManufacturingDate());
 	}
 
 	
@@ -505,11 +507,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     public String report() {	
 	String s = "[" + getName()+ " has received " + everReceived + " u (not counting initial="+initial+" u), has sent "+everSent+" u";
 
-	if (expiredProductSink != null && expiredProductSink.everConsumed >0) {	
-	    s += ". Discarded as expired=" + expiredProductSink.everConsumedBatches +  " ba";
+	if (expiredProductSink != null && expiredProductSink.getEverConsumed() >0) {	
+	    s += ". Discarded as expired=" + expiredProductSink.getEverConsumedBatches() +  " ba";
 	}
-	if (stolenProductSink.everConsumed >0) {
-	    s +=  ". Stolen=" + stolenProductSink.everConsumedBatches +  " ba";
+	if (stolenProductSink.getEverConsumed() >0) {
+	    s +=  ". Stolen=" + stolenProductSink.getEverConsumedBatches() +  " ba";
 	}
 	s += ". Available=" + currentStock + " u";
 	s += "]";

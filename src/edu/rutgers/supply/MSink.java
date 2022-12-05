@@ -1,4 +1,4 @@
-package  edu.rutgers.pharma3;
+package  edu.rutgers.supply;
 
 import java.util.*;
 import java.text.*;
@@ -12,12 +12,21 @@ import sim.des.*;
     debugging information and to keep track of the amount of resource
     it has consumed.
  */
-class MSink extends Sink implements Reporting {
+public class MSink extends Sink implements Reporting {
+
     /** How much stuff (units) has this Sink consumed since it's been created? */    
-    double everConsumed = 0;
-    double everConsumedBatches = 0;
+    public double getEverConsumed() { return everConsumed; }
+    protected double everConsumed = 0;
+
+    public double getEverConsumedBatches() { return everConsumedBatches; }
+    protected double everConsumedBatches = 0;
+
     /** Consumed in the most recent accept() call. (In terms of underlying CountableResource) */
-    double lastConsumed = 0;
+    public double getLastConsumed() { return lastConsumed; }
+    protected double lastConsumed = 0;
+
+    	
+
 	
     public MSink(SimState state, Resource typical) {
 	super(state,typical);

@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.*;
 import java.text.*;
 
@@ -51,7 +53,7 @@ SimpleDelay
     final MSink discardSink;
 
 
-    private Timer faultRateIncrease = new Timer();
+    private Timed faultRateIncrease = new Timed();
 
     /** This is used by a disruptor to reduce the quality of the
 	products produced by this unit over a certain time
@@ -194,14 +196,14 @@ SimpleDelay
 		if (showAge) {
 		    double now = state.schedule.getTime();
 		    LotInfo li = e.getLot();
-		    double age =  (now - li.earliestAncestorManufacturingDate);
+		    double age =  (now - li.getEarliestAncestorManufacturingDate());
 		    System.out.println(getName() + " at " + now + " testing batch aged " + age + "; " + li);
 		}
 				     
   		
 		amt = e.getContentAmount();
 
-		double r = faultyPortionDistribution.nextDouble() + e.getLot().increaseInFaultRate;
+		double r = faultyPortionDistribution.nextDouble() + e.getLot().getIncreaseInFaultRate();
 		if (r<0) r=0;
 		if (r>1) r=1;
 
@@ -229,10 +231,9 @@ SimpleDelay
 	    Batch b = (Batch)entities.getFirst();
 	    double amt = b.getContentAmount();
 	    
-
 	    boolean willDiscard=false, willRework=false;
 	    // The probability that the lot must be discarded
-	    double dp = discardProb + b.getLot().increaseInFaultRate;
+	    double dp = discardProb + b.getLot().getIncreaseInFaultRate();
 	    dp = Math.min(dp, 1);
 
 	    // The probability that the lot is "not good", i.e must be
@@ -269,7 +270,7 @@ SimpleDelay
 		LotInfo li = b.getLot();
 		String code = willRework? "r" :willDiscard? "b" : "g";
 		li.addToMsg("[tested " + code + " @" + now +" ]");
-		double age =  (now - li.earliestAncestorManufacturingDate);
+		double age =  (now - li.getEarliestAncestorManufacturingDate());
 		
 		System.out.println(getName() + " at " + now + " testing batch aged " + age + "; " + li );
 	    }

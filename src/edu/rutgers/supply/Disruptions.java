@@ -1,8 +1,7 @@
-package  edu.rutgers.pharma3;
+package  edu.rutgers.supply;
 
 import java.io.*;
 import java.util.*;
-//import java.text.*;
 
 import edu.rutgers.util.*;
 
@@ -12,9 +11,9 @@ import edu.rutgers.util.*;
     time and magnitude. 
 */
 
-class Disruptions {
+public class Disruptions {
 
-    enum Type {
+    public enum Type {
 	Delay, // not needed any more
 	ShipmentLoss,
 	Adulteration,
@@ -22,13 +21,15 @@ class Disruptions {
 	Halt,
     };
 
-    /** A single disruption event */
-    static class Disruption {
+    /** A single disruption event.
+	FIXME: Ought to replace "public" fields with getter methods
+     */
+    public static class Disruption {
 	Type type;
 	String unitName;
 	/** On the usual simulation clock, i.e. in days */
 	double time;
-	double magnitude;
+	public double magnitude;
 	Disruption(Type _type, String _unitName, double _time, double _magnitude) {
 	    type = _type;
 	    unitName = _unitName;
@@ -49,7 +50,7 @@ class Disruptions {
 	For simplicity, both the current time and the scheduled disruption
 	time are rounded to integers; i.e. we have 1-day granularity.
      */
-    Vector<Disruption> hasToday(Type type, String unitName, double time) {
+    public Vector<Disruption> hasToday(Type type, String unitName, double time) {
 	Vector<Disruption> v = new Vector<>();
 	for(Disruption d: data) {
 	    if (d.type == type &&

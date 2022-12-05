@@ -1,4 +1,4 @@
-package  edu.rutgers.pharma3;
+package  edu.rutgers.supply;
 
 import java.util.*;
 //import java.text.*;
@@ -43,6 +43,10 @@ public class LotInfo {
 	were manufactured, or, absent any, the lots own manufacturing date.
 	This is used for flow time stats.
     */
+    public double getEarliestAncestorManufacturingDate() {
+	return earliestAncestorManufacturingDate;
+    }
+	
     final double earliestAncestorManufacturingDate;
 
     /** Some additional text info that may be stored in the lot. Used
@@ -51,18 +55,20 @@ public class LotInfo {
      */
     String message = "";
 
-    void addToMsg(String s) {
+    public void addToMsg(String s) {
 	message +=  (message.length()>0?"; ":"") + s;
     }
 
-    void addToMsg(LotInfo precursor) {
+    public void addToMsg(LotInfo precursor) {
 	addToMsg("[Precursor: mfg="+precursor.manufacturingDate+"; "+ precursor.message + "]");
     }
      
     /** Some lots may have this value set to non-zero, e.g. as a result
 	of a disruption that causes a deterioration of product quality */
+    public double getIncreaseInFaultRate() { return increaseInFaultRate; }
     double increaseInFaultRate=0;
-    
+    public void setIncreaseInFaultRate(double _increaseInFaultRate) { increaseInFaultRate = _increaseInFaultRate; }
+
 
     public String toString() {
 	String s = "(Lot No. "+lotNo+", made@" + manufacturingDate +", expire@"+expirationDate + (message.length()>0?"; "+message:"") +")";
@@ -90,6 +96,6 @@ public class LotInfo {
     }
 
     /** How many units in this batch are "illicit" */
-    double illicitCount=0;
+    public double illicitCount=0;
     
 }

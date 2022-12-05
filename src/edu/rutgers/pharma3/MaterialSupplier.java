@@ -1,5 +1,7 @@
 package  edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import java.util.Vector;
 import java.io.*;
 
@@ -10,7 +12,7 @@ import sim.des.*;
 import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Disruptions.Disruption;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 /** Models a facility that supplies a raw material, plus the pharma co's 
     quality testing stage that handles the material from this supplier.
@@ -66,7 +68,7 @@ public class MaterialSupplier extends Macro
     static class SometimesSink extends MSink {
 	/** Will be accepting resource until this time
 	    point (not inclusive) */
-	Timer onUntil = new Timer();
+	Timed onUntil = new Timed();
 	public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
 	    return
 		onUntil.isOn(state.schedule.getTime()) &&
@@ -300,7 +302,7 @@ public class MaterialSupplier extends Macro
 	    ". Of this, "+
 	    " still in factory=" + needProd.hasBatches() + ba +
 	    ", in transit " +  needTrans.hasBatches() + ba +
-	    (stolenGoodsSink.everConsumed>0? ", stolen " + (long)stolenGoodsSink.everConsumedBatches  + " ba":"") +
+	    (stolenGoodsSink.getEverConsumed()>0? ", stolen " + (long)stolenGoodsSink.getEverConsumedBatches()  + " ba":"") +
 	    ", in QA " +  Util.ifmt(needQa.getAvailable()) +  "+" +  Util.ifmt(qaDelay.getDelayed());
 	s += ba + ". ";
 	s += "QA discarded=" + qaDelay.badResource + " ("+qaDelay.badBatches+ " ba)" +
@@ -311,7 +313,7 @@ public class MaterialSupplier extends Macro
 		   prodDelay.getDelayed() +
 		   (needTrans!=null? needTrans.getAvailable():0) +
 		   transDelay.getDelayed() +
-		   stolenGoodsSink.everConsumedBatches +
+		   stolenGoodsSink.getEverConsumedBatches() +
 		   needQa.getAvailable() +
 		   qaDelay.getDelayed() +
 		   qaDelay.badBatches+ qaDelay.releasedBatches);

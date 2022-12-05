@@ -1,4 +1,4 @@
-package  edu.rutgers.pharma3;
+package  edu.rutgers.supply;
 
 import java.util.*;
 import java.io.*;
@@ -14,7 +14,7 @@ import edu.rutgers.util.*;
     <p>
     A Charter object can be created in the constructor of a Named object. A call to Charter.print() then should be placed in that object's step() method (or somewhere, if you want to write data lines on some other schedule). Each print() call will write a line of data.
  */
-class Charter {
+public class Charter {
     private PrintWriter w=null;
     /** The object which will print its data thru this Charter */
     private Named c;
@@ -39,7 +39,7 @@ class Charter {
 	sch = schedule;
 
 	if (dir==null) {
-	    if (Demo.verbose) System.out.println("Charting turned off");
+	    //if (Demo.verbose) System.out.println("Charting turned off");
 	    return;
 	}
 	if (!dir.exists()) {
@@ -92,7 +92,7 @@ class Charter {
 	    if (x.close())  n++;
 	}
 	allCharters.clear();
-	if (!Demo.quiet) System.out.println("Closed all " + n+ " logs");
+	//if (!Demo.quiet) System.out.println("Closed all " + n+ " logs");
     }
     
 }

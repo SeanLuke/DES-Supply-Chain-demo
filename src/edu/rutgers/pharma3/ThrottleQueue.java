@@ -1,5 +1,6 @@
 package  edu.rutgers.pharma3;
 
+
 import java.util.Vector;
 import java.io.*;
 
@@ -10,7 +11,8 @@ import sim.des.*;
 import sim.des.portrayal.*;
 
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Disruptions.Disruption;
+import edu.rutgers.supply.*;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 /** A ThrottleQueue is normally used in tandem with a
     SimpleDelay. Taken together, they model a production

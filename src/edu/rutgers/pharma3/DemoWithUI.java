@@ -1,5 +1,7 @@
 package edu.rutgers.pharma3;
 
+import edu.rutgers.supply.*;
+
 import sim.engine.*;
 import sim.display.*;
 import sim.portrayal.grid.*;

@@ -1,4 +1,4 @@
-package  edu.rutgers.pharma3;
+package  edu.rutgers.supply;
 
 import java.util.*;
 import java.text.*;
@@ -11,7 +11,7 @@ import   edu.rutgers.util.*;
 
 
 /** An object implementing this interface will be able to tell something about its current state */
-interface Reporting {
+public interface Reporting {
     public String report();
 
     default String cname() {

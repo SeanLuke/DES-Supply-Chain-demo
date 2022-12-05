@@ -1,15 +1,15 @@
- package  edu.rutgers.pharma3;
+package  edu.rutgers.pharma3;
 
 import java.util.*;
-//import java.io.*;
 
 import sim.engine.*;
 import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
 
+import edu.rutgers.supply.*;
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Disruptions.Disruption;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 /** This is the actual "production stage" within a MaterialSuppler or
     a Production unit. 
@@ -79,7 +79,7 @@ public class ProdDelay extends SimpleDelay // Delay
     }
 
     
-    private Timer faultRateIncrease = new Timer();
+    private Timed faultRateIncrease = new Timed();
     /** This is used by a disruptor to reduce the quality of the products
 	produced by this unit over a certain time interval. */
     void setFaultRateIncrease(double x, Double _untilWhen) {
@@ -96,7 +96,7 @@ public class ProdDelay extends SimpleDelay // Delay
 
 	
 	Batch b  = (Batch)entity;
-	b.getLot().increaseInFaultRate = faultRateIncrease.getValue(t);
+	b.getLot().setIncreaseInFaultRate( faultRateIncrease.getValue(t));
 	boolean z=super.offerReceiver( receiver, entity);
 
 	//System.out.println("At " + t +", "+getName() + " offering to " + receiver.getName()+", result=" + z +"; receiver.ava=" + getAvailable());
