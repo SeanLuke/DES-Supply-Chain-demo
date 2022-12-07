@@ -9,7 +9,7 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** A Lot object contains useful information about a lot of product
+/** A LotInfo object contains useful information about a lot of product
     (which itself is modeled by a Batch object), such as the
     manufacturing date and expiration date. In the future, we may add
     various other fields to this class, e.g. some information about
@@ -30,8 +30,10 @@ public class LotInfo {
 	
     }
 
+    /** Unique lot number */
     final long lotNo;
 
+    /** The manufactuing date of this lot */
     final double manufacturingDate;
 
     
