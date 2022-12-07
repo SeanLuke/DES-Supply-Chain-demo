@@ -40,8 +40,10 @@ public class LotInfo {
     final double expirationDate;
 
     /** The earliest of the dates on which the "ancestors" of this lot
-	were manufactured, or, absent any, the lots own manufacturing date.
-	This is used for flow time stats.
+	were manufactured, or, absent any, the lots own manufacturing
+	date.  This is not needed in the actual simulation, but is
+	used for flow time stats, so that e.g. we can trace the path
+	of meat through the factory from a live cow to a can of spam.
     */
     public double getEarliestAncestorManufacturingDate() {
 	return earliestAncestorManufacturingDate;

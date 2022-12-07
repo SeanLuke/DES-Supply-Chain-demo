@@ -17,38 +17,64 @@ import edu.rutgers.util.*;
     name, expiration date, maybe some of the "life history"
     of the lot). 
     
-    A Batch object can represent e.g. a pallet on which several
-    boxes of a drug, all with the same lot number, are stored.  It
-    is possible for multiple batches to refer to the same lot
-    number, if a single lot has been split into several batches.
-
-    A Batch object can represent also a "prototype batch" (a model
+    A Batch object can represent "prototype batch" (a model
     used for creating real product lots) or a "real batch"
-    (representing an actual lot of the product. A prototype batch
-    stores a Batch.PrototypeInfo object in its Entity.info field, while
-    a real batch stores a LotInfo object in that field. The former 
-    contains information (rules) that is used in generating the latter.
+    (representing an actual lot of the product.
+
+    A "real batch" is e.g. a pallet on which several boxes of
+    a drug, all with the same lot number, are stored.  It is possible
+    for multiple batches to refer to the same lot number, if a single
+    lot has been split into several batches.
+
+    A prototype batch stores a Batch.PrototypeInfo object in its
+    Entity.info field, while a real batch stores a LotInfo object in
+    that field. The former contains information (rules) that is used
+    in generating the latter.
 
 */
 public class Batch extends Entity {
 
     /** A PrototypeInfo instance, stored in each prototype lot (but
-	not in actual lots) describes some properties of a
-	product. The data stored here areused to help properly set
-	parameters during the construction of actual lots.
+	not in actual lots) describes some properties of a type of
+	product (e.g. "aspirin in bulk", "aspirin in bottles", or
+	"trail mix"). The data stored here are used to help properly
+	set parameters during the construction of actual lots of this
+	product.
+
+	<p>
+	As far as the expiration date is concerned, there are two types
+	of products, distinguished by the flag <tt>inheritsExpiration</tt>:
+	<ol>
+	
+	<li>Own expiration (inheritsExpiration = false). For these
+	products, the expiration date is computed as the manufacturing
+	date plus the standard shelf life (say, 24 months). This is the
+	case with most products.
+
+	<li>Inherited expiration date (inheritsExpiration = true). For
+	these products, the expiration date is set based
+	on the earliest expiration date of the inputs, rather than as
+	the manufacturingDate + shelfLife.  This is suitable e.g. for
+	production stages that simply repackage an already-made
+	product. (E.g. when you make trail mix, the expiration data of
+	the package of the product should be set to the earliest of
+	the expiration dates of the lots of nuts, raisins, and
+	crackers that went into the mix).
+	
+	</ol>
      */
     static class PrototypeInfo {
 
-	/** If true, the expiration date is set based on the earliest expiration
-	date of the inputs, rather than as the manufacturingDate + shelfLife.
-	This is suitable e.g. for production stages that simply repackage
-	an already-made product.
+	/** If true, this is an "inherits expiration" product, whose
+	expiration date of this product is set based on the earliest
+	expiration date of the inputs, rather than as the
+	manufacturingDate + shelfLife.
 	*/
 	private boolean inheritsExpiration = false;
 
-	//public boolean getInheritsExpiration() {	return inheritsExpiration;    }
+	//public boolean getInheritsExpiration() {  return inheritsExpiration;  }
 
-    
+	
 	/** How soon after being created will the product in this lot
 	    expire? This is measured in the same units as used in the
 	    simulation Scheduler, i.e. days. The value of
@@ -57,14 +83,18 @@ public class Batch extends Entity {
 	*/
 	private double shelfLife;
 
-	/** This field may be set to non-null in prototype batches with inheritsExpiration==true.
-	    It is used to initialize the expiration date of batches that appear "ex nihilo" 
-	    (e.g. for the initial stock) rather than are produced during the simulation intself
-	    from identifiable input batches, and whose expiratin date therefore cannot be "inherited"
-	    from the inputs.
+	/** This field may be set to non-null only in prototype
+	    batches with inheritsExpiration==true.  It is used to
+	    initialize the expiration date of batches that appear "ex
+	    nihilo" (e.g. for the initial stock at the begining of the
+	    simularion) rather than are produced during the simulation
+	    intself from identifiable input batches, and whose
+	    expiration date therefore cannot be "inherited" from the
+	    inputs.
 	 */
 	private Double backupShelfLife;
 
+	/** Creates the batch prototype structure for a new product. */
 	PrototypeInfo(boolean _inheritsExpiration, Double _shelfLife, Double _backupShelfLife) {
 	    inheritsExpiration = _inheritsExpiration;
 	    shelfLife = (_shelfLife==null)? Double.POSITIVE_INFINITY :_shelfLife;
@@ -74,6 +104,17 @@ public class Batch extends Entity {
  	    
 	}
 
+	/** Creates the lot information structure for a new product lot
+	    (a "real batch") based on this prototype batch.
+	    @param name The name of the product, e.g. "Aspirin". This
+	    is just used in error messages.
+	    @param now The current simulation time, to properly initialize
+	    the expiration date.
+	    @param input The batches of ingredients. This is only used if this
+	    is an inherits-expiration product, to properly set its expiration
+	    date.
+	    
+	*/
 	LotInfo newLot(String name, double now, Vector<Batch> inputs) {
 	    double exp;
 
@@ -108,9 +149,7 @@ public class Batch extends Entity {
 		(inheritsExpiration?" inherits exp": "shelf life=" + shelfLife) +
 		")";
 	}
- 
-
-	
+ 	
     }
   	
     
@@ -142,12 +181,16 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     public String getUnderlyingName() {
 	return getUnderlying().getName();
     }
-    
+
+    /** @return The underlying resource */
     public CountableResource getUnderlying() {
 	return (CountableResource)(getStorage()[0]);
     }
     
-    /** Creates a "typical" (prototype) batch, rather than an actual batches */
+    /** Creates a "typical" (prototype) batch, with a PrototypeInfo
+        structure in it, rather than an actual batch. This constructor
+	is only used by mkPrototype().
+    */
     private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration,
 		  Double _shelfLife, Double _backupShelfLife) {
 	super(  "BatchOf" + typicalUnderlying.getName());
@@ -160,6 +203,9 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	particular product. Such object does not represent a specific
 	"real" batch, but is used as a pattern based on which real
 	batches of the same product will be created.
+
+	<p>The name of the batch product will be based on the name of the
+	underlying.
 
 	@param typicalUnderlying A CountableResource describing the
 	product (e.g. a particular chemical) which is "packaged" in
@@ -261,6 +307,8 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return d;
     }
 
+    /** Scans all input lots for their earliestAncestorManufacturingDate field.
+     */
     private static double earliestAncestorManufacturingDate(Vector<Batch> batches) {
 	double d = Double.POSITIVE_INFINITY;
 	for(Batch b: batches) {
@@ -281,7 +329,9 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return getContent().getAmount();
     }
 
-    /** How much of underlying resource are we are talking about.
+    /** How much of underlying resource are we are talking about, regardless
+	of whether r is represented as some amount of  fungible CountableResource,
+	or as a packaged Batch.
 	@param r Either a Batch or a CountableResource.
      */
     public static double getContentAmount(Resource r) {
