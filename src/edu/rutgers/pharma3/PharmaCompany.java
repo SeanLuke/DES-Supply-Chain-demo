@@ -264,19 +264,13 @@ private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputExcept
 	@param amount An "order paper" (CountableResource). Amount in units.
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	//double s0=getAvailable();
 
 	String msg = "At t=" + state.schedule.getTime() + ", " +  getName()+ " acting on order for supply of "+
-	    atLeast + " to " +  atMost + " units of " + amount; // +
-	    //", while qa.ava=" + qaDelay.getAvailable();
-
+	    atLeast + " to " +  atMost + " units of " + amount;
+	
 	double amt = amount.getAmount();
-
-	//distro.addToPlan(amt);
 	
 	boolean z = super.accept(provider, amount, atLeast, atMost);
-	//double s=getAvailable();
-	//msg += "; stock changed from " + s0 + " to " +s;	
 	if (Demo.verbose) System.out.println(msg);
 
 	rawMatSupplier.receiveOrder(Math.round(amt * fudgeFactor));

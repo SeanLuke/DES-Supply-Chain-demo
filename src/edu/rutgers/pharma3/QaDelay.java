@@ -18,31 +18,31 @@ import  edu.rutgers.util.*;
     before it's offered to the downstream consumer. Optionally, it
     can also direct some portion of the input to the "rework" receiver.
  */
-public class QaDelay extends //Delay
-SimpleDelay
+public class QaDelay extends SimpleDelay
     implements Reporting, Reporting.HasBatches
 {
 
-    /** If non-null, we reschedule this object at the end of each 
-	offerReceiver. This can be used to get the QaDelay automatically
-	reloaded a bit later.
-    */
-    private Steppable whomToWakeUp = null;
-
-    public void setWhomToWakeUp(Steppable x)  { whomToWakeUp = x; }
-    
-    /** This is non-null if we have item-by-item testing, with partial
-      discard. If it is present, then discardProb and reworkProb. It
-      must be zero. is expected that it only returns numbers within
-      [0:1] range */
+    /** This is non-null if we have item-by-item testing, with only
+	same units discarded from each batch. If it is present, then
+	discardProb and reworkProb must both be zeros. It is expected
+	that this distribution only returns numbers within [0:1]
+	range. For each batch being tested, a number is drawn from
+	this distribution, and the corresponding fraction of the batch
+	is discarded.
+   */
     final AbstractDistribution faultyPortionDistribution;
 
-    /** If any of these is non-zero, then we do whole-batch test-and-discard.
-	In this case, faultyPortionDistribution must be null.
+    /** If any of these is non-zero, then we do whole-batch
+	test-and-discard. In this case, faultyPortionDistribution must
+	be null.
+
+	The two values indicate with what probability a batch is
+	discarded, and with what probability a batch is sent back to
+	the production stage for reworking.
      */
     final double discardProb, reworkProb;
     
-    /** Pill counts */
+    /** Unit (pill) counts for the 3 directions of flow. */
     double badResource = 0, reworkResource=0, releasedGoodResource=0;
     public double getBadResource() { return badResource; }
     public double getReleasedGoodResource() { return releasedGoodResource; }
@@ -134,17 +134,18 @@ SimpleDelay
     }
     
     /** This is a wrapper over the standard Provider.offerReceiver(),
-	which reduces the amount of available stuff (resource) we
-	are to offer to the receiver. The reduction can be due to the QA inspection
-	removing some poor quality items, or due to 
-	to damage by mice and weevils, or to other adverse effects.	
+	which reduces the amount of available stuff (resource) we are
+	to offer to the receiver. The reduction can be due to the QA
+	inspection removing some poor quality items, or due to to
+	damage by mice and weevils, or to other adverse effects.
 
-	//FIXME: this method has the assumption that the
-	Receiver will take everything offered to it. If this assumption
-	does not hold, the repeated offers will repeatedly find
-	bad items in the already-checked pool. This can be fixed
-	by creating a separate Queue for the already-checked stuff,
-	and passing it to Receiver.accept() calls.
+	<p> //FIXME: this method has the assumption that the Receiver
+	will take everything offered to it. This is OK for the Pharma3
+	(SC-1) model; but, in general, if this assumption does not
+	hold, the repeated offers will repeatedly find bad items in
+	the already-checked pool. This can be fixed by creating a
+	separate Queue for the already-checked stuff, and passing it
+	to Receiver.accept() calls.
        		
     */
     protected boolean offerReceiver(Receiver receiver, double atMost) {
@@ -168,8 +169,6 @@ SimpleDelay
 		double r = faultyPortionDistribution.nextDouble();
 		if (r<0) r=0;
 		if (r>1) r=1;
-
-
 
 		double rEffective = Math.min(r + faultRateIncrease.getValue(t), 1.0);
 		
@@ -211,7 +210,7 @@ SimpleDelay
 		faulty = Math.round( amt * r);
 		e.getContent().decrease(faulty);
 		z = super.offerReceiver(receiver, e);
-		entities.remove(e);		// FIXME: do I need to manually remove e from entities?
+		entities.remove(e);		// manually remove e from entities?
 	    }
 
 
@@ -253,18 +252,8 @@ SimpleDelay
 		willDiscard? super.offerReceiver(discardSink, b):
 		super.offerReceiver(receiver, b);
 
-
 	    if (!z) throw new IllegalArgumentException("The expectation is that the receivers for QaDelay " + getName() + " never refuse a batch");
 	    
-	    //z =
-	    //willRework ? super.offerReceiver(sentBackTo, atMost):
-	    //	willDiscard? super.offerReceiver(discardSink, atMost):
-	    //	super.offerReceiver(receiver, atMost);
-		
-	    //ArrayList<Resource> lao = getLastAcceptedOffers();
-	    //if (lao==null || lao.size()!=1) throw new IllegalArgumentException("Unexpected result from shipOutDelay.getLastAcceptedOffers()");
-	    //Batch b = (Batch)lao.get(0);
-
 	    if (showAge) {
 		double now = state.schedule.getTime();
 		LotInfo li = b.getLot();
@@ -287,21 +276,14 @@ SimpleDelay
 		releasedBatches++;
 	    }
 
-	    // System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+"): reworkBatches="+reworkBatches+", badBatches=" + badBatches+", releasedBatches=" + releasedBatches);
-
 	}
-
-	if (whomToWakeUp != null) {
-	    double t = state.schedule.getTime();
-	    state.schedule.scheduleOnce(t+ 1e-5, whomToWakeUp);
-	}
-
 	
 	return z;
 
     }
 
-    long reworkBatches=0, badBatches=0,    releasedBatches=0;
+    /** Statistics on batches sent into each of the 3 possible directions */
+    long reworkBatches=0, badBatches=0, releasedBatches=0;
  
 
     /** Still under processing + at the output */
@@ -327,7 +309,8 @@ SimpleDelay
 	
     }
 
-    /** Stats for planning. The  average output/input ratio can be computed as
+    /** Computes the parameters of this QaDelay node, for use in
+	planning. The average output/input ratio can be computed as	
 	<div align="center">
 	gamma = (1-alpha-beta)/(1-beta),
 	</div>
@@ -348,19 +331,6 @@ SimpleDelay
 	
     }
 
-    /** Just for extra tracing */
-    /*
-    public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
-	boolean z =super.accept( provider, r, atLeast, atMost);
-
-	if (Demo.verbose) {
-	    if (r instanceof Batch) {
-		double t = state.schedule.getTime();	
-		((Batch)r).addToMsg("[QaDelay.acc@"+t+", hb="+hasBatches()+"]");
-	    }
-	}	
-	return z;
-    }
-    */
+  
     
 }

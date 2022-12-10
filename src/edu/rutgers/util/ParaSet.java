@@ -155,7 +155,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
 	try {
-	    return new Boolean(s);
+	    return Boolean.parseBoolean(s);
 	} catch(Exception ex) {
 	    throwII(key, "Cannot parse as a boolean: " + s);
 	    return null; // never reached

@@ -10,7 +10,7 @@ import sim.des.*;
 import   edu.rutgers.util.*;
 
 
-/** An object implementing this interface will be able to tell something about its current state */
+/** An object implementing this interface will be able to tell something about its current state. */
 public interface Reporting {
     public String report();
 
@@ -35,7 +35,12 @@ public interface Reporting {
   
     }
 
+    /** A convenience interface serving to indicate that a class has the
+	reporting method HasBatches.hasBatches() */
     static interface HasBatches {
+	/** Reports the amount of stuff stored
+	    in (e.g.) a Queue or Delay both in term of units and
+	    in terms of batches */
 	public String hasBatches();
     }
     
