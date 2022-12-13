@@ -134,13 +134,6 @@ public class Batch extends Entity {
 		Math.min(now, earliestAncestorManufacturingDate(inputs));
    	  	    
 	    LotInfo li = LotInfo.newLot(now, exp, earliestOrigin);
-
-	    //if (!Demo.quiet && inputs!=null) {
-	    //for(Batch b: inputs) {
-	    //li.addToMsg( b.getLot());
-	    //}
-	    //}
-	    
 	    return li;
 	}
 
@@ -238,7 +231,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	@param prototype A "prototype" batch, from which we
 	copy the name and type of underlying resource, as well
 	as its shelf life.
-	@param lot contains the unique lot number, expiration date etc
+	@param lot a newly created structure that contains the unique lot number, expiration date etc for the new lot
 	@param amount The amount of underlying resource
     */
     private Batch(Batch prototype, LotInfo lot, double amount) {
@@ -258,10 +251,9 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     
     /** Creates another batch with the same lot number and
 	a copy of the stored resource. Not sure why we'd need
-	this method, but let's have since all Resource classes
+	this method, but let's have it, since all Resource classes
 	seem to do so.
     */
-    
     public Resource duplicate() {
 	if (getInfo() instanceof LotInfo) {
 	    Batch b = new Batch(this, (LotInfo)getInfo(), getContentAmount());
@@ -272,14 +264,18 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	}
     }
     
-    /** Creates a Batch of the same type as this Batch, with a new unique
-	lot number, appropriate expiration date, and a specified amount of resource stored in it.
+    /** Creates a "real" Batch of the same type as this prototype
+	Batch, with a new unique lot number, appropriate expiration
+	date, and a specified amount of resource stored in it.
+	This method should only be called on prototype batches.
+	
 	@param now The "birthdate" (manufacturing date) of this lot
 	@param inputs If not null, contains the list of Batch inputs
-	that were used to make this lot. (Fungible, i.e. CountableResource,
-	inputs, are ignored and not included into this list). If this
-	product is of the "inheritExpiration" date, this list of inputs
-	is used to set the expiration date of the new batch;
+	that were used to make this lot. (Fungible,
+	i.e. CountableResource, inputs, should be ignored by the
+	caller, and not included into this list). If this product is
+	of the "inheritExpiration" date, this list of inputs is used
+	to set the expiration date of the new batch;
     */
     public Batch mkNewLot(double size, double now, Vector<Batch> inputs) {
 	Object info = getInfo(); 
@@ -290,7 +286,8 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return	b;
     }
 
-    /** A convenience method, for resources that don't have inputs that we pay attention to */
+    /** A convenience method, for resources that don't have inputs
+	that we need to pay attention to */
     public Batch mkNewLot(double size, double now) {
 	return  mkNewLot( size, now, null);
     }
@@ -308,6 +305,8 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     }
 
     /** Scans all input lots for their earliestAncestorManufacturingDate field.
+	This is useful for "lifetime tracing" tools, not for the SC simulation
+	itself.
      */
     private static double earliestAncestorManufacturingDate(Vector<Batch> batches) {
 	double d = Double.POSITIVE_INFINITY;
@@ -323,15 +322,17 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return (CountableResource)getStorage()[0];
     }
 
-    /** How much drug etc this batch contains */
+    /** How much prioduct (e.g. pills of a drug, etc) this batch contains */
     public double getContentAmount() {
 	if (getStorage()==null) throw new IllegalArgumentException("Bad batch: storage==null!");
 	return getContent().getAmount();
     }
 
-    /** How much of underlying resource are we are talking about, regardless
-	of whether r is represented as some amount of  fungible CountableResource,
-	or as a packaged Batch.
+    /** How much of underlying resource (e.g. how any pills) does a
+	given Resource obeject represent? This method should provide a
+	correct answer regardless of whether r is represented as some
+	amount of fungible CountableResource, or as a packaged Batch.
+	
 	@param r Either a Batch or a CountableResource.
      */
     public static double getContentAmount(Resource r) {
@@ -339,11 +340,14 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     }
 
    
-    /** An alternative to Provider.getAvailable(), which
-	looks at the amount of content inside Batches.
-	This, of course, is inefficient, so if possible
-	one needs to use running-total accounting,
-	such as Pool.currentStock on InputStore.currentStock.
+    /** How much "stuff" (e.g. how many pills) does the Provider have
+	on hand? This is an alternative to Provider.getAvailable(),
+	which, if appropriate, looks at the amount of content inside
+	Batches.  This, of course, is inefficient, so if possible one
+	needs to use running-total accounting, such as
+	Pool.currentStock on InputStore.currentStock.
+	@param p Provider of any kind (either of CountableResource, or of
+	Batch Entities)
      */
     static double getAvailableContent(Provider p) {
 	Entity[] ee = p.getEntities();
@@ -358,13 +362,17 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	}
   
     }
-    
+
+    /** If this is a "real" batch, retrieves its LotInfo structure (which
+	contains the lot number, expiration date, etc).
+    */
     public LotInfo getLot() {
 	Object info = getInfo();
 	if (info==null || !(info instanceof LotInfo)) throw new IllegalArgumentException("Cannot do getLot on what appears to be a prototype lot");
 	return (LotInfo)info;
     }
 
+    /** Has this lot expired, as of the specified date? */
     public boolean hasExpired(double now) {
 	return getLot().hasExpired(now);
     }
@@ -374,6 +382,10 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return  hasExpired(now+within);
     }
 
+    /** Adds text to the info message inside the batch's LotInfo object.
+	You can think of this as of warehouse workers, truck drivers, etc
+	writing notes on a slip of paper attached to the pallet.
+     */
     public void addToMsg(String s) {
 	LotInfo li = getLot();
 	if (li!=null) li.addToMsg(s);

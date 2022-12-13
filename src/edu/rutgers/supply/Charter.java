@@ -13,6 +13,28 @@ import edu.rutgers.util.*;
 
     <p>
     A Charter object can be created in the constructor of a Named object. A call to Charter.print() then should be placed in that object's step() method (or somewhere, if you want to write data lines on some other schedule). Each print() call will write a line of data.
+
+    <p> The resulting CSV file can then be viualized with tools such as gnuplot.
+For example:
+<pte>
+    set datafile separator ','
+
+#-- to make sure the tic labels on the Y-axis fit into the PNG image
+set lmargin 8
+set grid mxtics mytics
+
+set term qt 0
+set title 'Hospital/Pharmacy Pool'
+plot 'HospitalPool.csv'  using ($1):($2)  with lines title 'HP.Stock', \
+'HospitalPool.csv'  using ($1):($3)  with impulses title 'HP.Ordered', \
+'HospitalPool.csv'  using  ($1):($4)  with lines title 'HP.Received'
+set term png size 800,600
+set out 'HospitalPool.png'
+replot
+</pre>
+
+For more examples, see charts.gnu.
+
  */
 public class Charter {
     private PrintWriter w=null;
