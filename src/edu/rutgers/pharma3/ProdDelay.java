@@ -1,6 +1,7 @@
 package  edu.rutgers.pharma3;
 
 import java.util.*;
+import java.text.*;
 
 import sim.engine.*;
 import sim.util.*;
@@ -15,7 +16,7 @@ import edu.rutgers.supply.Disruptions.Disruption;
     a Production unit. 
 
     Among other things, it can modify properties of lots it 
-    offers to the receiver on certain days. This abiliy is controlled
+    offers to the receiver on certain days. This ability is controlled
     via the disruption schedule.
 
 */
@@ -66,11 +67,13 @@ public class ProdDelay extends SimpleDelay
 	if (getAvailable()>0) s += "+"+(long)getAvailable();
 	return s;
     }
+
+    static private DecimalFormat df = new DecimalFormat("0.00#");    
 	       
     public String report() {
 	double t = state.schedule.getTime();
 	double util = (t==0)? 1.0 : totalUsedTime/t;
-	return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+util+"]";
+	return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+df.format(util*100)+"%]";
     }
 
     

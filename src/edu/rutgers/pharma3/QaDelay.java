@@ -83,7 +83,6 @@ public class QaDelay extends SimpleDelay
 	reworkProb= _reworkProb;
 	faultyPortionDistribution = _faultyPortionDistribution;
   	discardSink = new MSink( state, typicalBatch);
-	//addReceiver(discardSink);
 
 	if (faultyPortionDistribution!=null) {
 	    if (discardProb!=0 || reworkProb !=0) throw new IllegalArgumentException("Cannot set both faultyPortionDistribution and discardProb/reworkProb on the same QaDelay!");
@@ -102,7 +101,6 @@ public class QaDelay extends SimpleDelay
 
 	if (para.get("faulty")==null) {
 	    return null;
-	    //throw  new IllegalInputException("Found no value for  " + para.name +".faulty");
 	} else if (para.get("faulty").size()==1) {
 	    faultyProb = para.getDouble("faulty");
 	} else {
@@ -124,9 +122,11 @@ public class QaDelay extends SimpleDelay
     Receiver sentBackTo=null;
 
 
-    /** Call this method if the QA process, in addtion to discarding 
+    /** Call this method if the QA process, in addition to discarding 
 	some items, can also send some items back to the factory
-	for reprocessing.
+	for reprocessing.  It only makes sense to call this method
+	if the parameter file provides reworkProb, which indicates the
+	probability of a lot experiencing this outcome.
 	@param  _sentBackTo Where to send some of the faulty products for rework.
      */
     void setRework( Receiver _sentBackTo) {

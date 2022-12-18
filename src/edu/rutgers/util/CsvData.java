@@ -9,12 +9,11 @@ import java.text.*;
 /** Represents the entire content of a CSV file. The file may consist
     of an optional header line and any number of data lines and
     (possibly) also comment lines. Comment lines may or may not be
-    stored. Child classes add specific semantics for a particular type of
+    stored. Child classes can add specific semantics for a particular type of
     CSV files.
  */
 public class CsvData {
 
-    //HashMap<String, Vector<String>> dummy = new HashMap<>();
     
     /** The header line of the CSV file. It is not analyzed, but stored, and
 	can be printed later. A file may or may not have a header line;
@@ -107,13 +106,9 @@ public class CsvData {
 		    throw new IllegalInputException("Unexpected header line or first line in " + csvFile + ". Found " + colCnt);
 		}
 
-		//		if (isHeader) {
-		//header = s;		    continue;
-		//}
 	    }
 
 
-	    //System.out.println("Line "+(n+1)": " + s);
 	    try {
 		String[] csv = ImportCSV.splitCSV(s);
 		// If legalLengths is null, columns can be of varied length

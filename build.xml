@@ -12,7 +12,7 @@
 
 -->
 
-<project name="pharmademo" default="jar" basedir=".">
+<project name="SC1" default="jar" basedir=".">
 
  <property name="main" location="."/>
 

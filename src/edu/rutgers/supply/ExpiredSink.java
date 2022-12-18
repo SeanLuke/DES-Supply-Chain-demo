@@ -1,13 +1,10 @@
-package  edu.rutgers.pharma3;
-
-import edu.rutgers.supply.*;
+package edu.rutgers.supply;
 
 import java.util.*;
 import java.text.*;
 
 import sim.engine.*;
 import sim.util.*;
-import sim.util.distribution.*;
 import sim.des.*;
 
 /** An ExpiredSink only accepts Batches which it considers expired or
@@ -20,10 +17,10 @@ import sim.des.*;
     chain where expired lots have to be destroyed once they are
     identified during the usual course of business.
 
-<p>
-    This class extends from MSink in order to collect all-time stats.
+<p> This class extends from MSink (rather than Sink) in order to
+    collect all-time stats.
  */
-class ExpiredSink extends MSink  {
+public class ExpiredSink extends MSink  {
 
     final int spareDays;
 
@@ -40,7 +37,7 @@ class ExpiredSink extends MSink  {
     /** Accepts (nearly-)expired batches, rejects good one.
 	@param provider does not matter a lot
 	@param resource a Batch to be tested
-	@return true on acceptance (i.e. if the batch was found to be expired)
+	@return true on acceptance (i.e. if the batch was found to be expired, and then consumed)
      */
     public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
 	if (!(resource instanceof Batch)) throw new IllegalArgumentException("ExpiredSink can only take Batch resources");
@@ -52,21 +49,21 @@ class ExpiredSink extends MSink  {
 	return true;	
     }
     
-    Batch getNonExpiredBatch(Provider p, LinkedList<Entity> entities) {
+    public Batch getNonExpiredBatch(Provider p, LinkedList<Entity> entities) {
 	return getNonExpiredBatch( p,  entities, new double [1]);
     }
 
 
     /** Scans the batches of a provider of Batches to find the first
-	"good" batch (one that's not about to expire). In so doing,
+	"good" batch (one that's not about to expire). While doing that,
 	purges the provider from any "bad" (nearly expired) batches
 	found in the process, by consuming them and removing them from
 	the provider.  This method can be used if we use this MSink as
 	a dumping place for expired batches.
 
-	Note: this method could be refactored as a method of the
-	Provider class, with the signature 
-	Entity 	Provider.getNonExpiredBatch(Receiver consumerOfBadBatches) 
+	<p> Note: the DES team could refactor this method as a method
+	of the Provider class, with the signature Entity
+	Provider.getNonExpiredBatch(Receiver consumerOfBadBatches)
 
 	The Receiver in question would be required to accept() only
 	bad entities (it can be an ExpiredSink), so that the method
@@ -84,7 +81,7 @@ class ExpiredSink extends MSink  {
 	@return The first "good" batch found in the provider, or null if none has been found.
 	
     */
-    Batch getNonExpiredBatch(Provider p, LinkedList<Entity> entities, double removedAmt[]) {
+    public Batch getNonExpiredBatch(Provider p, LinkedList<Entity> entities, double removedAmt[]) {
 	removedAmt[0] = 0;
 	while( p.getAvailable()>0) {
 	    Batch b = (Batch)entities.getFirst();
@@ -96,7 +93,7 @@ class ExpiredSink extends MSink  {
     }
 
     /** @return A short stats message, or an empty string if nothing has ever been discarded as expired */
-    String reportShort() {
+    public String reportShort() {
 	return (everConsumed==0)? "" : "(Discarded expired=" + everConsumed + " u = " + everConsumedBatches + " ba)";
     }
 

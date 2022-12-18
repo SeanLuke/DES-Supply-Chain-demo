@@ -31,32 +31,32 @@ import edu.rutgers.supply.Disruptions.Disruption;
     than a Delay. This is supposed to be more computationally
     efficient.
    
-    <P>In the  ThrottleQueue-SimpleDelay tandem, the ThrottleQueue
-    controls the behavior of the SimpleDelay, to ensure
-    that it holds exactly one batch at a time, and the processing time
-    of each batch is drawn from a specified distribution. It is
+    <P>In the ThrottleQueue-SimpleDelay tandem, the ThrottleQueue
+    controls the behavior of the SimpleDelay, to ensure that it holds
+    exactly one batch at a time, and the processing time of each batch
+    is drawn from a specified distribution. The ThrottleQueue is
     attached in front of the SimpleDelay it controls.
 
     <p>The ThrottleQueue sets the capacity of the SimpleDelay to 1,
     and sets itself as the slackProvider for the delay, so that every
-    time the delay is finished with a batch ("the bread has been baked")
-    it pulls one more batch ("a batch of raw loaves") from the queue. 
-    Additionally, when something is put into the Queue, its offerReceiver
-    checks whether the delay is empty ("the oven is idle"), and if it is, 
-    it offers resource to the delay. These two mechanism, in combination,
-    ensure that the delay ("the oven") is never idle, as long as there is
-    anything to be processed.
+    time the delay is finished with a batch ("the bread has been
+    baked") it pulls one more batch ("a batch of raw loaves") from the
+    queue, via the mkBatch() mechanism.  Additionally, when something
+    is put into the Queue, its offerReceiver checks whether the delay
+    is empty ("the oven is idle"), and if it is, it offers resource to
+    the delay. These two mechanism, in combination, ensure that the
+    delay ("the oven") is never idle, as long as there is anything to
+    be processed.
  */
-public class ThrottleQueue extends sim.des.Queue
-    implements     Named//,	    Reporting
+public class ThrottleQueue extends sim.des.Queue    implements     Named
 {
 
     /** Part of which production unit am I? This is needed in GraphAnalysis, as well as for auto-reloading */
     private //Production
-	SplitManager.HasQA 	whose=null;
-    void setWhose(SplitManager.HasQA  _whose) {whose = _whose;}
+	AbstractProduction 	whose=null;
+    void setWhose(AbstractProduction  _whose) {whose = _whose;}
     //    Production
-	SplitManager.HasQA 	getWhose() { return whose; }
+	AbstractProduction 	getWhose() { return whose; }
     
     private AbstractDistribution delayDistribution;
 
@@ -178,6 +178,10 @@ public class ThrottleQueue extends sim.des.Queue
 	return super.offerReceivers();
     }
 
+    /** If true, this indicates that whenever this queue is called
+	upon to provide a batch for its downstream receiver (likely,
+	via that receiver slackProvider mechanism) it will make itself
+	non-empty, if at all possible. */
     boolean autoReloading = false;
     void setAutoReloading(boolean x) {
 	 autoReloading = x;

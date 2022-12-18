@@ -14,8 +14,9 @@ import sim.des.portrayal.*;
 import edu.rutgers.util.*;
 import edu.rutgers.supply.Disruptions.Disruption;
 
-/** Models a facility that supplies a raw material, plus the pharma co's 
-    quality testing stage that handles the material from this supplier.
+/** Models a facility that supplies a raw material (i.e. an external
+    supplier), plus the pharma co's quality testing stage that handles
+    the material from this supplier.
 
     <p>The Receiever (Sink) feature of this class is used so that we
     can use it "accept" batches coming out of the 3 stages of delays
@@ -34,8 +35,8 @@ object to which this supplier should push QA'ed material.
  receiever. </ol>
 
  */
-public class MaterialSupplier extends Macro
-    implements     Named,	    Reporting, SplitManager.HasQA
+public class MaterialSupplier extends AbstractProduction
+    implements     Named,	    Reporting
 {
 
     /** The number of units whose production we are ordered to start.
@@ -55,7 +56,6 @@ public class MaterialSupplier extends Macro
     private final ProdDelay prodDelay;
     /** Transportation delay */
     private final SimpleDelay transDelay;
-    private final QaDelay qaDelay;
 
     private final ThrottleQueue needProd, needTrans, needQa;
 
@@ -172,11 +172,11 @@ public class MaterialSupplier extends Macro
 
     /** Lays out icons for the GUI display of a product flow chart.
 
-	(SVG won't work; only PNG is OK).
+	(For custome icons, SVG won't work; only PNG is OK).
 
 	@param x0 X offset for the top left corner
 	@param y0 Y offset for the top left corner
- */
+    */
     void depict(DES2D field, int x0, int y0) {
 	if (field==null) return;
 	field.add(this, x0, y0);
@@ -202,68 +202,34 @@ public class MaterialSupplier extends Macro
 
     }
 
-    public QaDelay getQaDelay() {	return qaDelay;    }
-
-    public Provider getTheLastStage() { return qaDelay;    }
-    
     final double standardBatchSize;
-
-    SplitManager sm;
-        
-    /** Sets the destination for the product that has passed the QA. This
-	should be called after the constructor has returned, and before
-	the simulation starts.
-       @param _rcv The place to which good stuff goes after QA
-     */
-    public void setQaReceiver(Receiver rcv, double fraction) {
-	sm.setQaReceiver(rcv, fraction);
-    }
 
     
     /** This method is called by an external customer when it needs
 	this supplier to send out some amount of stuff. It "loads some
 	stuff on a ship", i.e. puts it into the delay.
+
+	<p>This method makes a needProd.provide() call, which will
+	"prime the system" by starting the first mkBatch(), if needed
+	and possible. After that, the production cycle will repeat via
+	the slackProvider mechanism.
+
     */
     void receiveOrder(double amt) {
 	outstandingOrderAmount += amt;
 	everOrdered += amt;
-	//startAllProduction();
 	
-	// This will "prime the system" by starting the first
-	// mkBatch(), if needed and possible. After that, the
-	// production cycle will repeat via the slackProvider
-	// mechanism
 	needProd.provide(prodDelay);
 	
     }
 
-    /** Initiate the production process on as many batches as needed
-	to fulfill the (typically, once-a-month) order.
-	FIXME: we always use the standard batch size, and don't use 
-	the last short batch, in order to simplify Production.
-    */
-    /*
-    private boolean startAllProduction() {
-	int bcnt = 0;
-	while (true) {
-	//double x = Math.min(outstandingOrderAmount ,  standardBatchSize);
-	    if (mkBatch( state)) bcnt ++;
-	    else break;
-	}
-	double t = state.schedule.getTime();
-	if (Demo.verbose) System.out.println( "At t=" + t+", " + getName() + " has put "+bcnt + " batches to needProd; needProd: " + needProd.hasBatches());
-	needProd.step(state); // causes offerReceivers() to the prodDelay
-	return (bcnt>0);
-    }
-    */
-    
+ 
     /** Tries to make a batch, if not disabled, and if the plans allow that
 	@return true if a batch was made; false if not enough input resources
 	was there to make one, or the current plan does not call for one
 
     */
-    public boolean mkBatch(//SimState state
-) {
+    public boolean mkBatch() {
 	if (outstandingOrderAmount<=0) return false;
 
 	double x = standardBatchSize;
@@ -324,14 +290,6 @@ public class MaterialSupplier extends Macro
 	return wrap(s);
     } 
 
-
-    //String name;
-    //    public String getName() { return name; }
-    //public void setName(String name) { this.name = name; }
-  
-    /** For the "Named" interface. Maybe it should set the counters to 0... */
-    //public void reset(SimState state) {}
-
     /** Good resource released by QA today. Used in charting */
     private double releasedAsOfYesterday=0;
     
@@ -381,26 +339,10 @@ public class MaterialSupplier extends Macro
 	    throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	}
 
-
-	
-	//    double dp = discardProb + b.getLot().increaseInFaultRate;
-
-
-	
-	
 	double releasedAsOfToday = qaDelay.getReleasedGoodResource();
 	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	releasedAsOfYesterday = releasedAsOfToday;
 	charter.print(releasedToday);
-    }
-
-    /** Stats for planning */
-    double[] computeABG() {
-	return qaDelay.computeABG();
-    }
-  
-   double computeGamma() {
-	return computeABG()[2];
     }
 
 

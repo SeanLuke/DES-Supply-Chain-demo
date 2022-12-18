@@ -63,7 +63,13 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	return v.get(0);	
     }
 
-    /** @param key just for use in error messages
+    /** Parses the kind of expressions that can occur in a real-value
+	field. E.g. "3.333", "10/3", "10+3" etc. We needed this
+	because Ben likes to express processing times in his parameter
+	file as fractions (e.g.
+	[0.75/ 2.718281828, 1.25 / 2.718281828])
+	
+        @param key just for use in error messages
 	@param s  a real value or a fraction */
     public Double parseDoubleEx(String key, String s) throws IllegalInputException {
 

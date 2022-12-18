@@ -19,9 +19,9 @@ import edu.rutgers.util.*;
     processing pull requests, and for automatic replenishment when the 
     level falls below a certain point.
 
-    <p>
-    The Pool class is the common base for various "warehouses", such as the
-    Hospital/Pharmacies Pool or the Wholesale Pool.
+    <p> In SC-1, the Pool class is the common base for various
+    "warehouses", such as the Hospital/Pharmacies Pool or the
+    Wholesale Pool.
 
     <P>
     A Pool typically stores a Batch product (thus, <tt>prototype</tt> is Batch),
@@ -46,10 +46,10 @@ public class Pool extends sim.des.Queue
 
     protected final ParaSet para;
 
-    /* Controlled by configuration parameters, e.g.:
-    WholesalerPool,reorderPoint,0.75
-    WholesalerPool,reorderQty,0.25
-    */
+    // Controlled by configuration parameters, e.g.:
+    // WholesalerPool,reorderPoint,0.75
+    // WholesalerPool,reorderQty,0.25
+   
     private boolean hasReorderPolicy = false;
     protected double reorderPoint=0;
     private double reorderQty=0;
@@ -60,8 +60,9 @@ public class Pool extends sim.des.Queue
 	return everReceived;
     }
 
-    /** Ever received by the pool (not including the amount "received"
-	during the initialization process in the constructor)
+    /** The amount ever received by the pool (not including the amount
+	"received" during the initialization process in the
+	constructor)
      */
     double everReceived = 0;
     protected final double  initial;

@@ -6,7 +6,10 @@ import java.util.regex.*;
 import java.text.*;
 
 
-/** Auxiliary methods for manipulating hash tables etc */
+/** Auxiliary methods for manipulating hash tables, arrays, sets,
+    strings, etc. Mostly, the kind of stuff that I wish were included
+    into java.util, java.text, or maybe even into java.lang.
+*/
 public class Util {
 
     /** Converts an array into a hash map. This is used because Java, unlike Perl,
@@ -22,28 +25,32 @@ public class Util {
 	return h;
     }
 
-    /** Can also take String[] a */
+    /** Converts an array into a Set. Can also take String[] a */
     public static HashSet<String> array2set(String... a) {
 	HashSet<String> h = new HashSet<String>();
 	for(String x:a) h.add(x);
 	return h;
     }
 
+    /** Converts an array into a Vector. */
     public static <T> Vector<T> array2vector(T... a) {
 	Vector<T> v = new  Vector<>();
 	for(T x:a) v.add(x);
 	return v;  	
     }
     
-    /*
-    public static HashSet<String> array2set(String[] a) {
-	HashSet<String> h = new HashSet<String>();
-	for(String x:a) h.add(x);
-	return h;
-    }
-    */
-
-    /** Only uses non-null non-blank strings */
+    /** It's like String.join(), but more convenient. It can join
+	the string representation of any objects, and ignores nulls
+	and blank strings.
+	@param A Collection (e.g. Vector) or elements whose string
+	representations are to be joined into a single
+	string. Elements that are null, or those whose representation
+	is an empty string or white space are ignored, as if they
+	weren't in this collection.
+	@param sep The separator to insert between (non-ignored) joined
+	elements.
+		
+	*/
     public static <T> String joinNonBlank(String sep, Collection<T> v) {
 	Vector<String> w = new Vector<>();
 	for(T q: v)  {
@@ -79,20 +86,6 @@ public class Util {
     }
 
     
-    /*
-   public static <T> String joinNonBlank(String sep, String[] z) {
-	Vector<String> w = new Vector<>();
-	for(String q: z)  {
-	    if (q==null) continue;
-	    q = q.trim();
-	    if (q.length()==0) continue;
-	    w.add(q);
-	}
-	return join(sep, w);  
-    }
-    */
-
-    
     public static <T> String join(String sep, Vector<T> v) {
 	String s="";
 	for(T q: v)  {
@@ -100,12 +93,8 @@ public class Util {
 	    s += q.toString();
 	}
 	return s;
-   }
-    /*
-    public static String join(String sep, Vector<String> v) {
-	return join(sep, v.toArray(new String[0]));
     }
-    */
+
     public static <T> String join(String sep, T x[]) {
 	String s="";
 	for(int i=0; i<x.length; i++) {
@@ -293,6 +282,12 @@ The Java programming language guarantees that the operands of operators appear t
 	return q[q.length-1];
     }
 
+    /** Compact formatting for doubles.
+	@param x The value to format
+	@return If x actually represents an integer, format it as
+	an integer (this 3.0 will be "3", not "3.0"); otherwise,
+	use Java's default formatting for double.
+    */
     public static String ifmt(double x) {
 	return (long)x==x ? ""+ (long)x : "" + x;
     }

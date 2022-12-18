@@ -174,7 +174,7 @@ private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputExcept
 	    if (v.size()!=2) throw new IllegalArgumentException("Invalid data for " +name+ ".input");
 	    Steppable node = demo.lookupNode(v.get(0));
 	    if (node==null) throw new IllegalArgumentException("Invalid input name for " +name+ ".input: " + v.get(0));
-	    SplitManager.HasQA inputNode = (SplitManager.HasQA) node;
+	    AbstractProduction inputNode = (AbstractProduction) node;
 	    double fraction = Double.parseDouble(v.get(1));
 	    QaDelay inputQaDelay = inputNode.getQaDelay();
 	    if (inputQaDelay == null) throw new IllegalArgumentException("Cannot construct track " +name+ ", because its input node has no QA stage");

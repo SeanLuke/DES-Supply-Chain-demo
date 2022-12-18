@@ -1,13 +1,11 @@
 package  edu.rutgers.supply;
 
 import java.util.*;
-//import java.text.*;
 
 import sim.engine.*;
 import sim.util.*;
 import sim.des.*;
 
-import edu.rutgers.util.*;
 
 /** A LotInfo object contains useful information about a lot of product
     (which itself is modeled by a Batch object), such as the

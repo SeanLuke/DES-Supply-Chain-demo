@@ -8,7 +8,9 @@ import sim.util.*;
 import sim.util.distribution.*;
 import sim.des.*;
 
-import edu.rutgers.util.*;
+import edu.rutgers.util.IllegalInputException;
+import edu.rutgers.util.Config;
+import edu.rutgers.util.ParaSet;
 
 /** A Batch object stores a specified amount of the underlying
     resource (e.g. drug), and has a manufacturer lot number

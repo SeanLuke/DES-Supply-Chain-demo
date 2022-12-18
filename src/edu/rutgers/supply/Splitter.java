@@ -1,4 +1,4 @@
-package  edu.rutgers.pharma3;
+package edu.rutgers.supply;
 
 import edu.rutgers.supply.*;
 
@@ -7,27 +7,46 @@ import sim.des.*;
 import sim.engine.*;
 import java.util.*;
 
-import  edu.rutgers.util.Util;
+import edu.rutgers.util.Util;
 
 /**
-  A splitter divides its input into several streams, 
-  sending a specified percent of its input into each receiver.
+  A Splitter divides its input into several streams, 
+  sending a specified percent of its input into each receiver. 
+
+  <p>A Splitter normally has several (two or more) Receivers attached
+  to it. (Well, you can have just 1 Receiver of course, but that will
+  be a useless trivial splitter). A non-negative real number is
+  associated with each Receiver, indicating the desired portion
+  ("target fraction") of the incoming stream of product that should go
+  to that Receiver. The Splitter tries to divide the incoming stream
+  of product between its receivers so that the fraction received by
+  each receiver is proportional to the number associated with that
+  receiever.
+
+  <P>A Splitter can work both with a fungible resource (CountableResource)
+  and with a Batch resource. Either way, it applies fractions to the
+  amount of the underlying resource, rather than to the number of batches.
+
+  <p>A Splitter never "divides"
+
 **/
 
 public class Splitter extends If {
 
-
-    static class RData {
-	/** fractions[j] specifies the fraction of the input that will
-	    be sent to the j-th receiver */
-	final double fraction;
+    /** An auxiliary class used for accounting of the product going
+	to a particular Receiever */
+    public static class RData {
+	/** specifies the fraction of the input that will
+	    be sent to this receiver */
+	public final double fraction;
 	/** How much resource has been given to this receiver so far */
-	double given=0;
-	RData(double f) { fraction = f; }
-	RData(RData z) { this(z.fraction); }
+	protected double given=0;
+	public RData(double f) { fraction = f; }
+	public RData(RData z) { this(z.fraction); }
     }
 
-    HashMap<Receiver, RData> data = new HashMap<>();
+    /** Accounting structures for all receivers */
+    public HashMap<Receiver, RData> data = new HashMap<>();
 	
     void throwDoNotUse()        {
         throw new RuntimeException("Splitters do not respond to addReceiver(Receiver).  Instead, use addReceiver(Receiver, fraction).");
@@ -37,51 +56,56 @@ public class Splitter extends If {
         super(state, typical);
 	setName("Splitter of " + typical.getName());
     }
-                  
+
+
+    /** One should not use this method; use
+	addReceiver(Receiver* receiver, double fraction) instead */
     public boolean addReceiver(Receiver receiver) {
 	throwDoNotUse();
 	return false;
     }
-    
+
+    /** Adds one more destination (output channel) to this splitter. One
+	must make addReceiver() calls for all destinations before starting
+	using the splitter.
+        @param receiver A receiver to add
+	@param fraction A non-negative number indicating the portion of the
+	incoming stream of resource that should be sent to this Receiver.  If the fraction values for all Receivers sum to 1.0, then each one, indeed, is simply equal to the target fraction of the resource going to the associated receiver. Otherwise, we internally normalize by dividing each "fraction" value by the sum of all "fraction" values. So for example if we have 3 receivers with fractions 10, 30, 10, then they will receive (approximately) 20%, 60%, and 20% of the entire input stream.
+	
+     */
     public boolean addReceiver(Receiver receiver, double fraction)      {
 	if (data.containsKey(receiver))  throw new IllegalArgumentException("Duplicate addReceiver())");
 	if (fraction < 0) throw new IllegalArgumentException("Fractions must be non-negatitve; given " + fraction);
 	data.put(receiver, new RData(fraction));
 	setName("Splitter("+showRatios()+")");
-	//System.out.println("Add; Report for " + getName() + "\n" + report());
 			  
 	return super.addReceiver(receiver);
     }
 
+
+    /** One can use this method, but it's not recommended to do this after
+	the Splitter started to be used, because the arithmetic will be
+	rather confused. */
     public boolean removeReceiver(Receiver receiver)        {
 	data.remove(receiver);
-	//System.out.println("Remove; Report for " + getName() + "\n" + report());
 	return super.removeReceiver(receiver);
     }
 
-
-    double totalAccepted=0;
-    int cnt1=0, cnt2=0;
+    private double totalAccepted=0;
 
     /** This is called after a successful accept() by a downstream receiver */
     public void selectedOfferAccepted(Receiver receiver, Resource originalResource, Resource revisedResource) {
-	cnt2++;
 	RData d = data.get(receiver);
 
 	//System.out.println("Select; Report for " + getName() + "\n" + report());
-
 	
-	if (d==null) throw new  IllegalArgumentException("Unknown receiver: " + receiver);
+	if (d==null) throw new IllegalArgumentException("Unknown receiver: " + receiver);
 	double givenAmt=0;
 
-	/*
-	if (originalResource==null) { // this is how they handle entities...
-	    givenAmt = (lastBatch==null)? 1: lastBatch.getContentAmount();
-	} else if (originalResource  instanceof CountableResource) {
+       
+	if (originalResource  instanceof CountableResource) {
 	    givenAmt = originalResource.getAmount() -  revisedResource.getAmount();
-	} else
-	*/
-	if (originalResource instanceof Batch) {
+	} else	if (originalResource instanceof Batch) {
 	    givenAmt = ((Batch)originalResource).getContentAmount();
 	} else { // Entity. We know that one was accepted
 	    givenAmt = 1;// originalResource.getAmount();
@@ -91,10 +115,7 @@ public class Splitter extends If {
 	d.given  += givenAmt;
     }
 
-    //private Batch lastBatch = null;
-
-    double computeSumF(//Abstract
-		       Collection<Receiver> receivers) {
+    public double computeSumF(Collection<Receiver> receivers) {
 	double sumF=0;
 	for(Receiver r: receivers) {
 	    RData d = data.get(r);
@@ -112,31 +133,20 @@ public class Splitter extends If {
 	Provider.offerReceiver(Receiver, double).
 
 	@param receivers  This should be exactly the array from Provider.receivers, or this method will break.
+	@param amount This could be some amount of a fungible resource (CountableResource) or a Batch. Either way, the Splitter will send the entire thing to one chosen Receiver. The choice is made to keep the receivers' fractions of the received resource as close to the target values as possible.
      */    
     public Receiver selectReceiver(ArrayList<Receiver> receivers, Resource amount) {
-	cnt1 ++;
 	if (receivers.size()==0) throw new IllegalArgumentException("No receivers!");
 	
 	double sumF= computeSumF(receivers);
-	/*
-	for(Receiver r: receivers) {
-	    RData d = data.get(r);
-	    if (d==null) throw new IllegalArgumentException("Unknown receiver: " + r);	   
-	    sumF += d.fraction;
-	}
-	*/
 	if (sumF == 0) {
-	    //System.out.println(report());
 	    throw new IllegalArgumentException(toString()+": All fractions are zero!");
 	}
 	
-
 	// How much "stuff" are we offering?
 	double amt = 
 	    (amount instanceof Batch)? ((Batch)amount).getContentAmount() :
 	    amount.getAmount();
-
-	//lastBatch = (amount instanceof Batch)? (Batch)amount : null;
 	
 	Receiver chosenR = null;
 	double minZ = 0;
@@ -150,7 +160,7 @@ public class Splitter extends If {
 		minZ = z;
 	    }
 	}
-	//System.out.println("Chose: " +chosenR);
+
 	if (chosenR==null)  throw new IllegalArgumentException("Something wrong: chose null out of "+ receivers.size()+" receivers!");
 	return chosenR;
     }
@@ -160,10 +170,6 @@ public class Splitter extends If {
         return "Splitter@" + System.identityHashCode(this) + "(" + (getName() == null ? "" : getName()) + typical.getName() + ")";
         }
 
-    /** Does nothing.  There's no reason to step a Splitter. */
-    //public void step(SimState state)        {
-        // do nothing
-//}
 
     private String showRatios() {
 	Vector<String> q=new Vector<>();
@@ -183,7 +189,7 @@ public class Splitter extends If {
 	return String.join(":", q);	
     }
 
-    
+    /** Reports how much product has been sent to each channel */
     public String report() {
 	Vector<String> v=new Vector<>();
 	for(Receiver r: data.keySet()) {

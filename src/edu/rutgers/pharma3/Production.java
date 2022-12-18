@@ -20,11 +20,11 @@ import edu.rutgers.supply.Disruptions.Disruption;
 
     <p>A Production object typically includes a ProdDelay (modeling
     the production step), an optional SimpleDelay modeling a
-    transportaion delay, and a QaDelay modeling the testing stage. All
-    three of them are actually "throttled delays", i.e. a combination
-    of a ThrottleQueue (which holds batches to be processed) and a
-    SimpleDelay (or a derived class object) which handles at most 1
-    batch at a time.
+    transportaion delay, and a QaDelay modeling the testing stage. In
+    accordance with Ben's "forklift model", all three of them are
+    actually "throttled delays", i.e. a combination of a ThrottleQueue
+    (which holds batches to be processed) and a SimpleDelay (or a
+    derived class object) which handles at most 1 batch at a time.
 
     <P>Production objects are used to represent the 3 stages of the FC
     operation (API production, drug production, and packaging), as
@@ -45,11 +45,9 @@ import edu.rutgers.supply.Disruptions.Disruption;
 
 
   */
-public class Production extends sim.des.Macro
-    implements Reporting,  Named, SplitManager.HasQA
+public class Production extends AbstractProduction
+    implements Reporting,  Named
 {
-
-	
 
     /** Represents the storage of input materials (in Batches). They are already QA-tested by previous
 	stages of the chain. These Queues are not scheduled; instead, Production.step() pulls
@@ -63,14 +61,8 @@ public class Production extends sim.des.Macro
     ProdDelay prodDelay;
     /** Exists only in CMO tracks */
     private SimpleDelay transDelay = null;
-    /** Models the delay taken by the QA testing at the output. This
-	may be null if this production facility has no QA stage (such
-	as CMO Track A).
-    */
-    private QaDelay qaDelay;
     
-    final //Prod
-	ThrottleQueue needProd;
+    final ThrottleQueue needProd;
     private final ThrottleQueue needTrans, needQa;
 
     /** If an external producer sends it product for us to do QA, this
@@ -79,7 +71,6 @@ public class Production extends sim.des.Macro
     
 
     public ProdDelay getProdDelay() { return prodDelay; }
-    public QaDelay getQaDelay() { return qaDelay; }
 
     /** Returns the last existing stage of this production unit. Typically
 	this is the qaDelay, but some units (CMO Track A) don't have QA. */
@@ -164,8 +155,7 @@ public class Production extends sim.des.Macro
 	
 	prodDelay = new ProdDelay(state,outResource);
 	prodDelay.addReceiver(needTrans!=null? needTrans: needQa);
-	needProd = new //Prod
-	    ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
+	needProd = new ThrottleQueue(prodDelay, cap, para.getDistribution("prodDelay",state.random));
 	needProd.setWhose(this);
 	needProd.setAutoReloading(true);
 	
@@ -249,8 +239,8 @@ public class Production extends sim.des.Macro
 
 
     /** Checks if there are any "depletion" disruptions on any of our
-	input resources. This is only done in FC, not CMO, as per
-	Abhisekh's specs.
+	input resources. This is only done in FC, and not in CMO, as
+	per Abhisekh's specs.
     */
     private void disruptInputs(SimState state) {
 	if (getName().startsWith("Cmo")) return;
@@ -411,26 +401,6 @@ public class Production extends sim.des.Macro
 	return true;
 
     }
-
-    /** It's like ThrottleQueue, except that it does not actually hold much 
-	product in, but "makes" it on the fly */
-    /*
-   class ProdThrottleQueue extends ThrottleQueue {
-	public ProdThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
-	    super( _delay, cap,  _delayDistribution);
-	}
-
-	// This method ensures that whenever this queue is called
-	//    upon to provide a batch for the ProdDelay (via its slackProvider
-	//    mechanism) it will make itself non-empty, if at all possible. 
-	public boolean provide(Receiver receiver) {
-  	    if (getAvailable()==0) {
-		mkBatch(getState());
-	    }
-	    return super.provide(receiver);
-	}
-    }
-    */
     
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
@@ -483,16 +453,6 @@ public class Production extends sim.des.Macro
 
     }
 
-    //--------- Managing the downstream operations
-
-    SplitManager sm;
-
-    /** Adds a destination to the output of this production unit (typically, the
-	QA delay) */
-    public void setQaReceiver(Receiver rcv, double fraction) {  
-	sm.setQaReceiver(rcv, fraction);
-    }
-
     /** Assuming that RM-API-BulkDrug-PackagedDrug is the main
 	production chain, which input buffer is the "main" one for
 	this production unit? This method is used as a help in simplified 
@@ -514,7 +474,8 @@ public class Production extends sim.des.Macro
     /** The main performance parameters of this Production node, for
 	use in the overall system performance forecasting in 
 	GraphAnalysis. 
-	
+
+	<p>
 	FIXME: Same as in GraphAnalysis, the assumption here is that 
 	the outBatchSize = the inBatchSize for the "main" ingredient,
 	and there are no constraints for non-main ingredients.
@@ -563,15 +524,6 @@ public class Production extends sim.des.Macro
 	    }
 	    thruput = p.outBatchSize / d;
 	}
-    }
-
-
-    /** Stats for planning */
-    double[] computeABG() {
-	return qaDelay!=null? qaDelay.computeABG() : new double[] {0,0,1};
-    }
-    double computeGamma() {
-	return computeABG()[2];
     }
 
     

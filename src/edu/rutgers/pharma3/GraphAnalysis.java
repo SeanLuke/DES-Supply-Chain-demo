@@ -12,8 +12,7 @@ import sim.util.distribution.*;
 import sim.des.*;
 
 import edu.rutgers.util.*;
-import edu.rutgers.pharma3.Splitter.RData;
-import edu.rutgers.pharma3.SplitManager.HasQA;
+import edu.rutgers.supply.Splitter.RData;
 	
 /** This class exists so that we can figure in advance what would happen with a given amount (say, 1000 units) of RM that enters the system. Assuming that everything works as designed (with the split ratios, fault rates, etc, already in the system), how much of this RM will eventually arrive to the DC in the form of this finished product? On the way there, how much will pass through each production node? 
 
@@ -33,7 +32,8 @@ public class GraphAnalysis {
 	    super(f);
 	    toQa = _toQa;
 	}
-
+	double getGiven() { return given; }
+	void setGiven(double x) { given = x; }
     }
 
     
@@ -91,7 +91,7 @@ public class GraphAnalysis {
 	    rawMaterialSupplier. It should have all its outputs etc
 	    already properly set.
 	 */
-	Node(HasQA _x, int _no) {
+	Node(AbstractProduction _x, int _no) {
 	    no = _no;
 	    Production x = (_x instanceof Production)? (Production)_x: null;
 	    double abg[] = {0,0,1};
@@ -178,8 +178,8 @@ public class GraphAnalysis {
 		for(int j: outputs.keySet()) {
 		    RData2 d = outputs.get(j);
 		    String name = allProd[j].getName()+	(d.toQa? ".qa" : "");
-		    v.add("to " +name+" "+fa(d.given)+" ("+fpc(d.fraction)+")");
-		    sum += d.given;
+		    v.add("to " +name+" "+fa(d.getGiven())+" ("+fpc(d.fraction)+")");
+		    sum += d.getGiven();
 		}
 		if (outputs.size()>1) s += "" + fa(sum) + ": ";
 		s += String.join("; ", v);
@@ -257,7 +257,7 @@ public class GraphAnalysis {
 	    } else {
 		y.inputAmt.put(root.no, sent);
 	    }
-	    d.given = sent;
+	    d.setGiven( sent);
 	    analyze(y, thruputConstrained, useSafety);
 	}
     }

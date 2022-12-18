@@ -7,17 +7,27 @@ import sim.engine.*;
 import sim.util.*;
 import sim.des.*;
 
-import   edu.rutgers.util.*;
+import edu.rutgers.util.Util;
+import edu.rutgers.util.IllegalInputException;
 
 
-/** An object implementing this interface will be able to tell something about its current state. */
+/** An object implementing this interface will be able to tell
+    something about its current state, and its history (how much
+    work it has done, how good that work has been, etc).
+*/
 public interface Reporting {
     public String report();
 
+    /** Returns the last component of the class name of this object.
+	E.g. for an edu.rutgers.pharma3.QaDelay it will return "QaDelay".
+     */
     default String cname() {
 	return Util.cname(this);
     }
 
+    /** Given a message, prepends it with a text informing what object it
+	has come from (e.g. "QaDelay.Drug: ").
+     */
     default String wrap(String msg) {
 	String s = "[" + cname();
 
