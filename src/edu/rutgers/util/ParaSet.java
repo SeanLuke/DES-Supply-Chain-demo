@@ -239,7 +239,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     
     /** Creates a random distribution described by the parameters
 	in the specified line of this para set.
-	@param Shift the distribution to the right by this much. Normally 0, this value can be non-zero when modeling disruptions.     
+	@param offset Shift the distribution to the right by this much. Normally 0, this value can be non-zero when modeling disruptions.     
 	@return The distribution, or null if one isn't found. (This is handy for some Pools)
     */
     public AbstractDistribution getDistribution(String key,

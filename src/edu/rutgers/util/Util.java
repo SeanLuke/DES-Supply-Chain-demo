@@ -42,7 +42,7 @@ public class Util {
     /** It's like String.join(), but more convenient. It can join
 	the string representation of any objects, and ignores nulls
 	and blank strings.
-	@param A Collection (e.g. Vector) or elements whose string
+	@param v A Collection (e.g. Vector) or elements whose string
 	representations are to be joined into a single
 	string. Elements that are null, or those whose representation
 	is an empty string or white space are ignored, as if they

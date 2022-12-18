@@ -73,12 +73,17 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	production facility (or a transportation service, etc) which can
 	handle no more than a given number of batches at any given
 	time.
+
+	<p>Created by this constructor is a Queue object into which
+	one can put any number of "raw" batches, where they will sit
+	and wait for the production facility to grab them whenever
+	it's ready.
+
 	
 	@param delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
 	
 	@param cap The max number of batches that the production unit (the Delay object) can physically handle simultaneously. (Usually, 1).
 
-	@return A Queue object into which one can put any number of "raw" batches, where they will sit and wait for the production facility to grab them whenever it's ready. 
      */
     public  ThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
 	super(_delay.getState(), _delay.getTypical());

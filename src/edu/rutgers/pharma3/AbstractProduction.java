@@ -46,7 +46,7 @@ public abstract class AbstractProduction extends sim.des.Macro {
 	(typically, the QA delay). This should be called after the
 	constructor has returned, and before the simulation starts.
 
-	@param _rcv The place to which good stuff goes after QA
+	@param rcv The place to which (some portion of) output goes
 	@param fraction This should be 1.0 if all output goes to the
 	same place, or the appropriate fraction (a number in the [0;1]
 	range) for each destination if there are multiple destinations.

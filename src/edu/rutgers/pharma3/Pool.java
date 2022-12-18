@@ -524,8 +524,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
     /** Simulates theft or destruction of some of the product stored in 
 	this pool
-	@param The amount of product (units) to destroy.
-	@param return The amount actually destroyed. It may be smaller
+	@param amt The amount of product (units) to destroy.
+	@return The amount actually destroyed. It may be smaller
 	than requested (because there wasn't this much), or a bit
 	larger (becasuse of batch-size rounding)
     */
