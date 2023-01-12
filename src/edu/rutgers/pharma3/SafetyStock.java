@@ -53,7 +53,7 @@ public class SafetyStock extends Pool  {
     private Delay refillDelay = null;
 
     /** Are we allowed to access this safety stock only when a
-	supply-flowe anomaly has been detected? If non-null, this
+	supply-flow anomaly has been detected? If non-null, this
 	safety stock can only be used if the associated InputStore has
 	currently detected an anomaly. The double value indicates the
 	actuation delay (i.e. the anomaly must have been in effect for
@@ -71,25 +71,39 @@ public class SafetyStock extends Pool  {
 	refillDelay = new Delay(state,prototype);
 	refillDelay.setDelayDistribution(refillDistr);
 	refillDelay.addReceiver(this);
-	// to ensure multi-batch shipments are consolidasted safely
-	refillDelay.setDropsResourcesBeforeUpdate(false);
-
+	// to ensure multi-batch shipments are consolidated safely
+	if (getTypical() instanceof Batch) {
+	    refillDelay.setDropsResourcesBeforeUpdate(false);
+	}
+	
 	Double q = para.getDouble("needsAnomaly", null);
 	needsAnomaly = (q==null || q<0) ? null: q;
 
 
-      // Initialize the safety stock
-	magicFeed(this, initial);
+	//-- The safety stock has already been initialized by super(...),
+	//-- i.e. the Pool constructor. No need to do that again!
+	//-- magicFeed(this, initial);
 	everReceived = 0; // not counting the initial supply
 
 	
     }
   
     protected void reorderCheck() {
-	double need = reorderPoint - (currentStock + onOrder);
-	if (need <= 0) return;
-	sentToday = magicFeed(refillDelay, need);
-	onOrder += sentToday;
+	double deficit = reorderPoint - (currentStock + onOrder);
+
+	double now = getState().schedule.getTime();
+	//	System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
+	//			   "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
+	//			   " + OO:" + onOrder + ")=deficit=" + deficit + ". In delay=" +  refillDelay.getDelayed());
+
+	if (deficit <= 0) return;
+
+
+	double need = initial - (currentStock + onOrder);
+	orderedToday = magicFeed(refillDelay, need);
+	onOrder += orderedToday;
+	everOrdered += orderedToday;
+
     }
 
     
@@ -103,6 +117,8 @@ public class SafetyStock extends Pool  {
 	@return How much stuff (units) has actually be sent. It can exceed amt, due to the last-batch rounding.
     */
     private double magicFeed(Receiver rcv, double amt) {
+	//	System.out.println("DEBUG:" + getName() + ", magicFeed(" +amt+") to " +rcv);
+
 	double sent = 0;
 	Provider provider = null;  // why do we need it?	    
 	if (prototype instanceof Batch) {
@@ -117,11 +133,14 @@ public class SafetyStock extends Pool  {
 	    }
 	    if (delay!=null) delay.setUsesLastDelay(false);
 	} else {
+	    amt = Math.ceil(amt); // ensure that the value is integer, as needed for CR
+	    
 	    CountableResource b = new CountableResource((CountableResource)prototype, amt);
 	    if (!rcv.accept(provider, b, amt, amt)) throw new AssertionError("Queue did not accept");
 	    sent += amt;
 	}
-	if (Demo.verbose) System.out.println(getName() + " magicFeed gives " + sent);
+	//if (Demo.verbose)
+	//	System.out.println("DEBUG:" + getName() + " magicFeed gives " + sent);
 	return sent;
     }
 

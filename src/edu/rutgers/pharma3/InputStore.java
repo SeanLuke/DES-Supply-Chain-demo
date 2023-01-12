@@ -86,6 +86,8 @@ class InputStore extends sim.des.Queue {
 	if (expiredProductSink!=null) addReceiver(expiredProductSink);
 	safety = SafetyStock.mkSafetyStock( state, whose,
 					    config,  resource);
+	//-- we schedule it so that it would check for replenishment daily
+	state.schedule.scheduleRepeating(safety);
 
     }
 

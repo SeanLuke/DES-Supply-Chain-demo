@@ -54,6 +54,8 @@ public class Pool extends sim.des.Queue
     protected double reorderPoint=0;
     private double reorderQty=0;
 
+    /** How much this pool has ordered from its own suppliers, for its own
+	replenishment */
     protected double everOrdered=0;
     
     public double getEverReceived() {
@@ -121,12 +123,15 @@ public class Pool extends sim.des.Queue
 	charter=new Charter(state.schedule, this);
 	doChartHeader(moreHeaders);
 
+
+	//System.out.println("DEBUG:" + getName() + ", init done, stock=" +getContentAmount());
     }
 
     
-    /** Loads the Queue with the "initial supply", in standard size batches made today */
+    /** Instantly loads the Queue with the "initial supply", in standard size
+	batches made today */
     private void initSupply(double initial) {
-
+	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") in");
 	if (prototype instanceof Batch) {
 
 	    int n = (int)Math.round( initial / batchSize);
@@ -142,6 +147,7 @@ public class Pool extends sim.des.Queue
 	    Provider provider = null;  // why do we need it?
 	    if (!accept(provider, b, initial, initial)) throw new AssertionError("Queue did not accept");
 	}	
+   	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") out");
     }
 
     /** An auxiliary structure that stores information about one of
@@ -238,10 +244,10 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     ExpiredSink expiredProductSink;
   
 
-    /** How mauch has  been demanded from this pool by its customers */
+    /** How much has  been demanded from this pool by its customers */
     double everSent = 0;
 
-    /** Records, for each day, how much has been sent */
+    /** Records, for each day, how much has been sent by this pool*/
     Vector<Double> dailyDemandHistory = new Vector<Double>();
     double demandedToday=0, sentToday=0;
     
@@ -411,6 +417,12 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     
     /** Performs a reorder, if required; then fills any outstanding back orders. */
     public void step​(sim.engine.SimState state) {
+
+	double now = getState().schedule.getTime();
+	//System.out.println("DEBUG:" + getName() + ", t="+now+", step");
+
+
+	
 	reorderCheck();
 	fillBackOrders();
 	doChart(new double[0]);
@@ -439,9 +451,13 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 
 	double a = Batch.getContentAmount(amount);
+
+
+	//	System.out.println("DEBUG:" + getName() + ", stock=" +getContentAmount() +", accepting " +a + " from provider=" + provider);
+	
 	boolean z = super.accept(provider, amount, atLeast, atMost);
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
-	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Out pools ought not to do that!");
+	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
 
 	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery
 	    onOrder -= a;
@@ -459,6 +475,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    batchesReceivedToday ++;
 	    sumOfAgesReceivedToday += (now - ((Batch)amount).getLot().getEarliestAncestorManufacturingDate());
 	}
+
+	//	System.out.println("DEBUG:" + getName() + ", everReceived=" +everReceived +", receivedToday=" + receivedToday + ", currentStock=" + currentStock);
 
 	
 	return z;
