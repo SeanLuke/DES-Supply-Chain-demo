@@ -70,6 +70,7 @@ public class SafetyStock extends Pool  {
 	AbstractDistribution refillDistr = para.getDistribution("delay", state.random); 
 	refillDelay = new Delay(state,prototype);
 	refillDelay.setDelayDistribution(refillDistr);
+	refillDelay.setName("RefillDelay." + name);
 	refillDelay.addReceiver(this);
 	// to ensure multi-batch shipments are consolidated safely
 	if (getTypical() instanceof Batch) {
@@ -89,12 +90,17 @@ public class SafetyStock extends Pool  {
     }
   
     protected void reorderCheck() {
-	double deficit = reorderPoint - (currentStock + onOrder);
 
 	double now = getState().schedule.getTime();
-	//	System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
-	//			   "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
-	//			   " + OO:" + onOrder + ")=deficit=" + deficit + ". In delay=" +  refillDelay.getDelayed());
+	if (Demo.verbose && currentStock != getContentAmount()) {
+	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
+	}
+	
+	double deficit = reorderPoint - (currentStock + onOrder);
+
+	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
+			   "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
+				   " + OO:" + onOrder + ")=deficit=" + deficit + ". Delay=" +  refillDelay.report());
 
 	if (deficit <= 0) return;
 
@@ -117,7 +123,7 @@ public class SafetyStock extends Pool  {
 	@return How much stuff (units) has actually be sent. It can exceed amt, due to the last-batch rounding.
     */
     private double magicFeed(Receiver rcv, double amt) {
-	//	System.out.println("DEBUG:" + getName() + ", magicFeed(" +amt+") to " +rcv);
+
 
 	double sent = 0;
 	Provider provider = null;  // why do we need it?	    
@@ -136,8 +142,13 @@ public class SafetyStock extends Pool  {
 	    amt = Math.ceil(amt); // ensure that the value is integer, as needed for CR
 	    
 	    CountableResource b = new CountableResource((CountableResource)prototype, amt);
+
+	    //System.out.println("DEBUG:" + getName() + ", magicFeed(" +amt+") to " +rcv + "; sending " + b.getAmount());
+
+	    
 	    if (!rcv.accept(provider, b, amt, amt)) throw new AssertionError("Queue did not accept");
 	    sent += amt;
+
 	}
 	//if (Demo.verbose)
 	//	System.out.println("DEBUG:" + getName() + " magicFeed gives " + sent);
@@ -152,6 +163,9 @@ public class SafetyStock extends Pool  {
 
 	    Batch b = expiredProductSink.getNonExpiredBatch(this, entities, expiredAmt);
 	    currentStock -= expiredAmt[0];
+	    if (Demo.verbose && currentStock != getContentAmount()) {
+		System.out.println("DEBUG:" + getName() + ", t="+t+", mismatch (E) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
+	    }
 	    if (b==null) return false;
 	    if (b.getContentAmount()!=inBatchSize) throw new IllegalArgumentException("Unexpected batch size in " + getName() + ": wanted " + inBatchSize +", found " + b.getContentAmount());
 	    return true;
@@ -202,9 +216,9 @@ public class SafetyStock extends Pool  {
 		throw new IllegalArgumentException(msg);
 	    }		
 	} else throw new IllegalArgumentException("Wrong input resource type");
-	currentStock -= batchSize;   
-	everSent += batchSize;
-	sentToday += batchSize;
+	currentStock -= inBatchSize;
+	everSent += inBatchSize;
+	sentToday += inBatchSize;
 	return b;	    
     }
 

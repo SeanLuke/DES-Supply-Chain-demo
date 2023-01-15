@@ -399,9 +399,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	of all stored batches (in units)
      */
     public double getContentAmount()        {
-        if (resource != null) {
+        if (resource != null) {  // fungible
             return resource.getAmount();
-	} else if (entities != null) {
+	} else if (entities != null) {  // batch
 	    /*
 	    double sum = 0;
 	    for(Entity e: entities) {
@@ -415,8 +415,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 
     
-    /** Performs a reorder, if required; then fills any outstanding back orders. */
-    public void step​(sim.engine.SimState state) {
+    /** Performs a reorder, if required; then fills any outstanding back orders, and prints the chart entry. */
+    public void step(sim.engine.SimState state) {
 
 	double now = getState().schedule.getTime();
 	//System.out.println("DEBUG:" + getName() + ", t="+now+", step");
@@ -442,7 +442,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
  */
     protected double onOrder = 0;
 
-    /** This is called from a supplier when it ships a batch over. 
+    /** This is called from a supplier (or the associated Delay) when
+	a batched shipped to this pool arrives.
 
 	Every piece of resource getting into this pool goes through this method;
 	this is why we have currentStock increment done in here.
@@ -453,7 +454,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	double a = Batch.getContentAmount(amount);
 
 
-	//	System.out.println("DEBUG:" + getName() + ", stock=" +getContentAmount() +", accepting " +a + " from provider=" + provider);
+	//System.out.println("DEBUG:" + getName() + ", stock=" +getContentAmount() +", accepting " +a + " from provider=" + provider);
 	
 	boolean z = super.accept(provider, amount, atLeast, atMost);
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");

@@ -2,6 +2,7 @@
 #----------------------------------------------------
 # Sample usage:
 # ./run.sh -until 300
+# ./run3.sh -until 360 -config config/old_config_file -charts chart-01 
 #----------------------------------------------------
 
 
