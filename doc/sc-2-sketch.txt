@@ -1,0 +1,157 @@
+SC-2 MASON DES implementation sketch
+------------------------------------
+
+   Draft 2023-01-31.
+
+This is draft. "XXXX" stands for places that I still need to fill in or expand.
+
+----------------------------------------
+
+Underlying objects:
+* UPatient extends CountableResource
+* UEE extends CountableResource
+* UDS extends CountableResource
+
+* RawMaterialEE, RawMaterialDS
+* PacMatEE, PacMatDS
+
+---------------------------------------
+
+Entities:
+* EE extends Entity
+ -- stores 1 UEE
+ -- the info structure contains info on EE's "life story": manuf date, predicted breakdown point, predicted end-of-life point. (In terms of days of service, not calendar dates, because EEs only wear out when in use).  We may even create the entire future life story -- all breakdown points and end of life point -- at the creation of the device, to make later processing easier. This is possible because those apparently are just based on chronological days of service, not on the specific cirucmstances of the service.)
+
+* DS extends Entity
+ -- stores 1 UDS
+ -- info
+
+* Patient extends Entity;
+   -- stores: 1 UPatient; possibly also 1 UEE + 1 UDS
+   -- info: EE's and DS's;  patient's story (...)
+
+
+--------
+
+
+
+* WaitingPatientPool (WPP): extends Queue<Patient>
+   -- Patients in this queue don't have EE+DS
+   -- scheduled step(): every day puts a certain number of patients (drawn from a distribution) into the queue. (It would be "more DES" to have a separate Source element, but I think it's an overkill)
+
+* ServicedPatientPool (SPP): extends Delay<Patient>
+   (It simultaneously models the Seized Equipment Pool as well, since there
+    is a 1:1 mapping between patients and their equipment)
+   (It cannot be a SimpleDelay, because the patient servicing time is
+   drawn from a distribution [skewed Triangular(1, 4, 180) days], and
+   therefore the system is not FIFO)
+   -- Each Patient here has EE+DS
+   -- receiver = PatientSink
+   -- scheduled step {
+        - while possible (= a patient is available in PWRP or WPP, and equipment is available in HEP) { take patient from PWRP or WPP, EE or EE+DS from HEP, put an entry here }
+	- delay time (T) for the patient is chosen as follows:	
+        - Normally, for patients from WPP, T is drawn from the "service duration" AKA "time seized" distribution ("Kit (EE plus DS) Time Seized (per patient visit): Triangular(1, 4, 180) days"); from patients from PWRP, the "remaining T" is already recorded in Patient.info.
+        - But if the EE has a breakdown or end-of-life predicted to occur during this time, the delay time is set shorter (only until the EE event), and approprite flags are set in the Patient.info to indicate the special circumstances.
+
+      }
+   -- offerReceiver(Receiver receiver, double atMost) {
+         // this is triggered at the end of the delay, i.e. the end of treatment
+	 // or EE failure
+	 - check flags on the Patient
+	 - if no special flags, the  EE unit is put into HEP, DS to DS sink, and the patient goes to the default receiver (Patient Sink)
+	 - if the flags indicate EE end-of-life, EE goes to EE Sink, patient to PWRP (Waiting for Replacement)
+	 - if the flags indicate EE end-of-life, EE goes to MRP, patient to PWRP (Waiting for Replacement)
+	 
+      }
+   -- handling EE breakdowns? detecting = XXX; send unit to EE; patient sent to PWRP, timing = XXX
+   -- One way to handle breakdowns is as follows. When a Patient (with EE) is put into this Delay, we randomly decide if the EE will break during his stay; if it does, we modify that patient's delay time as needed, and also set a boolean flag on the patient; so when that patient comes out of the delay, offerReceiver will know that it's to be routed differently.
+
+* PatientsWaitingForReplacementPool (PWRP): extends Queue <Patient>
+   -- they have DS but no EE
+   -- no step() or receivers; fully managed by  ServicedPatientPool
+
+* Maintenance and Repair Pool (MRP): extends Delay<EE>
+  -- setReceiver(HEP.qee)
+  -- no step() needed; units are put in by SPP
+  -- delay time: EE Repair Time: Unif(8, 10) days. There is apparently no capacity constraint (at least the param file mentions none).
+  
+
+* HospitalEquipmentPool (HEP) {
+    Queue<EE> qee;
+    Queue<DS> qds;
+    -- two buffers (Delay) for receiving shipments (InDelay)
+    -- The functionality of qee and qds is similar to that of pharma3.Pool
+    step() {
+       -- It's important to distinguish a "replenishment order" (which
+          goes to some pool, instructing it to send some number of
+          units), and a "production order", which goes to the factory
+          (FC) to initiate a cascade of production processes
+          there. The HEP generates both kinds of orders (see below).
+       -- the usual replenishment check for qee and qds
+       -- if replenishment happens today, the entire replenishment order
+          goes to a single provider (calling e.g. EEDS.receiveOrder(InDelay,amt)
+	  - EE Supplier Choice Probability: From EE Distribution Center (EEDC): 95%
+              From Distributor Pool (DP.ee): 5%
+	  - DS Supplier Choice Probability: From DS Distribution Center (DSDC): 90%
+	     From Distributor Pool (DP.ds): 10%
+	  - the order, apparently, is of a "ship all at once when ready" kind   
+	  - regardless of where the replenishment order goes, an equal size
+	    production order is simultaneously sent to the FC.
+    }
+  }
+
+* EE.DistributionCenter (EEDC) extends pharma3.Pool {
+     static class UnfilledOrder { Receiver rcv, double amt }
+     List<UnfilledOrder> unfilledOrders;
+     receiveOrder(Receiver rcv, double needed) {
+       if the desired amount is available, offer it to the receiver;
+       otherwise, add an entry to unfilledOrders
+     }
+     scheduled step() {
+        while(!unfilledOrder.isEmpty()) {
+	   if (have enough stuff to fill the first order) { fill it; }
+	   else break;
+	}
+     }
+  }
+
+* DistributorPool -- similar to the above
+
+* MedTechCompany (FC) {
+   -- fairly similar to pharma3.PharmaCompany
+   -- receiveOrder() (called by HEP) {
+      -- sends order to the 4 suppliers (EE & DS : RM & packmat), by calling MaterialSupplier.receiveOrder() on each one.
+      XXXX
+   }
+   XXXX
+
+ }
+
+* MaterialSupplier, somewhat modified from pharma3.
+  -- (4 instances used for EE & DS : RM & packmat)
+  -- very different from the "forklift model" in SC-1. In SC-2, instead, there is no capacity control, and no processing of individual small batches. Instead, we just have a Delay; receiveOrder() creates one large Batch<RawMaterialEE>, and puts it into the Delay. There is no capacity constraint on RM production, just timing. (So the physical model is: the RM supplier has on hand more RM than we ever need, and the shipping capacity is not a constraint either. So all it takes is to load and ship it from Zhejiang to New Jersey by slow boat).
+  -- The Batch<RawMaterialEE> has the "illicit percentage" in its Info structure.
+  -- RawMaterialEE is not tested, so the Delay feeds directly into the InputStore of CMO
+
+
+* EE CMO: not quite clear yet. Perhaps just a Delay, with each batch of RM mapped to a large batch of EE product... but maybe more complex. Need input from Ben (Qu. No. 6). (XXXX)
+
+
+=======================================================
+
+Some numbers:
+
+
+
+5439 patients per week; thus need to make, on average, at least 5439 good DS units per week (777 per day).
+
+The initial inventory of DS Unif(24176, 72528) is enough for 1-3 months (31-93 days).
+
+Kit (EE plus DS) Time Seized (per patient visit): Triangular(1, 4, 180) days -- thus, a EE unit on average spends ca. 60 days on a patient. Thus one needs the "fleet" of ca 777 * 60 = ca. 47,000 EE units to serve all patients in a sustainable way. This is the desired initial inventory (or, at least, we'd want to have this many units available within the first 4 months or so).   However, the param file has a much lower initial inventory:
+Unif(2590, 6907); that's going to be depleted within 3-9 days, after which the patients will start piling up in the WPP.
+
+EE Lifetime: Unif(5, 10) years, meaning the lifetime of  ca. 7.5 years (of servcie).  In other words, to sustainably replace breaking EE units, one needs the annual production of ca 777*60/7.5 = 6,000 per year = 17 per day.
+
+An EE unit 
+
+
