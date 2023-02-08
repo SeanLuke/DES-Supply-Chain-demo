@@ -3,7 +3,7 @@ SC-2 MASON DES implementation sketch
 
    Draft 2023-01-31.
 
-This is draft. "XXXX" stands for places that I still need to fill in or expand.
+This is a draft. "XXXX" stands for places that I still need to fill in or expand.
 
 ----------------------------------------
 
