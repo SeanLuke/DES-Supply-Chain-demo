@@ -285,8 +285,11 @@ public class Production extends AbstractProduction
 	startPlan = x;
     }
     
-    /** Produce as many batches as allowed by the production capacity (per day)
-	and available inputs. A disruption may reduce the production capacity temporarily.
+    /** See if the production plan and the available inputs mandate the
+	production of more batches, and if so, ensure that the prodDelay
+	is 'primed' by needProd.
+
+	A disruption may reduce the production capacity temporarily.
     */
     public void step(SimState state) {
 

@@ -1,9 +1,11 @@
 SC-2 MASON DES implementation sketch
 ------------------------------------
 
-   Draft 2023-01-31.
+   Draft 2023-02-13.
 
-This is a draft. "XXXX" stands for places that I still need to fill in or expand.
+This is a draft. "XXX" stands for places that I still need to fill in or expand.
+
+Most classes will be implemented in the new package edu.rutgers.supply.sc2, whose structure will be fairly similar to that of edu.rutgers.supply.pharma3
 
 ----------------------------------------
 
@@ -94,9 +96,7 @@ Entities:
               From Distributor Pool (DP.ee): 5%
 	  - DS Supplier Choice Probability: From DS Distribution Center (DSDC): 90%
 	     From Distributor Pool (DP.ds): 10%
-	  - the order, apparently, is of a "ship all at once when ready" kind   
-	  - regardless of where the replenishment order goes, an equal size
-	    production order is simultaneously sent to the FC.
+	  - the order is filled at once (if stuff is available), or in two parts (what's available now goes now, the rest goes as back-order later.)
     }
   }
 
@@ -121,21 +121,33 @@ Entities:
    -- fairly similar to pharma3.PharmaCompany
    -- receiveOrder() (called by HEP) {
       -- sends order to the 4 suppliers (EE & DS : RM & packmat), by calling MaterialSupplier.receiveOrder() on each one.
-      XXXX
+      XXX
    }
-   XXXX
+   XXX
 
  }
 
-* MaterialSupplier, somewhat modified from pharma3.
+* MaterialSupplier, somewhat modified from  pharma3.MaterialSupplier
   -- (4 instances used for EE & DS : RM & packmat)
   -- very different from the "forklift model" in SC-1. In SC-2, instead, there is no capacity control, and no processing of individual small batches. Instead, we just have a Delay; receiveOrder() creates one large Batch<RawMaterialEE>, and puts it into the Delay. There is no capacity constraint on RM production, just timing. (So the physical model is: the RM supplier has on hand more RM than we ever need, and the shipping capacity is not a constraint either. So all it takes is to load and ship it from Zhejiang to New Jersey by slow boat).
   -- The Batch<RawMaterialEE> has the "illicit percentage" in its Info structure.
   -- RawMaterialEE is not tested, so the Delay feeds directly into the InputStore of CMO
 
 
-* EE CMO: not quite clear yet. Perhaps just a Delay, with each batch of RM mapped to a large batch of EE product... but maybe more complex. Need input from Ben (Qu. No. 6). (XXXX)
+* EE CMO, similar to pharma3.Production. (Production is controlled by external orders and capacity)
+  -- The inputStore is like pharma3.Pool, so that it orders from the RM supplier on its own, based on its stock levels. (XXX: so do we have 2 methods of ordering RM, one from the safety stock and another from FC? Qu. No 9)
+  -- As with pharma3.Production, we have  the production Delay, transportation Delay, and QA delay.
+  -- As in pharma3.Production, the variable this.startPlan keeps track of the amount of product (EE units) that need to be produced (more precisely, to be put into the prodDelay). (Perhaps it would be better to have not a single scalar variable, but a list of {orderNo, amt} pairs, so that a shipping label with the order number could be attached to each batch being shipped).
+  -- Production orders received from the FC by this.receiveOrder(amt, orderNo), which increments this.startPlan
+  -- Additionally (this is not in Ben's param file, but it is an easy expedient to compensate for discarded "badput"), this.receiveOrder() is also called from the downstream EE QA (testing) units, whenever tested units are discarded. In these calls, the amt is equal to the number of discarded units, and orderNo is the same as that associated with the discarded unit.
+  -- as in pharma3.Production,  ThrottleQueue needProd is used to ensure continuous operation of the production system (i.e., if any work needs to be done, starting work on the next batch as soon as the previous batch has been completed).
+  -- scheduled step() merely serves to "prime" needProd, i.e. to ensure it will start work if it's not currently working.
+  -- To fully eliminate idleness when work needs to be done, a similar "priming kick" may be activated by receiveOrder(), and by the arrival of new RM into the inputStore.  
+  -- Since the transportation delay talks about 5-7 days per batch, it is impossible to interpret it in the one-batch-at-a-time "forklift model" (the overall capacity will be way too low). So we will assume the "container ship" model, with no capacity restriction, and batches traveling in parallel.
 
+* EE Packaging, similar to pharma3.Pool and EE CMO Production, with 2 inputs (EE from CMO, and Packaging Material).
+
+* DS RM supplier: a MaterialSupplier with the QA (testing stage)
 
 =======================================================
 
@@ -150,8 +162,8 @@ The initial inventory of DS Unif(24176, 72528) is enough for 1-3 months (31-93 d
 Kit (EE plus DS) Time Seized (per patient visit): Triangular(1, 4, 180) days -- thus, a EE unit on average spends ca. 60 days on a patient. Thus one needs the "fleet" of ca 777 * 60 = ca. 47,000 EE units to serve all patients in a sustainable way. This is the desired initial inventory (or, at least, we'd want to have this many units available within the first 4 months or so).   However, the param file has a much lower initial inventory:
 Unif(2590, 6907); that's going to be depleted within 3-9 days, after which the patients will start piling up in the WPP.
 
-EE Lifetime: Unif(5, 10) years, meaning the lifetime of  ca. 7.5 years (of servcie).  In other words, to sustainably replace breaking EE units, one needs the annual production of ca 777*60/7.5 = 6,000 per year = 17 per day.
+EE Lifetime: Unif(5, 10) years, meaning the lifetime of  ca. 7.5 years (of service).  In other words, to sustainably replace breaking EE units, one needs the annual production of ca 777*60/7.5 = 6,000 per year = 17 per day.
 
-An EE unit 
+
 
 
