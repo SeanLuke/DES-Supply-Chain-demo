@@ -37,7 +37,7 @@ public class Demo extends SimState {
 
     
     /** Set this to true to print a lot of stuff */
-    static boolean verbose=false;
+    static boolean verbose=true;//false;
     /** Set this to true to print less stuff, and turn off all interactive things */
     static boolean quiet=false;
 
@@ -121,6 +121,12 @@ public class Demo extends SimState {
 	    System.exit(1);
 	}
  
+    }
+
+    public void	finish() {
+	if (!quiet) doReport("Finish");
+	if (verbose) System.out.println("Closing logs");
+	Charter.closeAll();
     }
     
     static class Reporter implements Steppable {

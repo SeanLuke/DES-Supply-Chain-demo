@@ -12,13 +12,13 @@ RMEE,targetLevel,10362
 RMEE,supplierDelay,Uniform,30,60
 
 #------ EE manufacturing --------
-eeCmoProd.inBatch,10
-eeCmoProd.batch,10
-eeCmoProd.qaDelay,
-eeCmoProd.transDelay,Uniform,5,10
-eeCmoProd.prodDelay,Triangular,0.01,0.02,0.03
-eeCmoProd.faulty.0.02
-eeCmoProd.rework.0.08
+eeCmoProd,inBatch,10
+eeCmoProd,batch,10
+eeCmoProd,qaDelay,Uniform,0.01,0.03
+eeCmoProd,transDelay,Uniform,5,10
+eeCmoProd,prodDelay,Triangular,0.01,0.02,0.03
+eeCmoProd,faulty,0.02
+eeCmoProd,rework,0.08
 
 
 
