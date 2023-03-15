@@ -97,6 +97,7 @@ public class Batch extends Entity {
 	private Double backupShelfLife;
 
 	/** Creates the batch prototype structure for a new product. */
+	/*
 	PrototypeInfo(boolean _inheritsExpiration, Double _shelfLife, Double _backupShelfLife) {
 	    inheritsExpiration = _inheritsExpiration;
 	    shelfLife = (_shelfLife==null)? Double.POSITIVE_INFINITY :_shelfLife;
@@ -105,7 +106,17 @@ public class Batch extends Entity {
 	    //System.out.println("Created PI = " +this);
  	    
 	}
+	*/
 
+	PrototypeInfo(ParaSet para) throws IllegalInputException {	
+	    inheritsExpiration =  para.getBoolean("inheritsExpiration", false);
+	    shelfLife = para.getDouble("expiration",Double.POSITIVE_INFINITY);
+	    backupShelfLife =  inheritsExpiration?   
+		para.getDouble("backupExpiration", null):
+		null;
+	}
+
+	
 	/** Creates the lot information structure for a new product lot
 	    (a "real batch") based on this prototype batch.
 	    @param name The name of the product, e.g. "Aspirin". This
@@ -186,10 +197,10 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
         structure in it, rather than an actual batch. This constructor
 	is only used by mkPrototype().
     */
-    private Batch(CountableResource typicalUnderlying, boolean _inheritsExpiration,
-		  Double _shelfLife, Double _backupShelfLife) {
+    private Batch(CountableResource typicalUnderlying,
+		  PrototypeInfo pi) {
 	super(  "BatchOf" + typicalUnderlying.getName());
-	setInfo( new PrototypeInfo( _inheritsExpiration, _shelfLife,  _backupShelfLife));
+	setInfo( pi);
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created Prototype Batch = " +this);
     }
@@ -221,10 +232,9 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	ParaSet para = config.get(uname);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for product named '" + uname +"'");
 
-	Batch b = new Batch(typicalUnderlying,
-			    para.getBoolean("inheritsExpiration", false),
-			    para.getDouble("expiration",Double.POSITIVE_INFINITY),
-			    para.getDouble("backupExpiration", null)			    );
+	PrototypeInfo pi = new PrototypeInfo(para);
+
+	Batch b = new Batch(typicalUnderlying, pi);
 
 	return b;
 
@@ -238,7 +248,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	@param lot a newly created structure that contains the unique lot number, expiration date etc for the new lot
 	@param amount The amount of underlying resource
     */
-    private Batch(Batch prototype, LotInfo lot, double amount) {
+    protected Batch(Batch prototype, LotInfo lot, double amount) {
 	super(prototype); // this sets name and type
 	setInfo(lot);
 	CountableResource r0 = prototype.getContent();

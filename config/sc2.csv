@@ -1,0 +1,24 @@
+WaitingPatientQueue,avgDailyArrival,5439/7
+
+
+#----  Properties of EE devices ---------
+EE,lifetime,Uniform,5*365,10*365
+EE,tbf,Triangular,0,5*365,10*365
+
+#---- The supply of raw material for EE
+RMEE,initial,10362
+RMEE,reorderPoint,6908
+RMEE,targetLevel,10362
+RMEE,supplierDelay,Uniform,30,60
+
+#------ EE manufacturing --------
+eeCmoProd.inBatch,10
+eeCmoProd.batch,10
+eeCmoProd.qaDelay,
+eeCmoProd.transDelay,Uniform,5,10
+eeCmoProd.prodDelay,Triangular,0.01,0.02,0.03
+eeCmoProd.faulty.0.02
+eeCmoProd.rework.0.08
+
+
+

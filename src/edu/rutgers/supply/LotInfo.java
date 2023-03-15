@@ -76,6 +76,11 @@ public class LotInfo {
 	String s = "(Lot No. "+lotNo+", made@" + manufacturingDate +", expire@"+expirationDate + (message.length()>0?"; "+message:"") +")";
 	return s;
     }
+
+    /** Used by sc2.Patient etc */
+    //    protected LotInfo(long _lotNo) {
+    //	lotNo = _lotNo;
+    //    }
        
 	
     private LotInfo(long _lotNo, double now, double _expirationDate, double _earliestAncestorManufacturingDate) {

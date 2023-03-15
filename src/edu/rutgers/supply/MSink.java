@@ -10,8 +10,8 @@ import sim.des.*;
 
 /** A Metered Sink is a wrapper around Sink, designed to keep track of
     the amount of resource it has consumed, and to print some
-    debugging information if needed.
-
+    debugging information if needed. It can work both with fungible resources
+    (CountableResource) and with "palletized" ones (Batch).
  */
 public class MSink extends Sink implements Reporting {
 
