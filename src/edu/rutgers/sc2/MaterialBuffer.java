@@ -20,28 +20,14 @@ import edu.rutgers.util.*;
  */
 class MaterialBuffer extends sim.des.Queue {
 
+    /** A link back to the Production object whose part this InputStore is */
     private Production whose=null;
     
     protected final ParaSet para;
 
-    /** This is true if the buffer has been configured to place its own orders with the supplier */
-    private boolean hasReorderPolicy = false;
-    protected double reorderPoint=0;
-    private double targetLevel=0;
-
-  /** How much this pool has ordered from its own suppliers, for its own
-	replenishment */
-    protected double everOrdered=0;
+    /** This is non-null if the buffer has been configured to place its own orders with the supplier */
+    Reordering reordering=null;
     
-    public double getEverReceived() {
-	return everReceived;
-    }
-
-    /** The amount ever received by the pool (not including the amount
-	"received" during the initialization process in the
-	constructor)
-     */
-    double everReceived = 0;
     protected final double  initial;
     public double getInitial() {
 	return initial;
@@ -52,13 +38,7 @@ class MaterialBuffer extends sim.des.Queue {
     /** How much stuff is stored here. The value should be the same as given by
 	getContentAmount(), but without scanning the entire buffer */
     protected double currentStock=0;
-
-
     
-    /** A link back to the Production object whose part this InputStore is */
-    //final Production whose;
-
-
     /** Keeps track of the amount of product that has been discarded because we discovered
 	that it was too close to expiration.  */
     //final ExpiredSink expiredProductSink;
@@ -75,7 +55,25 @@ class MaterialBuffer extends sim.des.Queue {
     /** Used to detect anomalies in the in-flow of resource into this buffer */
     //private SimpleDetector detector = new SimpleDetector();
 
-    Delay supplierDelay;
+    public double getEverReceived() {
+	return everReceived;
+    }
+
+    /** The amount ever received by the pool (not including the amount
+	"received" during the initialization process in the
+	constructor)
+     */
+    double everReceived = 0;
+
+    /** The amount of stuff received since the most recent daily
+	chart-writing.  This is incremented at every accept, and
+	reduced to 0 at the chart-writing step.
+    */
+    protected double receivedToday=0;
+
+    /** Used in computing the average age of batches coming in on a given day */
+    protected double batchesReceivedToday=0, sumOfAgesReceivedToday=0;
+    
 
 
 
@@ -110,17 +108,10 @@ class MaterialBuffer extends sim.des.Queue {
 	initSupply(initial);
 	everReceived = 0; // not counting the initial supply
 
+	reordering = Reordering.mkReordering(this, state, para);
+	
 	//expiredProductSink = (resource instanceof Batch) ?	    new ExpiredSink(state,  (Batch)resource, 365) : null;
 
-	Double r = para.getDouble("reorderPoint", null);
-	if (r!=null) {
-	    hasReorderPolicy = true;
-	    reorderPoint = r;
-
-	    r =  para.getDouble("targetLevel", null);
-	    if (r==null)  throw new  IllegalInputException("Element named '" + name +"' has reorder point, but no target level");
-	    targetLevel = r;
-	}
 	charter=new Charter(state.schedule, this);
 	doChartHeader(moreHeaders);
 
@@ -135,11 +126,6 @@ class MaterialBuffer extends sim.des.Queue {
 	//if (expiredProductSink!=null) addReceiver(expiredProductSink);
 
 
-	supplierDelay = new Delay(state, prototype);
-	supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",state.random));
-	supplierDelay.addReceiver(this);
-
-	
 	//-- we schedule it so that it would check for replenishment daily
 	state.schedule.scheduleRepeating(this);
 
@@ -341,27 +327,10 @@ class MaterialBuffer extends sim.des.Queue {
 
 	double now = getState().schedule.getTime();
 	//System.out.println("DEBUG:" + getName() + ", t="+now+", step");
-
-
 	
-	reorderCheck();
-	//fillBackOrders();
+	if (reordering!=null) reordering.reorderCheck();
 	doChart(new double[0]);
     }
-
-    /** The amount of stuff received since the most recent daily
-	chart-writing.  This is incremented at every accept, and
-	reduced to 0 at the chart-writing step.
-    */
-    protected double receivedToday=0;
-
-    /** Used in computing the average age of batches coming in on a given day */
-    protected double batchesReceivedToday=0, sumOfAgesReceivedToday=0;
-    
-    /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
-      FIXME: it would be better to have separate vars for separate suppliers
- */
-    protected double onOrder = 0;
 
     /** This is called from a supplier (or the associated Delay) when
 	a batched shipped to this pool arrives.
@@ -381,12 +350,8 @@ class MaterialBuffer extends sim.des.Queue {
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
 
-	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery
-	    onOrder -= a;
-	    if (onOrder < a) { // they have over-delivered
-		onOrder=0;
-	    }
-	}
+	if (reordering!=null) reordering.onAccept(provider,a);
+
 	everReceived += a;
 	receivedToday += a;
 	
@@ -404,39 +369,11 @@ class MaterialBuffer extends sim.des.Queue {
 	return z;
     }
 
-    /** Reported in a time series chart file */
-    double orderedToday = 0;
-
-    /** Checks if this pool needs stuff reordered, and makes an order if needed */
-    protected void reorderCheck() {
-	if (!hasReorderPolicy) return;
-    	double t = state.schedule.getTime();
-
-	double have =  getContentAmount() + onOrder;
-	if (have > reorderPoint) return;
-	double needed = Math.round(targetLevel - reorderPoint);
-	double unfilled = needed;
-
-
-	if (unfilled>0) {
-	    CountableResource shipment = new CountableResource((CountableResource)prototype, unfilled);
-	    Provider p = null;
-	    if (!supplierDelay.accept(p, shipment, unfilled, unfilled)) throw new IllegalArgumentException("supplierDelay failed to accept");
-	    double sent =unfilled;
-	    unfilled -= sent;
-	    onOrder += sent;
-	}
-
-	orderedToday = needed;
-	everOrdered += orderedToday;
-
-    }
-    
    /** Prints the header of the time series CSV file
 	@param moreHeaders Names of any additional columns (beyond those that 
 	all Pools print) */
     void doChartHeader(String... moreHeaders) {
-	String[] a = {"stock","orderedToday"  ,"receivedToday", "stillOnOrder"
+	String[] a = {"stock","orderedToday"  ,"receivedToday", "onOrder"
 	    //, "demandedToday","sentToday"
 	};
 	String[] b = Arrays.copyOf(a, a.length + moreHeaders.length);
@@ -452,8 +389,11 @@ class MaterialBuffer extends sim.des.Queue {
      */
     void doChart(double... moreValues) {
 	double stock =  getContentAmount();
-	double stillOnOrder = everOrdered - everReceived;
-	double[] a = {stock,orderedToday,receivedToday,stillOnOrder
+	
+	double[] a = {stock,
+		      (reordering==null? 0: reordering.orderedToday),
+		      receivedToday,
+		      (reordering==null? 0: reordering.onOrder)
 	    //,demandedToday,sentToday
 	};
 	double[] b = Arrays.copyOf(a, a.length + moreValues.length);
@@ -464,7 +404,7 @@ class MaterialBuffer extends sim.des.Queue {
 	receivedToday=0;
 	//demandedToday=0;
 	//sentToday=0;
-	orderedToday=0;
+	if (reordering!=null) reordering.onChart();
 	batchesReceivedToday = sumOfAgesReceivedToday = 0;
 
     }

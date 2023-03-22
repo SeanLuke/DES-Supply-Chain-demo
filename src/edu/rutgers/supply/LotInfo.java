@@ -32,12 +32,12 @@ public class LotInfo {
     final long lotNo;
 
     /** The manufactuing date of this lot */
-    final double manufacturingDate;
+    double manufacturingDate;
 
     
     /** The expiration date of this lot. If the product never expire,
 	we store Double.POSITIVE_INFINITY here */
-    final double expirationDate;
+    double expirationDate;
 
     /** The earliest of the dates on which the "ancestors" of this lot
 	were manufactured, or, absent any, the lots own manufacturing
@@ -49,7 +49,7 @@ public class LotInfo {
 	return earliestAncestorManufacturingDate;
     }
 	
-    final double earliestAncestorManufacturingDate;
+    double earliestAncestorManufacturingDate;
 
     /** Some additional text info that may be stored in the lot. Used
 	primarily for studying various fine properties of the supply
@@ -90,6 +90,19 @@ public class LotInfo {
 	earliestAncestorManufacturingDate  = _earliestAncestorManufacturingDate;
     }
 
+    /** Adjusts the various dates in this lot as a result of merger with
+	another lot, the product in which may be not as fresh as in this lot.
+     */
+    void effectMerge(LotInfo other) {
+	//long _lotNo, double now, double _expirationDate, double _earliestAncestorManufacturingDate) 
+	manufacturingDate = Math.min(manufacturingDate, other.manufacturingDate);
+	expirationDate = Math.min(expirationDate, other.expirationDate);
+	earliestAncestorManufacturingDate  = Math.min(earliestAncestorManufacturingDate, other.earliestAncestorManufacturingDate);
+    }
+
+
+
+    
     /** Creates a the LotInfo object for a lot with a new unique ID number 
      */
     static LotInfo newLot(double now, double _expirationDate, double _earliestAncestorManufacturingDate) {
@@ -104,5 +117,14 @@ public class LotInfo {
 
     /** How many units in this batch are "illicit" */
     public double illicitCount=0;
+
+
+    /** Creates the "label" for a lot into which part of the existing
+	lot is to be separated */
+    LotInfo split() {
+	 LotInfo x =  new LotInfo( nextLotNo(), manufacturingDate,  expirationDate, earliestAncestorManufacturingDate);
+	 return x;
+    }
+
     
 }

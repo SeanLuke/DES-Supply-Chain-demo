@@ -169,6 +169,31 @@ public class ParaSet extends HashMap<String, Vector<String>> {
     }
 
 
+    /** Returns the value of the specified parameter if it can be
+	interpreted as a value of the specified enumerated type.
+	If no parameter with the specified value has been supplied,
+	or if its value cannot be interpreted as a value of the desired
+	type, the supplied default value is returned
+	@param defVal The default value to be returned. May be null.
+    */
+
+    public  <T extends Enum<T>> T getEnum(Class<T> retType, String key, T defVal) throws IllegalInputException  {	    
+	Vector<String> v = get(key);
+	if (v==null)  return defVal;
+	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
+	String x = v.get(0);
+
+	try {
+	    return Enum.valueOf(retType, x);
+	} catch (Exception ex) {
+	    throwII(key, "Invalid value: "+x);
+	    return null; // just for the compiler not to complain
+	}
+
+    }
+
+
+    
     public class MyUniform extends sim.util.distribution.Uniform {
 	public MyUniform(double min, double max, MersenneTwisterFast randomGenerator) {
 	    super(min,max,randomGenerator);

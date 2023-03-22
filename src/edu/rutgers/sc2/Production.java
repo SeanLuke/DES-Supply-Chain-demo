@@ -21,7 +21,7 @@ class Production extends AbstractProduction
     implements Reporting, Named 
 {
 
-    private MaterialBuffer[] inputStore;
+    private InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
 
     private Charter charter;
@@ -33,12 +33,22 @@ class Production extends AbstractProduction
     private SimpleDelay transDelay = null;
     
     final ThrottleQueue needProd;
+    /** These only exist if the respective stages are throttled */
     private final ThrottleQueue needTrans, needQa;
 
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent */
-    ThrottleQueue getNeedQa() { return needQa;}
-    
+    //    ThrottleQueue getNeedQa() { return needQa;}
+    /** If an external producer sends it product for us to do QA, this
+	is where it should be sent. Either the QA delay itself (if
+	parallel processing is allowed), or the waiting buffer (if throttled).
+    */
+    Receiver getQaEntrance() { return needQa!=null? needQa: qaDelay;}
+
+    /** Where batches go for transportation */
+    Receiver getTransEntrance() { return needTrans!=null? needTrans: transDelay; }
+	
+
 
     public ProdDelay getProdDelay() { return prodDelay; }
 
@@ -85,17 +95,18 @@ class Production extends AbstractProduction
 
 
 	// Storage for input ingredients
-	inputStore = new MaterialBuffer[inResources.length];
+	inputStore = new InputStore[inResources.length];
 	for(int j=0; j<inputStore.length; j++) {
 	    inputStore[j] =
-		//new InputStore(this, state, config, inResources[j], inBatchSizes[j]);
-		new MaterialBuffer(this, state, config,(CountableResource)inResources[j], new String[0]);
+		new InputStore(this, state, config, inResources[j]);
 
 	    if (this instanceof Macro) addReceiver(inputStore[j], false); 
 	}
 	
 	outBatchSize = para.getDouble("batch");
 
+
+	final boolean qaIsThrottled=false, transIsThrottled=false;
 	
 	//batchesPerDay = para.getLong("batchesPerDay", null);
 
@@ -104,8 +115,12 @@ class Production extends AbstractProduction
 	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
 	if (qaDelay != null) {
 	    if (this instanceof Macro)  addProvider(qaDelay, false);
-	    needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random));
-	    needQa.setWhose(this);
+	    if ( qaIsThrottled) {
+		needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random));
+		needQa.setWhose(this);
+	    } else {
+		needQa = null;
+	    }
 	} else {
 	    needQa = null;
 	}
@@ -113,15 +128,23 @@ class Production extends AbstractProduction
 	if (para.get("transDelay")!=null) {
 	    transDelay = new SimpleDelay(state, outResource);
 	    transDelay.setName("TransDelay of " + outResource.getName());
-	    needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random)); 
-	    if (needQa!=null) transDelay.addReceiver(needQa);
+
+	    if (transIsThrottled) {
+		needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random));
+	    } else {
+		needTrans = null;
+	    }
+	    
+	    if (getQaEntrance()!=null) transDelay.addReceiver(getQaEntrance());
+	    
 	} else {
 	    transDelay = null;
 	    needTrans = null;
 	}
 	
 	prodDelay = new ProdDelay(state,outResource);
-	prodDelay.addReceiver(needTrans!=null? needTrans: needQa);
+
+	prodDelay.addReceiver(getTransEntrance()!=null? getTransEntrance(): getQaEntrance());
 
 	AbstractDistribution d0 = para.getDistribution("prodDelay",state.random);
 	AbstractDistribution dn = new CombinationDistribution(d0, (int)outBatchSize);
@@ -186,7 +209,7 @@ class Production extends AbstractProduction
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    //Resource r = inResources[j];
 
-	    MaterialBuffer p = inputStore[j];
+	    InputStore p = inputStore[j];
 	    String name = p.getUnderlyingName();
 	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion, name);
 	    if (vd.size()==1) {
@@ -212,8 +235,11 @@ class Production extends AbstractProduction
     /** If this is not null, it indicates how many units of the product we
 	are still to produce (or, more precisely, to start). If null,
 	then the control is entirely by the supply side. */
-    Double startPlan = null;
+    Double startPlan = 0.0;
 
+    /** Configure this unit to be controlled by the rationing of inputs */
+    
+    void setNoPlan() { startPlan = null; }
     void setPlan(double x) { startPlan = x; }
     void addToPlan(double x) {
 	if (startPlan != null) x += startPlan;
@@ -321,11 +347,10 @@ class Production extends AbstractProduction
 	
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    
-	    MaterialBuffer p = inputStore[j];
+	    InputStore p = inputStore[j];
 	    //System.out.println("mkBatch: Available ("+p.getTypical()+")=" + p.reportAvailable());
-	    //Batch b =
-	    double c = p.consumeOneBatch(inBatchSizes[j]);
-	    if (c != inBatchSizes[j]) throw new IllegalArgumentException();
+	    Batch b = p.consumeOneBatch(inBatchSizes[j]);
+	    //if (c != inBatchSizes[j]) throw new IllegalArgumentException();
 	    //if (b!=null) usedBatches.add(b);    
 	}
 
@@ -345,7 +370,7 @@ class Production extends AbstractProduction
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
 	int j=0;
-	for(MaterialBuffer input: inputStore) {	    
+	for(InputStore input: inputStore) {	    
 	    v.add( input.report(showBatchSize));
 	    j++;
 	}
@@ -378,8 +403,9 @@ class Production extends AbstractProduction
 
 	s += " = (in prod=" +   needProd.hasBatches() +	    " ba;";
 	if (needTrans!=null) s +="  in trans=" +   needTrans.hasBatches() +")";
+	else if (transDelay!=null) s +="  in trans=" +   (long)transDelay.getDelayedPlusAvailable() +")";
 	if (qaDelay!=null) {
-	    s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
+	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
 	    s += " " + qaDelay.report();	    
 	//s +="  in QA=" +   needQa.hasBatches() +")";
 	}
@@ -391,6 +417,20 @@ class Production extends AbstractProduction
 	
 	return s;
 
+    }
+
+
+    /** Produces an optional Delay element that can be stuck at the output
+	end of this Production unit. Configured based on the "outputDelay"
+	field in the ParaSet.
+    */
+    Delay mkOutputDelay(Receiver rcv)  throws IllegalInputException {
+
+	AbstractDistribution distr = para.getDistribution("outputDelay", state.random); 
+	Delay delay = new Delay(state, outResource);
+	delay.setDelayDistribution(distr);
+	delay.addReceiver(rcv);
+	return delay;
     }
     
     

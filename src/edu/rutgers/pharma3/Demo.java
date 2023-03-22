@@ -50,7 +50,8 @@ public class Demo extends SimState {
     }
 
 
-    /** Used to look up supply chain elements by name */
+    /** Used to look up supply chain elements by name. Maps the name
+	of an element to the element itself. */
     private HashMap<String,Steppable> addedNodes = new HashMap<>();
     //private HashMap<String,Object> addedNodes = new HashMap<>();
     Steppable lookupNode(String name) { return addedNodes.get(name); }

@@ -83,8 +83,10 @@ public class Demo extends SimState {
 	if (verbose) doReport("Start");
     }
 
-    Production eeCmoProd;
+    Production eeCmoProd, eePackaging;
+    Pool eeDC;
 
+    
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
 	GraphAnalysis.
@@ -105,10 +107,34 @@ public class Demo extends SimState {
 
 	    
 	    eeCmoProd = new Production(this, "eeCmoProd", config,
-						  new Resource[] {rmEE},
-						  eeBatch);
+				       new Resource[] {rmEE},
+				       eeBatch);
 
 	    add(eeCmoProd);
+
+
+	    CountableResource pmEE = new CountableResource("PMEE", 1);
+
+	    eePackaging = new Production(this, "eePackaging", config,
+					 new Resource[] {eeBatch, pmEE},
+					 eeBatch);
+	    eePackaging.setNoPlan(); // driven by inputs
+	    add(eePackaging);
+
+	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
+
+	    MedTech eeMedTech = new MedTech("eeMedTech", eeCmoProd);
+	    add(eeMedTech);
+
+	    eeDC = new Pool(this, "eeDC", config,  eeBatch, new String[0]);
+
+	    add(eeDC);
+
+	    Delay d = eePackaging.mkOutputDelay(eeDC);
+	    eePackaging.setQaReceiver(d, 1.0);	
+
+	    //-- link it in, based on the "from1" fields in its ParaSet
+	    eeDC.setSuppliers(addedNodes);
 
 	    
 	} catch( IllegalInputException ex) {
@@ -145,8 +171,9 @@ public class Demo extends SimState {
     
     String report() {
 	Vector<String> v= new Vector<>();
-	//v.add("No data yet");
 	v.add(eeCmoProd.report());
+	v.add(eePackaging.report());
+	v.add(eeDC.report());
 	/*
 	v.add(endConsumer.report());
 	v.add(hospitalPool.report());

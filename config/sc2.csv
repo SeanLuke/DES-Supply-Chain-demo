@@ -6,10 +6,17 @@ EE,lifetime,Uniform,5*365,10*365
 EE,tbf,Triangular,0,5*365,10*365
 
 #---- The supply of raw material for EE
-RMEE,initial,10362
-RMEE,reorderPoint,6908
-RMEE,targetLevel,10362
-RMEE,supplierDelay,Uniform,30,60
+#RMEE,initial,10362
+#RMEE,reorderPoint,6908
+#RMEE,targetLevel,10362
+#RMEE,supplierDelay,Uniform,30,60
+
+eeCmoProd.safety.RMEE,initial,10362
+eeCmoProd.safety.RMEE,targetLevel,10362
+eeCmoProd.safety.RMEE,reorderPoint,6908
+#eeCmoProd.safety.RMEE,delay,Uniform,30,60
+eeCmoProd.safety.RMEE,delay,Uniform,3,4
+eeCmoProd.safety.RMEE,needsAnomaly,-1
 
 #------ EE manufacturing --------
 eeCmoProd,inBatch,10
@@ -20,5 +27,57 @@ eeCmoProd,prodDelay,Triangular,0.01,0.02,0.03
 eeCmoProd,faulty,0.02
 eeCmoProd,rework,0.08
 
+#---- The supply of packaging material for EE
+
+eePackaging.safety.PMEE,initial,1500
+eePackaging.safety.PMEE,targetLevel,1500
+eePackaging.safety.PMEE,reorderPoint,1000
+#eePackaging.safety.PMEE,delay,Triangular,54,60,66
+eePackaging.safety.PMEE,delay,Triangular,4,6,8
+eePackaging.safety.PMEE,needsAnomaly,-1
+
+#--- The normal route:
+#EE Packaging Material Incoming Order Transportation Delay from EE Packaging Material
+#Supplier Pool: Unif(1,2) months
+
+#----  EE packaging ----------------
+eePackaging,inBatch,10,10
+eePackaging,batch,10
+eePackaging,qaDelay,Uniform,0,0
+eePackaging,transDelay,0
+eePackaging,prodDelay,Uniform,0.01,0.03
+eePackaging,faulty,0
+eePackaging,rework,0.01
+
+#-- EE Packaged and Inspected Batch Outgoing Transportation Delay to EE Distribution Center: Unif(3,5) days
+eePackaging,outputDelay,Uniform,3,5
 
 
+
+#-------- EE Distribution Center
+#-- where it sends orders
+eeDC,from1,eeMedTech,1.00
+
+eeDC,mode,Mode1
+
+eeDC,initial,1500
+eeDC,batch,10
+eeDC,reorderPoint,6908
+eeDC,targetLevel,10362
+
+
+# EE Order Incoming Transportation Delay from EE Packaging and Inspection: see Section 5
+#The percentages below must sum to exactly 100%
+#EE Percentage Shipped From EE Distribution Center to Distributor Pool: 5%
+#EE Percentage Kept at EE Distribution Center for Hospital/Equipment Pool: 95%
+#EE Order Outgoing Transportation Delay to Distributor Pool: Unif(5,7) days
+#EE Order Outgoing Transportation Delay to Hospital/Equipment Pool: Unif(5,7) days
+
+
+
+#HospitalPool,from1,WholesalerPool,1.00
+#HospitalPool,from2,Distributor,0.00
+#HospitalPool,backOrder,WholesalerPool,1.0
+#HospitalPool,delay1,Triangular,7,10,15
+#HospitalPool,delay2,Triangular,7,10,15
+#HospitalPool,delayBackOrder,Triangular,7,10,15

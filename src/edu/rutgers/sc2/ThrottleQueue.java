@@ -138,6 +138,8 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
     }
 
 
+    /** How many batches are there waiting for processing, and
+	how many are waiting for processing */
     public String hasBatches() {
 	String s = "" + (long)getAvailable();
 	if (delay instanceof Reporting.HasBatches) {

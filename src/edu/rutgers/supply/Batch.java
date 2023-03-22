@@ -179,7 +179,9 @@ Foo,
 </pre>
 for both a countable resource named "Foo" and for a Batch of "Foo".
      */
-    public static String getUnderlyingName(Resource r) {	
+    public static String getUnderlyingName(Resource r) {
+	//System.out.println("DEBUG: gUN(r=" + r+")");
+
 	return (r instanceof Batch)?  ((Batch)r).getUnderlyingName() : r.getName();
     }
 
@@ -306,6 +308,27 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return  mkNewLot( size, now, null);
     }
 
+    /** Reduce this lot by the specified amount, and move the
+	removed amount to a new lot.
+	@param amount the amount to remove from this lot and put into the new lot
+	@return  the new lot 
+    */
+    public Batch split(double amount) {
+	// ZZZZ
+	if (amount>getContentAmount()) throw new IllegalArgumentException("Want to split off more than there is in this batch");
+	else 	if (amount==getContentAmount()) throw new IllegalArgumentException("Want to split off the entire content of this batch");
+
+	getContent().decrease(amount); 
+	return new Batch(this, getLot().split(), amount);
+    }
+
+    /** Adds the resource from the other batch to this one */
+    public void merge(Batch other) {
+	getContent().add(other.getContent());
+	getLot().effectMerge(other.getLot());
+    }
+    
+    
     /** What is the earliest expiration date among all the batches in the list? 
 	@return the earliest expiration date, or  Double.POSITIVE_INFINITY if
 	the array of inputs is empty
