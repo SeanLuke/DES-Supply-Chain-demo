@@ -18,8 +18,8 @@ import edu.rutgers.supply.Disruptions.Disruption;
 public class WaitingPatientQueue extends sim.des.Queue implements Named, Reporting {
     AbstractDiscreteDistribution dailyArrivalDistribution;
     
-    public WaitingPatientQueue(SimState state, Config config, Entity typicalPatient) throws IllegalInputException {
-	super(state, typicalPatient);
+    public WaitingPatientQueue(SimState state, Config config) throws IllegalInputException {
+	super(state, Patient.prototype);
 	setName(Util.cname(this));
 	ParaSet para = config.get(getName());
 

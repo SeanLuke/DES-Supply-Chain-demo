@@ -17,6 +17,7 @@ import edu.rutgers.supply.*;
 public class Patient extends Entity {
     static CountableResource uPatient = new  CountableResource("Patient",1);
     //private static Batch prototype;
+    static Patient prototype;
 
     static class PatientInfo {
 	/** The date when the treatment started. The value is null until it has
@@ -34,11 +35,17 @@ public class Patient extends Entity {
     /** Should be called once, before any actual patients are created */
     public static void init(Config config ) throws IllegalInputException {	
 	//prototype = mkPrototype(UPatient, config);
+	prototype = new Patient(true);
     }
+
+    /** Creates the prototype entity */
+    private Patient(boolean proto) {
+	super("Patient");
+    }
+
     
-    
-    public Patient() {
-	super(  "Patient" );
+    Patient() {
+	super( prototype );
 	PatientInfo pi = new PatientInfo();
 	setInfo( pi);
 	setStorage( new Resource[] {uPatient});

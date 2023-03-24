@@ -98,10 +98,10 @@ public class Demo extends SimState {
 	try {
 	    Patient.init(config);
 	    EE.init(this,config);
-	    Patient typicalPatient = new Patient();
+	    Patient typicalPatient = Patient.prototype;
 
 	    
-	    wpq = new WaitingPatientQueue(this, config, typicalPatient);
+	    wpq = new WaitingPatientQueue(this, config);
 	    add(wpq);
 	    
 	    CountableResource rmEE = new CountableResource("RMEE", 1);
@@ -148,7 +148,7 @@ public class Demo extends SimState {
 	    eeDP.setSuppliers(addedNodes);
 	    eeHEP.setSuppliers(addedNodes);
 
-	    spp = new ServicedPatientPool(this, config, typicalPatient, wpq, eeHEP);
+	    spp = new ServicedPatientPool(this, config, wpq, eeHEP);
 
 
 	    

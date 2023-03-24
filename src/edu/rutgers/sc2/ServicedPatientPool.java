@@ -22,8 +22,8 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     WaitingPatientQueue wpq;
     Pool eeHEP;
     
-    public ServicedPatientPool(SimState state, Config config, Entity typicalPatient,  WaitingPatientQueue _wpq, Pool _eeHEP) throws IllegalInputException {
-	super(state, typicalPatient);
+    public ServicedPatientPool(SimState state, Config config, WaitingPatientQueue _wpq, Pool _eeHEP) throws IllegalInputException {
+	super(state, Patient.prototype);
 	setName(Util.cname(this));
 	wpq = _wpq;
 	eeHEP = _eeHEP;
