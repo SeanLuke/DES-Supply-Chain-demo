@@ -67,7 +67,7 @@ public class Pool extends sim.des.Queue
 	constructor)
      */
     double everReceived = 0;
-    protected final double  initial, targetLevel;
+    protected final double  initial, initialReceived, targetLevel;
     public double getInitial() {
 	return initial;
     }
@@ -107,7 +107,7 @@ public class Pool extends sim.des.Queue
 	initial = para.getDouble("initial");
 	targetLevel = para.getDouble("targetLevel", initial);
 	batchSize = para.getDouble("batch");
-	initSupply(initial);
+	initialReceived = initSupply(initial);
 	everReceived = 0; // not counting the initial supply
 
 	expiredProductSink = (resource instanceof Batch) ?
@@ -143,8 +143,9 @@ public class Pool extends sim.des.Queue
     
     /** Instantly loads the Queue with the "initial supply", in standard size
 	batches made today */
-    private void initSupply(double initial) {
+    private double initSupply(double initial) {
 	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") in");
+	double sent=0;
 	if (prototype instanceof Batch) {
 
 	    int n = (int)Math.round( initial / batchSize);
@@ -153,14 +154,16 @@ public class Pool extends sim.des.Queue
 		Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
 		Provider provider = null;  // why do we need it?
 		if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
+		sent += batchSize;
 	    }
 
 	} else {
-	    CountableResource b = new CountableResource((CountableResource)prototype, initial);
+	    CountableResource b = new CountableResource((CountableResource)prototype, sent=initial);
 	    Provider provider = null;  // why do we need it?
 	    if (!accept(provider, b, initial, initial)) throw new AssertionError("Queue did not accept");
 	}	
    	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") out");
+	return sent;
     }
 
     /** An auxiliary structure that stores information about one of
@@ -176,9 +179,12 @@ public class Pool extends sim.des.Queue
 	/** Where does this supplier send stuff to? This can be either
 	    this Pool itself (if shipping is immediate shipping), 
 	    or a Delay feeding into this Pool.
-	    @param delayDistr The delay distribution, or null for immediate delivery
 	*/
 	final Receiver entryPoint;
+
+	/**
+	    @param delayDistr The delay distribution, or null for immediate delivery
+	*/
 	Supplier(BatchProvider _src, double _fraction,	AbstractDistribution delayDistr) {
 	    src = _src;
 	    fraction = _fraction;
@@ -195,11 +201,19 @@ public class Pool extends sim.des.Queue
 	}
     }
 
-    /** Where the normal supply comes from */
+    /** Where the normal supply comes from. Each entry comes with a real number,
+	which, depending on the mode, may be interepreted as a fraction or
+	a probability.
+    */
     private Vector<Supplier> normalSuppliers = new Vector<>();
     /** Where back-orders can be placed, if the normal suppliers don't have enough material on hand */
     private Supplier backOrderSupplier = null;
-    
+
+    /** If this is not null, a "parallel order" (typically, a work order,
+	in the amount equal to the usual pull order) is sent here. This is used
+	e.g. by sc2.HEP. The amount of parallel order is not added to "onOrder".
+     */
+    private Supplier parallelSupplier = null;
     
     /** Looks at the "from" parameters in the ParaSet to identify the pools from which this pool will	request resources.
 <pre>
@@ -221,18 +235,24 @@ HospitalPool,backOrder,WholesalerPool
 
 	String key = "backOrder";
 	String key2 = "delayBackOrder";
-	backOrderSupplier = mkSupplier(key, key2, knownPools, true);				
+	backOrderSupplier = mkSupplier(key, key2, knownPools, true);
+
+	key = "parallelOrder";
+	key2 = "parallelOrderDelay";
+	parallelSupplier =  mkSupplier(key, key2, knownPools, false);
     }
 
     /** Initializes a supplier based on a line from the ParaSet. Example:
-    HospitalPool,from1,WholesalerPool,1.00
+<pre>
+	HospitalPool,from1,WholesalerPool,1.00
 #HospitalPool,from2,Distributor,0.00
 HospitalPool,backOrder,WholesalerPool,1.0
 HospitalPool,delay1,Triangular,7,10,15
 HospitalPool,delay2,Triangular,7,10,15
 HospitalPool,delayBackOrder,Triangular,7,10,15
+</pre>
 
-
+@param bePool If true, requires that the specified supplier is a Pool (and not some other node)
  */
     private Supplier mkSupplier(String key, String key2, HashMap<String,Steppable> knownPools, boolean bePool)
 	throws IllegalInputException {
@@ -259,14 +279,15 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     ExpiredSink expiredProductSink;
   
 
-    /** How much has  been demanded from this pool by its customers */
+    /** How much has  been sent by this pool to its customers */
     double everSent = 0;
-
-    /** Records, for each day, how much has been sent by this pool*/
-    Vector<Double> dailyDemandHistory = new Vector<Double>();
-    double demandedToday=0, sentToday=0;
+    double sentToday=0;
     
-    /** Records today's "sent" amount */
+    /** Records, for each day, how much has been demanded from this pool*/
+    Vector<Double> dailyDemandHistory = new Vector<Double>();
+    double demandedToday=0;
+    
+    /** Records today's "demanded" amount */
     synchronized private void recordDemand(double demand) {
 	double t = state.schedule.getTime();
 	int j = (int)Math.round(t);
@@ -327,7 +348,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     }
     */
 
-    /** Moves stuff from this pool directly to another pool etc,
+    /** Process a request from a consumer (a downstream pool) to give
+	it some stuff. To the extent stuff is available, 
+	moves stuff from this pool directly to another pool etc,
 	or to a Delay object that models shipping to someplace.
 
 	<p>
@@ -336,7 +359,20 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	pallets on the same truck or ship. (This is also good for 
 	computational efficiency).
 
-	@param r Can be a Pool or a SimpleDelay, or something else.
+	@param r Where to put the stuff. This can be a Pool or a
+	SimpleDelay, or something else.
+
+	@param amt How much stuff has requested by the consumer. The entire
+	amount is recorded as (part of) today's demand; the entire amount,
+	or part of it (as much as available) is sent out.
+
+	@param doRecordDemand  True if this is the "first call" (likely
+	from another chain element), so that the entire demanded amount
+
+	@return The amount actually sent. If the amount was smaller
+	than requested, the caller will decide what to do next,
+	i.e. either back-order from the same pool, or try to send
+	an order somewhere else.
     */
     public double feedTo(Receiver r, double amt, boolean doRecordDemand) {
 	final boolean consolidate = true;
@@ -380,23 +416,33 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	everSent += sent;
 	sentToday += sent;
 	// FIXME: double-recording may occur in an un-fulfilled instant order followed by a back-order
-	if (doRecordDemand) recordDemand(amt);
+	//if (doRecordDemand) recordDemand(amt);
+	// In SC-2 we only record the sent amount, because the consumer will
+	// make a separate backOrder call for the unfilled amount, and that
+	// amount will be recorded at that point
+	if (doRecordDemand) recordDemand(sent);
 	return sent;
     }
 
 
-    /** Not-yet-fulfilled back orders */
-    HashMap<Receiver,Double> needToSend = new HashMap<>();
+    /** Not-yet-fulfilled back orders. For each Receiver this map
+	shows how much (0 or more) we still need to send to it.
+     */
+    private HashMap<Receiver,Double> needToSend = new HashMap<>();
 
     /** The Pool receives an order for something that it does not
-	have, and files it for later filling */
+	have, and files it for later filling. This method can be
+	used once the caller knows that the Pool cannot ship anything
+	today anymore.
+    */
     void backOrder(Receiver r, double amt) {
 	Double x = needToSend.get(r);
 	needToSend.put(r,  x==null? amt: x+amt);
 	recordDemand(amt);
     }
-
-    /** Checks all outstanding back-order requests, and fulfills them to the extent possible.
+    
+    /** Checks all outstanding back-order requests, and fulfills them
+	to the extent possible.
      */
     protected void fillBackOrders() {
 	for(Receiver rcv:  needToSend.keySet()) {
@@ -499,7 +545,12 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     }
 
 
-    /** Reorder Mode 1: simple MTS */
+    /** Reorder Mode 1: simple MTS. The supplier is chosen randomly,
+	and the entire order goes to it (with a back-order portion,
+	if necessary). Additionally, if the config prescribes it,
+	a parallel order is sent to the "parallel" supplier (i.e.
+	a manufacturing order in addition to a pull order).
+     */
     protected void reorderCheck1() {
 	
 	double now = getState().schedule.getTime();
@@ -519,15 +570,49 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	final double needed = targetLevel - has;
 	double unfilled=needed, orderedToday=0;
 
+	boolean randomChoice = true; // as opposed to a fraction
+	
+
+	double probSum = 0;
 	for(Supplier sup: normalSuppliers) {
-	    double amt = Math.round(sup.fraction * needed);
+	    probSum += sup.fraction;
+	}
+	if (probSum <=0) throw new AssertionError();
+
+	double who = getState().random.nextDouble() * probSum, s = 0;
+	
+	for(Supplier sup: normalSuppliers) {
+
+	    double amt;
+	    boolean done = false;
+	    if (randomChoice) {
+		s += sup.fraction;
+		if (s < who) continue;
+		amt = needed;
+		done = true;
+	    } else {
+		amt = sup.fraction * needed;
+	    } 
+	    amt = Math.round(amt);
 	    double sent = sup.src.feedTo(sup.entryPoint, amt);
+
+	    if (amt<sent) {
+		if (!(sup.src instanceof Pool)) throw new AssertionError("Non-pools are supposed to 'fill' entire orders");
+		((Pool)sup.src).backOrder(sup.entryPoint, amt-sent);
+	    }
+	    
 	    unfilled -= sent;
 	    orderedToday += sent;
+	    if (done) break;
 	}
 	onOrder += orderedToday;
 	everOrdered += orderedToday;
 
+	// Some pools, beside making pull orders to upstream pool, also
+	// send a "parallel order" to the production unit
+	if (parallelSupplier !=null) {
+	    double sent = parallelSupplier.src.feedTo(parallelSupplier.entryPoint, needed);	    
+	}
     }
 
     /** Reported in a time series chart file */
@@ -540,9 +625,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (mode==ReorderMode.Mode1) {
 	    reorderCheck1();
 	    return;
-	};
+	} else {
+	    throw new IllegalArgumentException("Pool mode not supported: " + mode);
+	}
 
-	
+	/*
     	double t = state.schedule.getTime();
 	double lms = getLastMonthDemand();
 	if (Demo.verbose) System.out.println("As of " + t+", " + getName() + " has sent " + lms + " units over the last month");
@@ -574,12 +661,12 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	orderedToday = needed;
 	everOrdered += orderedToday;
-
+	*/
     }
     
 
     public String report() {	
-	String s = "[" + getName()+ " has received " + everReceived + " u (not counting initial="+initial+" u), has sent "+everSent+" u";
+	String s = "[" + getName()+ " has received " + everReceived + " u (not counting initial="+initialReceived+" u), has sent "+everSent+" u";
 
 	if (expiredProductSink != null && expiredProductSink.getEverConsumed() >0) {	
 	    s += ". Discarded as expired=" + expiredProductSink.getEverConsumedBatches() +  " ba";

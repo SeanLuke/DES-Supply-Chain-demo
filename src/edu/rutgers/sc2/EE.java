@@ -16,9 +16,11 @@ import edu.rutgers.supply.*;
 
 /** An object of this class can represent either a single fully initialized EE,
     or a batch of manufactured, but not initialized EE units. */
-public class EE extends Entity {
+public class EE extends Batch
+			//		       Entity
+{
     static final String uname = "EE";
-    static CountableResource uEE = new  CountableResource(uname,1);
+    static CountableResource uEE = new CountableResource(uname,1);
 
     private static  CountableResource giveUEE(int n) {
 	if (n<1) throw new IllegalArgumentException();
@@ -42,13 +44,14 @@ public class EE extends Entity {
 
     /** Information about the "individual features" of this EE device,
 	such as the "plan for breakdowns". */
-    static class EEInfo {
+    static class EEInfo extends LotInfo {
 	double remainingLifetime;
 	double remainingTbf;
 	/** The clock time point at which the clocks decreasing the remainingLifetime and remainingTbf started. This is typically the time point when treatment was started or resumed. The value is null if at present the clock is not running (because the device is not in use with a patient). */
 	Double useStartedAt=null;
-	EEInfo(boolean doInit) {
-	    if (doInit) init();
+	EEInfo(LotInfo li) {
+	    super(li);
+	    init();
 	}
 	private void init() {
 	    remainingLifetime =  Math.abs(lifetimeDistribution.nextDouble());
@@ -57,7 +60,7 @@ public class EE extends Entity {
     }
 
 
-
+    /*
     public EE(int n) {
 	super(  "EE" );
 	EEInfo pi = new EEInfo(true);
@@ -65,7 +68,20 @@ public class EE extends Entity {
 	setStorage( new Resource[] {giveUEE(n)});
 
     }
+    */
+
+    /** Converts a plain Batch of 1 uEE to a proper EE object, by adding
+	individualized EE-specific information.
+     */
+    public EE(Batch b) {
+	super(b, b.getLot(), b.getContentAmount());
+	if (!b.getUnderlying().isSameType(uEE) ||
+	    b.getContentAmount()!=1 ||
+	    !(getInfo() instanceof LotInfo)) throw new IllegalArgumentException("Cannot convert " + b + " to EE");
+	setInfo( new EEInfo(b.getLot()));
 	
+    }
+    
 
     
 }

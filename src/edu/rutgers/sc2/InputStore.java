@@ -246,10 +246,17 @@ class InputStore extends sim.des.Queue {
 	stolen += destroyed;
 	return  destroyed;		
     }
-	
+
     /** Performs certain auxiliary operation piggy-backed on acceptance
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
+	return doAccept(provider,  amount, atLeast, atMost, false);
+    }
+
+    /** @param isInit If true, just puts stuff in, without any additional
+	operations. This is a call during the initialization
+    */
+    public boolean doAccept(Provider provider, Resource amount, double atLeast, double atMost, boolean isInit) {
 	//	    String given = (amount instanceof CountableResource)? ""+  amount.getAmount()+" units":		(amount instanceof Batch)? "a batch of " + ((Batch)amount).getContentAmount() +" units":		"an entity";
 
 	double a = (amount instanceof Batch)? ((Batch)amount).getContentAmount() : amount.getAmount();
@@ -257,6 +264,9 @@ class InputStore extends sim.des.Queue {
 	boolean z = super.accept(provider,  amount, atLeast,  atMost);
 	if (!z) throw new AssertionError();
 	currentStock += a;
+
+	if (isInit) return z; // it's no time to do anything else as the system is not ready yet
+	
 	everReceived  += a;
 	
 	// See if the production system is empty, and needs to be "primed"

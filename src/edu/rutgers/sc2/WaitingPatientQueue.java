@@ -1,6 +1,5 @@
 package  edu.rutgers.sc2;
 
-
 import java.util.Vector;
 import java.io.*;
 
@@ -16,7 +15,7 @@ import edu.rutgers.supply.Disruptions.Disruption;
 
 /** Patients arrive to this queue randomly "from the street", and wait
     here for the EE and DS to be provided to them */
-public class WaitingPatientQueue extends sim.des.Queue implements Named {
+public class WaitingPatientQueue extends sim.des.Queue implements Named, Reporting {
     AbstractDiscreteDistribution dailyArrivalDistribution;
     
     public WaitingPatientQueue(SimState state, Config config, Entity typicalPatient) throws IllegalInputException {
@@ -40,5 +39,12 @@ public class WaitingPatientQueue extends sim.des.Queue implements Named {
 
 	}
     }
+
+      public String report() {	
+	  String s = "[" + getName(); //+ " has received orders for " + everReceivedOrders + " u";
+
+	s += "]";
+       return wrap(s);
+   }
 
 }

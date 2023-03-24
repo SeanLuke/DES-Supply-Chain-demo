@@ -54,6 +54,7 @@ extends Probe implements Reporting
 
     protected double reorderPoint=0;
     private double targetLevel=0;
+    private double initial=0;
 
         /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
       FIXME: it would be better to have separate vars for separate suppliers
@@ -116,6 +117,7 @@ extends Probe implements Reporting
 	if (r==null)  throw new  IllegalInputException("Element named '" + whose.getName() +"' has reorder point, but no target level");
 	targetLevel = r;
 
+	initial = para.getDouble("initial", null);
 	
 	String un= Batch.getUnderlyingName(prototype);
 
@@ -134,14 +136,9 @@ extends Probe implements Reporting
 	Double q = para.getDouble("needsAnomaly", null);
 	needsAnomaly = (q==null || q<0) ? null: q;
 
-
-	//-- The safety stock has already been initialized by super(...),
-	//-- i.e. the Pool constructor. No need to do that again!
-	//-- magicFeed(this, initial);
-	//everReceived = 0; // not counting the initial supply
-
-	
+	initSupply(initial);
     }
+
   
     protected void reorderCheck() {
 
@@ -360,6 +357,31 @@ extends Probe implements Reporting
 	//	doChart(new double[0]);
     }
     
+
+    /** Instantly loads the Queue with the "initial supply", in standard size
+	batches made today */
+    private void initSupply(double initial) {
+	if (initial<=0) return;
+	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") in");
+	if (prototype instanceof Batch) {
+
+	    double batchSize = Math.round(initial);
+	    int n = 1; // (int)Math.round( initial / batchSize);
+	    double now = state.schedule.getTime();
+	    for(int j=0; j<n; j++) {
+		Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
+		Provider provider = null;  // why do we need it?
+		if (!whose.doAccept(provider, whiteHole, 1, 1, true)) throw new AssertionError("Queue did not accept");
+	    }
+
+	} else {
+	    CountableResource b = new CountableResource((CountableResource)prototype, initial);
+	    Provider provider = null;  // why do we need it?
+	    if (!whose.doAccept(provider, b, initial, initial, true)) throw new AssertionError("Queue did not accept");
+	}	
+   	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") out");
+    }
+
 
     
 }

@@ -90,6 +90,18 @@ public class LotInfo {
 	earliestAncestorManufacturingDate  = _earliestAncestorManufacturingDate;
     }
 
+    /** Used to a create a new Lot that is to replace the old one, keeping its lot number.
+	This is mostly for use in sc2.EE.
+     */
+    public LotInfo(LotInfo o) {
+	lotNo = o.lotNo;
+	manufacturingDate = o.manufacturingDate;
+	expirationDate = o.expirationDate;
+	earliestAncestorManufacturingDate  = o.earliestAncestorManufacturingDate;
+	
+    }
+
+    
     /** Adjusts the various dates in this lot as a result of merger with
 	another lot, the product in which may be not as fresh as in this lot.
      */

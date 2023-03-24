@@ -37,7 +37,7 @@ public class Demo extends SimState {
 
     
     /** Set this to true to print a lot of stuff */
-    static boolean verbose=true;//false;
+    static boolean verbose=false;
     /** Set this to true to print less stuff, and turn off all interactive things */
     static boolean quiet=false;
 
@@ -84,8 +84,11 @@ public class Demo extends SimState {
     }
 
     Production eeCmoProd, eePackaging;
-    Pool eeDC;
-
+    Pool eeDC, eeDP, eeHEP;
+    MedTech eeMedTech;
+    
+    WaitingPatientQueue wpq;
+    ServicedPatientPool spp;
     
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
@@ -98,8 +101,9 @@ public class Demo extends SimState {
 	    Patient typicalPatient = new Patient();
 
 	    
-	    WaitingPatientQueue wpq = new WaitingPatientQueue(this, config, typicalPatient);
-
+	    wpq = new WaitingPatientQueue(this, config, typicalPatient);
+	    add(wpq);
+	    
 	    CountableResource rmEE = new CountableResource("RMEE", 1);
 	    //MaterialBuffer rmBuffer = new MaterialBuffer( this, config, rmEE, new String[0]);
 
@@ -122,19 +126,30 @@ public class Demo extends SimState {
 	    add(eePackaging);
 
 	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
-
-	    MedTech eeMedTech = new MedTech("eeMedTech", eeCmoProd);
+	    eeMedTech = new MedTech("eeMedTech", eeCmoProd);
+	    
 	    add(eeMedTech);
 
 	    eeDC = new Pool(this, "eeDC", config,  eeBatch, new String[0]);
-
 	    add(eeDC);
 
 	    Delay d = eePackaging.mkOutputDelay(eeDC);
 	    eePackaging.setQaReceiver(d, 1.0);	
 
-	    //-- link it in, based on the "from1" fields in its ParaSet
+	    eeDP = new Pool(this, "eeDP", config,  eeBatch, new String[0]);
+	    add(eeDP);
+
+	    eeHEP = new Pool(this, "eeHEP", config,  eeBatch, new String[0]);
+	    add(eeHEP);
+
+	    
+	    //-- link the pools, based on the "from1" fields in its ParaSet
 	    eeDC.setSuppliers(addedNodes);
+	    eeDP.setSuppliers(addedNodes);
+	    eeHEP.setSuppliers(addedNodes);
+
+	    spp = new ServicedPatientPool(this, config, typicalPatient, wpq, eeHEP);
+
 
 	    
 	} catch( IllegalInputException ex) {
@@ -174,13 +189,11 @@ public class Demo extends SimState {
 	v.add(eeCmoProd.report());
 	v.add(eePackaging.report());
 	v.add(eeDC.report());
-	/*
-	v.add(endConsumer.report());
-	v.add(hospitalPool.report());
-	v.add(wholesalerPool.report());
-	v.add(untrustedPool.report());
-	v.add(pharmaCompany.report());
-	*/
+	v.add(eeDP.report());
+	v.add(eeHEP.report());
+	v.add(eeMedTech.report());
+	v.add(wpq.report());
+	v.add(spp.report());
 	return String.join("\n", v);
     }
 

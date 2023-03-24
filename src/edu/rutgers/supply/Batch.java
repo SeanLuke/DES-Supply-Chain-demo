@@ -259,7 +259,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	//System.out.println("Created2: " + this);
     }
 
-    /** Duplicate the prototype. Just used for duplicate() */    
+    /** Duplicates the prototype. Just used for duplicate() */    
     private Batch(Batch prototype) {
 	super(prototype); // this sets name and type
     }

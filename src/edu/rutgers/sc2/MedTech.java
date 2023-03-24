@@ -13,7 +13,7 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-class MedTech implements Named, BatchProvider {
+class MedTech implements Named, BatchProvider, Reporting {
 
     Production prod;
 
@@ -25,6 +25,9 @@ class MedTech implements Named, BatchProvider {
 	setName(_name);
     }
 
+    double everReceivedOrders = 0;
+    
+    
     /** Despite the name, it does not actually feed anything to the receiver,
 	but requests the producer to produce some products which will eventually
 	propagate to the receiver */       
@@ -32,6 +35,7 @@ class MedTech implements Named, BatchProvider {
 	prod.addToPlan(amt);
 	// FIXME: should also order some raw materials for the production node,
 	// so that it won't have to rely on safety stocks
+	everReceivedOrders += amt;
 	return amt;
     }
 
@@ -42,5 +46,14 @@ class MedTech implements Named, BatchProvider {
     private String name;
     public java.lang.String	getName()	{ return name; }
     public void	setName​(java.lang.String name)	 { this.name = name; }
+
+
+    public String report() {	
+	String s = "[" + getName()+ " has received orders for " + everReceivedOrders + " u";
+
+	s += "]";
+       return wrap(s);
+   }
+
     
 }

@@ -1,5 +1,7 @@
 WaitingPatientQueue,avgDailyArrival,5439/7
 
+# Kit (EE plus DS) Time Seized (per patient visit): Triangular(1, 4, 180) days
+ServicedPatientPool,serviceTime,Triangular,1,4,180
 
 #----  Properties of EE devices ---------
 EE,lifetime,Uniform,5*365,10*365
@@ -14,8 +16,8 @@ EE,tbf,Triangular,0,5*365,10*365
 eeCmoProd.safety.RMEE,initial,10362
 eeCmoProd.safety.RMEE,targetLevel,10362
 eeCmoProd.safety.RMEE,reorderPoint,6908
-#eeCmoProd.safety.RMEE,delay,Uniform,30,60
-eeCmoProd.safety.RMEE,delay,Uniform,3,4
+eeCmoProd.safety.RMEE,delay,Uniform,30,60
+# eeCmoProd.safety.RMEE,delay,Uniform,3,4
 eeCmoProd.safety.RMEE,needsAnomaly,-1
 
 #------ EE manufacturing --------
@@ -32,8 +34,8 @@ eeCmoProd,rework,0.08
 eePackaging.safety.PMEE,initial,1500
 eePackaging.safety.PMEE,targetLevel,1500
 eePackaging.safety.PMEE,reorderPoint,1000
-#eePackaging.safety.PMEE,delay,Triangular,54,60,66
-eePackaging.safety.PMEE,delay,Triangular,4,6,8
+eePackaging.safety.PMEE,delay,Triangular,54,60,66
+# eePackaging.safety.PMEE,delay,Triangular,4,6,8
 eePackaging.safety.PMEE,needsAnomaly,-1
 
 #--- The normal route:
@@ -75,9 +77,36 @@ eeDC,targetLevel,10362
 
 
 
-#HospitalPool,from1,WholesalerPool,1.00
-#HospitalPool,from2,Distributor,0.00
-#HospitalPool,backOrder,WholesalerPool,1.0
-#HospitalPool,delay1,Triangular,7,10,15
-#HospitalPool,delay2,Triangular,7,10,15
-#HospitalPool,delayBackOrder,Triangular,7,10,15
+#------- EE Distributor Pool
+#-- where it sends orders
+eeDP,from1,eeDC,1.00
+eeDP,mode,Mode1
+eeDP,delay1,Uniform,5,7
+
+# c) Distributor Pool node parameters:
+# EE Initial Inventory: 692 units 12 week worth of inventory
+# EE Reorder Point: 692 units (8 weeks’ worth)
+# EE Target Level: 1,036 units (12 weeks’ worth)
+# EE and DS Order Outgoing Transportation Delay to Hospital/Equipment Pool: Unif(5,7) days
+
+eeDP,initial,692
+eeDP,batch,10
+eeDP,reorderPoint,692
+eeDP,targetLevel,1036
+
+#--------- EE Hospital/Equipment Pool (HEP)
+eeHEP,mode,Mode1
+eeHEP,from1,eeDC,0.95
+eeHEP,delay1,Triangular,1,3,5
+eeHEP,from2,eeDP,0.05
+eeHEP,delay2,Triangular,1,3,5
+eeHEP,parallelOrder,eeMedTech,1.0
+
+
+# EE Initial Inventory: Unif(2590, 6907)
+# DS Initial Inventory: Unif(24176, 72528)
+eeHEP,initial,2590   
+eeHEP,batch,10
+eeHEP,reorderPoint,3454
+eeHEP,targetLevel,6907
+
