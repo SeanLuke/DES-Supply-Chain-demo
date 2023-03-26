@@ -31,6 +31,7 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 
 	serviceTimeDistribution = para.getDistribution("serviceTime", state.random);
 
+	//wpq.addReceiver(this);
 	
     }
 
@@ -40,23 +41,36 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     public void step(SimState state) {
 
 	while(wpq.getAvailable()>0) {
-	    //   if (hepEE.getAvailable()>0) {	    
-	    //	Batch b=hepEE.getFirst();			
-	    //}
+	    boolean z = wpq.provide(this);
+	    if (!z) break;
 	}
-	/*
-	int todaysArrivals  = dailyArrivalDistribution.nextInt();
-	for(int j=0; j<todaysArrivals; j++) {
-	    Patient p = new Patient();
-	    Provider provider = null;  // why do we need it?		
-	    if (!accept(provider, p, 1, 1)) throw new IllegalArgumentException("WPQ must accept");
-
-	}
-	*/
     }
+
+    int everAccepted=0;
+
+    
+    public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
+
+	  if (!(amount instanceof Patient)) throw new IllegalArgumentException("SPP cannot accept a non-Patient: " + amount);
+	  Patient p = (Patient)amount;
+	  if (eeHEP.getAvailable()==0) return false;
+
+	  //double c0 = eeHEP.getContentAmount();
+	  
+	  EE ee = eeHEP.extractOneEE();
+	  p.equip(ee);
+	  
+	  boolean z = super.accept( provider, p,  atLeast,  atMost);
+	  
+	  if (!z) throw new AssertionError("Delay did not accept");
+	  everAccepted++;
+	  return z;
+      }
+
 
     public String report() {	
 	String s = "[" + getName();//+ " has received orders for " + everReceivedOrders + " u";
+	s += "; accepted " + everAccepted + " patients; currently treated=" + getDelayed();
 
 	s += "]";
 	return wrap(s);

@@ -314,7 +314,6 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	@return  the new lot 
     */
     public Batch split(double amount) {
-	// ZZZZ
 	if (amount>getContentAmount()) throw new IllegalArgumentException("Want to split off more than there is in this batch");
 	else 	if (amount==getContentAmount()) throw new IllegalArgumentException("Want to split off the entire content of this batch");
 

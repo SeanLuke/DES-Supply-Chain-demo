@@ -149,7 +149,7 @@ public class Demo extends SimState {
 	    eeHEP.setSuppliers(addedNodes);
 
 	    spp = new ServicedPatientPool(this, config, wpq, eeHEP);
-
+	    add(spp);
 
 	    
 	} catch( IllegalInputException ex) {

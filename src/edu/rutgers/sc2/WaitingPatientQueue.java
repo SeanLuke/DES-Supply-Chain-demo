@@ -47,4 +47,18 @@ public class WaitingPatientQueue extends sim.des.Queue implements Named, Reporti
        return wrap(s);
    }
 
+    /*
+    Patient getFirst() {
+	return (Patient)entities.getFirst();
+    }
+
+    private boolean remove(Batch b) {
+	return entities.remove(b);
+    }
+   
+    boolean offerToMe(Receiver r, Patient p) {
+	return offerReceiver(r, p);
+    }
+    */
+    
 }

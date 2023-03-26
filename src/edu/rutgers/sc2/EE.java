@@ -57,8 +57,14 @@ public class EE extends Batch
 	    remainingLifetime =  Math.abs(lifetimeDistribution.nextDouble());
 	    remainingTbf =  Math.abs(tbfDistribution.nextDouble());
 	}
+	
+	void startUse(double now) {
+	    useStartedAt = now;
+	}
+	
     }
 
+    
 
     /*
     public EE(int n) {
@@ -81,7 +87,10 @@ public class EE extends Batch
 	setInfo( new EEInfo(b.getLot()));
 	
     }
-    
+
+    EEInfo getEEInfo() {
+	return (EEInfo)getInfo();
+    }
 
     
 }

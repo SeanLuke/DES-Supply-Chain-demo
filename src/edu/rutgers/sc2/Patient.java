@@ -14,6 +14,9 @@ import edu.rutgers.util.ParaSet;
 import edu.rutgers.supply.*;
 
 
+/** Represents a patient, either a "naked" one (waiting for
+    treatment), or one fitted with an EE and DS (being treated)
+ */
 public class Patient extends Entity {
     static CountableResource uPatient = new  CountableResource("Patient",1);
     //private static Batch prototype;
@@ -52,6 +55,17 @@ public class Patient extends Entity {
 	//System.out.println("Created Prototype Batch = " +this);
     }
 
+    PatientInfo getPatientInfo() {
+	return (PatientInfo) getInfo();
+    }
+
+    /** Equip a patient with an EE and a DS */
+    void equip(EE _ee) {
+	PatientInfo pi = getPatientInfo();
+	if (pi.ee!=null) throw new AssertionError("Patient already has an EE");
+	pi.ee = _ee;
+    }
+    
     
     
 }

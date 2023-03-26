@@ -409,10 +409,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    if (delay!=null) {
 		delay.setUsesLastDelay(false);
 	    }
+	    currentStock -= (sent + expired);
 	} else if (prototype instanceof CountableResource) {
 	    offerReceiver(r, amt);
+	    currentStock = getAvailable();
 	} else throw new AssertionError();
-	currentStock -= (sent + expired);
 	everSent += sent;
 	sentToday += sent;
 	// FIXME: double-recording may occur in an un-fulfilled instant order followed by a back-order
@@ -743,6 +744,29 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	orderedToday=0;
 	batchesReceivedToday = sumOfAgesReceivedToday = 0;
 
+    }
+
+    /** This is for eeHEP only. If eeHEP is ever made into a separate
+	subclass, this method will be moved there.
+
+	Gets a single EE out of this pool, and removes it from the pool.
+	@return an EE object if, one can be obtained, or null otherwise
+     */
+    EE extractOneEE() {
+	if (getAvailable()==0) return null;
+	Batch b=(Batch)entities.getFirst();
+	EE ee;
+	if (b instanceof EE) {
+	    ee = (EE)b;
+	    entities.remove(b);
+	} else if (b.getContentAmount()==1) {
+	    ee = new EE(b);
+	    entities.remove(b);
+	} else {
+	    ee = new EE(b.split(1));		
+	}
+	currentStock -= 1;
+	return ee;
     }
     
 }
