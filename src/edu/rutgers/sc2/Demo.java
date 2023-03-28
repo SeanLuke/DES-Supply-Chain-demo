@@ -89,6 +89,8 @@ public class Demo extends SimState {
     
     WaitingPatientQueue wpq;
     ServicedPatientPool spp;
+
+    Batch eeBatch;
     
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
@@ -107,7 +109,7 @@ public class Demo extends SimState {
 	    CountableResource rmEE = new CountableResource("RMEE", 1);
 	    //MaterialBuffer rmBuffer = new MaterialBuffer( this, config, rmEE, new String[0]);
 
-	    Batch eeBatch = Batch.mkPrototype(EE.uEE, config);
+	    eeBatch = Batch.mkPrototype(EE.uEE, config);
 
 	    
 	    eeCmoProd = new Production(this, "eeCmoProd", config,

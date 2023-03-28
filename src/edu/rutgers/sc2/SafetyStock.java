@@ -103,9 +103,7 @@ extends Probe implements Reporting
 	setName(name);
 	para = config.get(name);
 	prototype = _resource;
-
-	
-
+       
 	whose = _whose;
 	addReceiver(whose);
 	
@@ -301,11 +299,14 @@ extends Probe implements Reporting
 	double a = Batch.getContentAmount(amount);
 
 
-	System.out.println("DEBUG:" + getName() + ", stock=" +whose.getContentAmount() +", accepting " +amount + " from provider=" + provider + ". The destination stores " + whose.prototype);
+	//System.out.println("DEBUG:" + getName() + ", stock=" +whose.getContentAmount() +", accepting " +amount + " from provider=" + provider + ". The destination stores " + whose.prototype);
+
+
+	//-- Had to make a fix in Filter.java for this to work, as per DES Qu. No. 36
+	boolean z = super.accept(provider, amount, atLeast, atMost);
+	//whose.accept(provider, amount, atLeast, atMost);
 
 	
-	boolean z = //super.accept(provider, amount, atLeast, atMost);
-	    whose.accept(provider, amount, atLeast, atMost);
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
 

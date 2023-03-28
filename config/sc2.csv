@@ -2,6 +2,7 @@ WaitingPatientQueue,avgDailyArrival,5439/7
 
 # Kit (EE plus DS) Time Seized (per patient visit): Triangular(1, 4, 180) days
 ServicedPatientPool,serviceTime,Triangular,1,4,180
+ServicedPatientPool,repairTime,Uniform,8,10
 
 #----  Properties of EE devices ---------
 EE,lifetime,Uniform,5*365,10*365

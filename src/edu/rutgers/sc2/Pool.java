@@ -43,6 +43,7 @@ public class Pool extends sim.des.Queue
 	Wholesaler Pool etc, this represents batches of packaged
 	drug. */
     protected final Resource prototype;
+    Resource getPrototype() { return prototype; }
 
     protected final ParaSet para;
 

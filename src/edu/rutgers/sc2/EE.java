@@ -42,6 +42,21 @@ public class EE extends Batch
 	tbfDistribution = para.getDistribution("tbf", state.random);
     }
 
+    enum EndCode { PATIENT_CURED, EE_DIED, EE_BROKEN };
+
+    boolean patientCured() {
+	return getEEInfo().endCode==EndCode.PATIENT_CURED;
+    }
+
+    boolean eeDied() {
+	return getEEInfo().endCode==EndCode.EE_DIED;
+    }
+
+    boolean eeBroken() {
+	return getEEInfo().endCode==EndCode.EE_BROKEN;
+    }
+
+    
     /** Information about the "individual features" of this EE device,
 	such as the "plan for breakdowns". */
     static class EEInfo extends LotInfo {
@@ -57,9 +72,61 @@ public class EE extends Batch
 	    remainingLifetime =  Math.abs(lifetimeDistribution.nextDouble());
 	    remainingTbf =  Math.abs(tbfDistribution.nextDouble());
 	}
+
+	/** How much time this device will spend with a patient this time */
+	double delayTime;
+
+	/** How the patient's experience with this device will end */
+	EndCode endCode = null;
+
+	/** After the device is separated from the patient, will the patient
+	    still need more treatment? (This is 0 in a normal situaion,
+	    and positive in the case of a device breakdown) */
+	double remainingTreatmentTime;
 	
-	void startUse(double now) {
+	/** Attach this EE device to a patient who is being sent to
+	    treatment now. This method is called at the moment when
+	    the EE device is attached to the patient, at the start of the
+	    treatment.
+	*/
+	void startUse(double now, double treatmentTime) {
 	    useStartedAt = now;
+	    endCode = EndCode.PATIENT_CURED;
+	    delayTime = treatmentTime;
+	    if (remainingLifetime <= remainingTbf) {
+		if (remainingLifetime <  treatmentTime) {
+		    endCode = EndCode.EE_DIED;
+		    delayTime = remainingLifetime;
+		}
+	    } else {
+		if (remainingTbf <   treatmentTime) {
+		    endCode = EndCode.EE_BROKEN;
+		    delayTime = remainingTbf;
+		}
+	    }
+	    remainingTreatmentTime = treatmentTime - delayTime;
+	}
+
+	/** This must be called when the device is separated from the
+	    patient, either due to the successful end of the
+	    treatment, or the breakdown of the device. It adjusts time
+	    counters in the device and in the patient. */
+	void finishUse(Patient p) {
+	    p.getPatientInfo().treatmentTimeLeft -= delayTime;	    
+	    remainingLifetime -= delayTime;
+	    remainingTbf -= delayTime;
+	    useStartedAt = null;
+	    delayTime = 0;
+	    final double eps = 1e-6;
+	    if (remainingTbf <= eps) {
+		remainingTbf =  Math.abs(tbfDistribution.nextDouble());
+	    }
+	}
+
+
+	public String toString() {
+	    return "[EE: code=" + endCode +", life left=" +   remainingLifetime +
+		", TBF left=" + remainingTbf +"; use started at " + useStartedAt +", delay=" + delayTime + "]";
 	}
 	
     }
@@ -92,5 +159,17 @@ public class EE extends Batch
 	return (EEInfo)getInfo();
     }
 
+    void startUse(double now, double treatmentTime) {
+	getEEInfo().startUse( now, treatmentTime);
+
+    }
     
+    void finishUse(Patient p) {
+	getEEInfo().finishUse(p);
+	p.getPatientInfo().ee = null;
+    }
+    
+    public String toString() {
+	return getEEInfo().toString();
+    }
 }
