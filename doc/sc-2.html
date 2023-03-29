@@ -75,8 +75,9 @@ cp des.jar ../lib
 Warning: the above may take forever, as GitHub will tend to give you megabutyes and gigabytes of stuff you don't need. So, alternatively, you can just ask me for precompiled  des.jar, and put it into your ~/mason/lib
 </strike>
 
-<li>At present (March 2023) we compile and run the SC-2 model app not with the most current version of a the DES library, but with the locally customized version of the October 2023 version of it.
-	  
+<li>At present (March 2023) we compile and run the SC-2 model app not with the most current version of a the DES library, but with the locally customized version of the October 2023 version of it.  This is compiled to the JAR file found in <tt>~vmenkov/mason/lib/des.jar</tt> on robo1.
+
+  </ul>
       
       <h2>Compile</h2>
 
@@ -107,12 +108,13 @@ ant javadoc
 
 <p>You can run the simulation with a command like this:
   <pre>
-    ./run3.sh -until 365 > tmp.log
+    ./run-cs2.sh -until 365 > tmp.log
   </pre>
 The <tt>-until 365</tt> is a standard MASON option, which will cause the application to run for 365 units of simulation time (simulated days, in this model). Without this option, the application will likely never stop.
 
   <h3>Command-line options</h3>
 
+  
 <p>There are a few additional command-line options you can use with <tt>run.sh</tt>:
 
   <ul>
@@ -124,16 +126,16 @@ The <tt>-until 365</tt> is a standard MASON option, which will cause the applica
 
 	       <h2>Run - GUI</h2>
 
+	       <strike>
 <pre>
   cd ~/mason/work
   scripts/gui-3.sh
 </pre>
-	       
+</strike>
+
 	       <h2>Configuration file</h2>
 
-<p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/pharma3.csv</tt>.
-
-<p>Note: as of 2022-06-07, pharma3.csv contains modified parameters, using much bigger batches than prescribed in Ben's model. This is done in order for the GUI simulation to run at an acceptable speed. The file  <tt>config/pharma3.orig.csv</tt> contains parameters closer to Ben's original one.
+<p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/cs2.csv</tt>.
 
   
 <p>The configuration file is in CSV format. All lines beginning with a hash mark (#) are ignored, as well as all empty lines.
@@ -158,214 +160,35 @@ means the that the parameter <tt>faulty</tt> for the element called <tt>Producti
   <p>
   The output file, for a run without the <tt>-verbose</tt> option, may look like this:
   <pre>
- ./run3.sh -until 365 > t.tmp
-
- Demo()
+ ./run-sc2.sh -until 360
+MASON Version 20.  For further options, try adding ' -help' at end.
+Job: 0 Seed: 769313669
 Demo.start
-===== -1.0: Start =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=0.0; has 0.0 units of packagedDrug on hand. Has Received=0.0]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=0.0; ever started production=0 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=0.0 (0 ba), QA released=0.0 (0 ba)]
-Split (90:10) 0 units: To Input(Batch of RawMaterial), 0; To Input(Batch of RawMaterial), 0
-[MaterialSupplier.PacMatSupplier: Ever ordered=0.0; ever started production=0 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=0.0 (0 ba), QA released=0.0 (0 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=0.0; ever started production=0 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=0.0 (0 ba), QA released=0.0 (0 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 0 (0 ba) + (rework=0.0) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); rework=0 (0 ba); good=0 (0 ba))]
-[Production line (Batch of API): accepted 0 ba, totaling 0]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:0.0 batches]). Ever started: 0 (0 ba) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); good=0 (0 ba))]
-[Production line (Batch of bulkDrug): accepted 0 ba, totaling 0]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:0.0 batches]). Ever started: 0 (0 ba) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); good=0 (0 ba))]
-[Production line (Batch of packagedDrug): accepted 0 ba, totaling 0]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 0 (0 ba) + (rework=0.0) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); rework=0 (0 ba); good=0 (0 ba))]
-[Production line (Batch of API): accepted 0 ba, totaling 0]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 0 (0 ba) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); good=0 (0 ba))]
-[Production line (Batch of bulkDrug): accepted 0 ba, totaling 0]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 0 (0 ba) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); good=0 (0 ba))]
-[Production line (Batch of packagedDrug): accepted 0 ba, totaling 0]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=0.0 ba. Shipping plan=0.0 u, has shipped=0.0 u, in 0 loads. Of this, 0 ba is still being shipped. Remains on hand=0.0 ba]
+Disruptions=null
+SC2 DES/MASON simulation, ver=1.000, config=config/sc2.csv
+===== 360.0028004500225: Finish =================
+[Production.eeCmoProd; stored inputs=([RMEE:2.0 u. [SafetyStock.eeCmoProd.safety.RMEE(RMEE): [eeCmoProd.safety.RMEE has ordered 6950.0 u,  has received 0.0 u. On order=6950.0; in transit 6950.0]]]). Ever started: 10360 (1036 ba) = (in prod=0+(0) ba;  in trans=0) (in QA= 0+1 ba; discarded=380 (38 ba); rework=960 (96 ba); good=9980 (998 ba))
+[Production line (BatchOfEE): accepted 1132 ba, totaling 11320; utilization=62.663%]
+[Production.eePackaging; stored inputs=([BatchOfEE:848 ba, PMEE:0.0 u. [SafetyStock.eePackaging.safety.PMEE(PMEE): [eePackaging.safety.PMEE has ordered 1090.0 u,  has received 0.0 u. On order=1090.0; in transit 1090.0]]]). Ever started: 1500 (150 ba) = (in prod=0+(0) ba;  in trans=0) (in QA= 0+1 ba; discarded=0 (0 ba); rework=0 (0 ba); good=1500 (150 ba))
+[Production line (BatchOfEE): accepted 150 ba, totaling 1500; utilization=8.318%]
+[Pool.eeDC(BatchOfEE): [eeDC has received 1500.0 u (not counting initial=1500.0 u), has sent 3000.0 u. Available=0.0 u]]
+[Pool.eeDP(BatchOfEE): [eeDP has received 1280.0 u (not counting initial=690.0 u), has sent 1970.0 u. Available=0.0 u]]
+[Pool.eeHEP(BatchOfEE): [eeHEP has received 37476.0 u (not counting initial=2590.0 u), has sent 0.0 u. Available=0.0 u]]
+[MedTech.eeMedTech: [eeMedTech has received orders for 2486572.0 u]]
+[WaitingPatientQueue.WaitingPatientQueue(Patient): [WaitingPatientQueue]]
+[ServicedPatientPool.ServicedPatientPool(Patient): [ServicedPatientPool; accepted 40066 patients; currently treated=6270; patients cured=33672; EE destroyed=0; EE sent to repair=124. EE in repair pool=10]]
 ================================================
-===== 59.0: Report at t=59.0 =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=2.418058139E9; has 1.08E9 units of packagedDrug on hand. Has Received=1.08E9]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=2.418058139E9; ever started production=242 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=1.4E8 (14 ba), QA released=2.28E9 (228 ba)]
-Split (90:10) 2280000000 units: To Input(Batch of RawMaterial), 2060000000; To Input(Batch of RawMaterial), 220000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=2.418058139E9; ever started production=242 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=4.9281758E7 (242 ba), QA released=2.370718242E9 (3219 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=2.418058139E9; ever started production=242 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=1.1E8 (11 ba), QA released=2.31E9 (231 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 2060000000 (206 ba) + (rework=4.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=0 (0 ba); rework=40000000 (4 ba); good=2060000000 (206 ba))]
-[Production line (Batch of API): accepted 210 ba, totaling 2100000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:77.0 batches]). Ever started: 1540000000 (154 ba) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); good=1530000000 (153 ba))]
-[Production line (Batch of bulkDrug): accepted 154 ba, totaling 1540000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:1.600718242E9 batches]). Ever started: 770000000 (77 ba) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); good=760000000 (76 ba))]
-[Production line (Batch of packagedDrug): accepted 77 ba, totaling 770000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 220000000 (22 ba) + (rework=0.0) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); rework=0 (0 ba); good=210000000 (21 ba))]
-[Production line (Batch of API): accepted 22 ba, totaling 220000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 730000000 (73 ba) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); good=720000000 (72 ba))]
-[Production line (Batch of bulkDrug): accepted 73 ba, totaling 730000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 1480000000 (148 ba) = (in prod=0 ba; in QA= 0 ba; discarded=20000000 (2 ba); good=1460000000 (146 ba))]
-[Production line (Batch of packagedDrug): accepted 148 ba, totaling 1480000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=222.0 ba. Shipping plan=2.418058139E9 u, has shipped=1.08E9 u, in 1 loads. Of this, 0 ba is still being shipped. Remains on hand=114.0 ba]
-================================================
-===== 119.0: Report at t=119.0 =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=4.836116985E9; has 3.33E9 units of packagedDrug on hand. Has Received=3.33E9]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=4.836116985E9; ever started production=484 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=2.4E8 (24 ba), QA released=4.6E9 (460 ba)]
-Split (90:10) 4600000000 units: To Input(Batch of RawMaterial), 4140000000; To Input(Batch of RawMaterial), 460000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=4.836116985E9; ever started production=484 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=9.7530946E7 (484 ba), QA released=4.742469054E9 (7377 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=4.836116985E9; ever started production=484 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=1.9E8 (19 ba), QA released=4.65E9 (465 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 4140000000 (414 ba) + (rework=5.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); rework=50000000 (5 ba); good=4130000000 (413 ba))]
-[Production line (Batch of API): accepted 419 ba, totaling 4190000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:154.0 batches]). Ever started: 3110000000 (311 ba) = (in prod=0 ba; in QA= 0 ba; discarded=20000000 (2 ba); good=3090000000 (309 ba))]
-[Production line (Batch of bulkDrug): accepted 311 ba, totaling 3110000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:3.192469054E9 batches]). Ever started: 1550000000 (155 ba) = (in prod=0 ba; in QA= 0 ba; discarded=40000000 (4 ba); good=1510000000 (151 ba))]
-[Production line (Batch of packagedDrug): accepted 155 ba, totaling 1550000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 460000000 (46 ba) + (rework=1.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); rework=10000000 (1 ba); good=450000000 (45 ba))]
-[Production line (Batch of API): accepted 47 ba, totaling 470000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 1470000000 (147 ba) = (in prod=0 ba; in QA= 0 ba; discarded=50000000 (5 ba); good=1420000000 (142 ba))]
-[Production line (Batch of bulkDrug): accepted 147 ba, totaling 1470000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 2960000000 (296 ba) = (in prod=0 ba; in QA= 0 ba; discarded=80000000 (8 ba); good=2880000000 (288 ba))]
-[Production line (Batch of packagedDrug): accepted 296 ba, totaling 2960000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=439.0 ba. Shipping plan=4.836116985E9 u, has shipped=3.33E9 u, in 3 loads. Of this, 0 ba is still being shipped. Remains on hand=106.0 ba]
-================================================
-===== 179.0: Report at t=179.0 =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=7.254172536E9; has 5.43E9 units of packagedDrug on hand. Has Received=5.43E9]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=7.254172536E9; ever started production=726 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=4.0E8 (40 ba), QA released=6.86E9 (686 ba)]
-Split (90:10) 6860000000 units: To Input(Batch of RawMaterial), 6180000000; To Input(Batch of RawMaterial), 680000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=7.254172536E9; ever started production=726 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=1.44737954E8 (726 ba), QA released=7.115262046E9 (21404 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=7.254172536E9; ever started production=726 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=2.8E8 (28 ba), QA released=6.98E9 (698 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 6180000000 (618 ba) + (rework=1.0E8) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); rework=100000000 (10 ba); good=6170000000 (617 ba))]
-[Production line (Batch of API): accepted 628 ba, totaling 6280000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:233.0 batches]). Ever started: 4650000000 (465 ba) = (in prod=0 ba; in QA= 0 ba; discarded=40000000 (4 ba); good=4610000000 (461 ba))]
-[Production line (Batch of bulkDrug): accepted 465 ba, totaling 4650000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:4.805262046E9 batches]). Ever started: 2310000000 (231 ba) = (in prod=0 ba; in QA= 0 ba; discarded=60000000 (6 ba); good=2250000000 (225 ba))]
-[Production line (Batch of packagedDrug): accepted 231 ba, totaling 2310000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 680000000 (68 ba) + (rework=1.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=20000000 (2 ba); rework=10000000 (1 ba); good=660000000 (66 ba))]
-[Production line (Batch of API): accepted 69 ba, totaling 690000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 2180000000 (218 ba) = (in prod=0 ba; in QA= 0 ba; discarded=70000000 (7 ba); good=2110000000 (211 ba))]
-[Production line (Batch of bulkDrug): accepted 218 ba, totaling 2180000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 4410000000 (441 ba) = (in prod=0 ba; in QA= 0 ba; discarded=100000000 (10 ba); good=4310000000 (431 ba))]
-[Production line (Batch of packagedDrug): accepted 441 ba, totaling 4410000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=656.0 ba. Shipping plan=7.254172536E9 u, has shipped=5.43E9 u, in 5 loads. Of this, 0 ba is still being shipped. Remains on hand=113.0 ba]
-================================================
-===== 239.0: Report at t=239.0 =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=9.672223822E9; has 7.66E9 units of packagedDrug on hand. Has Received=7.66E9]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=9.672223822E9; ever started production=968 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=5.0E8 (50 ba), QA released=9.18E9 (918 ba)]
-Split (90:10) 9180000000 units: To Input(Batch of RawMaterial), 8270000000; To Input(Batch of RawMaterial), 910000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=9.672223822E9; ever started production=968 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=1.92362506E8 (968 ba), QA released=9.487637494E9 (25070 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=9.672223822E9; ever started production=968 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=3.4E8 (34 ba), QA released=9.34E9 (934 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 8270000000 (827 ba) + (rework=1.5E8) = (in prod=0 ba; in QA= 0 ba; discarded=10000000 (1 ba); rework=150000000 (15 ba); good=8260000000 (826 ba))]
-[Production line (Batch of API): accepted 842 ba, totaling 8420000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:312.0 batches]). Ever started: 6220000000 (622 ba) = (in prod=0 ba; in QA= 0 ba; discarded=60000000 (6 ba); good=6160000000 (616 ba))]
-[Production line (Batch of bulkDrug): accepted 622 ba, totaling 6220000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:6.407637494E9 batches]). Ever started: 3080000000 (308 ba) = (in prod=0 ba; in QA= 0 ba; discarded=60000000 (6 ba); good=3020000000 (302 ba))]
-[Production line (Batch of packagedDrug): accepted 308 ba, totaling 3080000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 910000000 (91 ba) + (rework=2.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=30000000 (3 ba); rework=20000000 (2 ba); good=880000000 (88 ba))]
-[Production line (Batch of API): accepted 93 ba, totaling 930000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 2920000000 (292 ba) = (in prod=0 ba; in QA= 0 ba; discarded=80000000 (8 ba); good=2840000000 (284 ba))]
-[Production line (Batch of bulkDrug): accepted 292 ba, totaling 2920000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 5920000000 (592 ba) = (in prod=0 ba; in QA= 0 ba; discarded=170000000 (17 ba); good=5750000000 (575 ba))]
-[Production line (Batch of packagedDrug): accepted 592 ba, totaling 5920000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=877.0 ba. Shipping plan=9.672223822E9 u, has shipped=7.66E9 u, in 7 loads. Of this, 0 ba is still being shipped. Remains on hand=111.0 ba]
-================================================
-===== 299.0: Report at t=299.0 =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=1.2090275839E10; has 9.9E9 units of packagedDrug on hand. Has Received=9.9E9]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=1.2090275839E10; ever started production=1210 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=5.9E8 (59 ba), QA released=1.151E10 (1151 ba)]
-Split (90:10) 11510000000 units: To Input(Batch of RawMaterial), 10360000000; To Input(Batch of RawMaterial), 1150000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=1.2090275839E10; ever started production=1210 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=2.40902322E8 (1210 ba), QA released=1.1859097678E10 (28097 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=1.2090275839E10; ever started production=1210 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=4.4E8 (44 ba), QA released=1.166E10 (1166 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 10360000000 (1036 ba) + (rework=1.6E8) = (in prod=0 ba; in QA= 0 ba; discarded=20000000 (2 ba); rework=160000000 (16 ba); good=10340000000 (1034 ba))]
-[Production line (Batch of API): accepted 1052 ba, totaling 10520000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:386.0 batches]). Ever started: 7800000000 (780 ba) = (in prod=0 ba; in QA= 0 ba; discarded=70000000 (7 ba); good=7730000000 (773 ba))]
-[Production line (Batch of bulkDrug): accepted 780 ba, totaling 7800000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:7.989097678E9 batches]). Ever started: 3870000000 (387 ba) = (in prod=0 ba; in QA= 0 ba; discarded=100000000 (10 ba); good=3770000000 (377 ba))]
-[Production line (Batch of packagedDrug): accepted 387 ba, totaling 3870000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 1150000000 (115 ba) + (rework=2.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=30000000 (3 ba); rework=20000000 (2 ba); good=1120000000 (112 ba))]
-[Production line (Batch of API): accepted 117 ba, totaling 1170000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 3660000000 (366 ba) = (in prod=0 ba; in QA= 0 ba; discarded=90000000 (9 ba); good=3570000000 (357 ba))]
-[Production line (Batch of bulkDrug): accepted 366 ba, totaling 3660000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 7430000000 (743 ba) = (in prod=0 ba; in QA= 0 ba; discarded=180000000 (18 ba); good=7250000000 (725 ba))]
-[Production line (Batch of packagedDrug): accepted 743 ba, totaling 7430000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=1102.0 ba. Shipping plan=1.2090275839E10 u, has shipped=9.9E9 u, in 9 loads. Of this, 0 ba is still being shipped. Remains on hand=112.0 ba]
-================================================
-===== 359.0: Report at t=359.0 =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=1.450833707E10; has 1.21E10 units of packagedDrug on hand. Has Received=1.21E10]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=1.450833707E10; ever started production=1451 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=7.3E8 (73 ba), QA released=1.378E10 (1378 ba)]
-Split (90:10) 13780000000 units: To Input(Batch of RawMaterial), 12410000000; To Input(Batch of RawMaterial), 1370000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=1.450833707E10; ever started production=1451 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=2.90519377E8 (1451 ba), QA released=1.4219480623E10 (33814 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=1.450833707E10; ever started production=1451 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=5.2E8 (52 ba), QA released=1.399E10 (1399 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 12410000000 (1241 ba) + (rework=1.8E8) = (in prod=0 ba; in QA= 0 ba; discarded=50000000 (5 ba); rework=180000000 (18 ba); good=12360000000 (1236 ba))]
-[Production line (Batch of API): accepted 1259 ba, totaling 12590000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:467.0 batches]). Ever started: 9320000000 (932 ba) = (in prod=0 ba; in QA= 0 ba; discarded=70000000 (7 ba); good=9250000000 (925 ba))]
-[Production line (Batch of bulkDrug): accepted 932 ba, totaling 9320000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:9.589480623E9 batches]). Ever started: 4630000000 (463 ba) = (in prod=0 ba; in QA= 0 ba; discarded=120000000 (12 ba); good=4510000000 (451 ba))]
-[Production line (Batch of packagedDrug): accepted 463 ba, totaling 4630000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 1370000000 (137 ba) + (rework=3.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=30000000 (3 ba); rework=30000000 (3 ba); good=1340000000 (134 ba))]
-[Production line (Batch of API): accepted 140 ba, totaling 1400000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 4380000000 (438 ba) = (in prod=0 ba; in QA= 0 ba; discarded=90000000 (9 ba); good=4290000000 (429 ba))]
-[Production line (Batch of bulkDrug): accepted 438 ba, totaling 4380000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 8910000000 (891 ba) = (in prod=0 ba; in QA= 0 ba; discarded=200000000 (20 ba); good=8710000000 (871 ba))]
-[Production line (Batch of packagedDrug): accepted 891 ba, totaling 8910000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=1322.0 ba. Shipping plan=1.450833707E10 u, has shipped=1.21E10 u, in 11 loads. Of this, 0 ba is still being shipped. Remains on hand=112.0 ba]
-================================================
-===== 365.1061190420989: Finish =================
-[HospitalPool.HospitalPool(Batch of packagedDrug): Has ordered=1.5717363773E10; has 1.322E10 units of packagedDrug on hand. Has Received=1.322E10]
----- Suppliers: -------------------------------
-[MaterialSupplier.RawMaterialSupplier: Ever ordered=1.5717363773E10; ever started production=1572 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=7.8E8 (78 ba), QA released=1.494E10 (1494 ba)]
-Split (90:10) 14940000000 units: To Input(Batch of RawMaterial), 13450000000; To Input(Batch of RawMaterial), 1490000000
-[MaterialSupplier.PacMatSupplier: Ever ordered=1.5717363773E10; ever started production=1572 ba. Of this,  still in factory=0+0, on truck 0+0, in QA 0+0. QA discarded=3.14977008E8 (1572 ba), QA released=1.5405022992E10 (36547 ba)]
-[MaterialSupplier.ExcipientSupplier: Ever ordered=1.5717363773E10; ever started production=1572 ba. Of this,  still in factory=0+0 ba, on truck 0+0 ba, in QA 0+0 ba. QA discarded=5.6E8 (56 ba), QA released=1.516E10 (1516 ba)]
----- FC: --------------------------------------
-[Production.ApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 13450000000 (1345 ba) + (rework=1.9E8) = (in prod=0 ba; in QA= 0 ba; discarded=60000000 (6 ba); rework=190000000 (19 ba); good=13390000000 (1339 ba))]
-[Production line (Batch of API): accepted 1364 ba, totaling 13640000000]
-[Production.DrugProduction; stored inputs=([Batch of API:0.0 batches, Batch of Excipient:505.0 batches]). Ever started: 10110000000 (1011 ba) = (in prod=0 ba; in QA= 0 ba; discarded=90000000 (9 ba); good=10020000000 (1002 ba))]
-[Production line (Batch of bulkDrug): accepted 1011 ba, totaling 10110000000]
-[Production.Packaging; stored inputs=([Batch of bulkDrug:0.0 batches, PackagingMaterial:1.0395022992E10 batches]). Ever started: 5010000000 (501 ba) = (in prod=0 ba; in QA= 0 ba; discarded=130000000 (13 ba); good=4880000000 (488 ba))]
-[Production line (Batch of packagedDrug): accepted 501 ba, totaling 5010000000]
----- CMO: -------------------------------------
-[Production.CmoApiProduction; stored inputs=([Batch of RawMaterial:0.0 batches]). Ever started: 1490000000 (149 ba) + (rework=4.0E7) = (in prod=0 ba; in QA= 0 ba; discarded=30000000 (3 ba); rework=40000000 (4 ba); good=1460000000 (146 ba))]
-[Production line (Batch of API): accepted 153 ba, totaling 1530000000]
-[Production.CmoDrugProduction; stored inputs=([Batch of API:0.0 batches]). Ever started: 4740000000 (474 ba) = (in prod=0 ba; in QA= 0 ba; discarded=90000000 (9 ba); good=4650000000 (465 ba))]
-[Production line (Batch of bulkDrug): accepted 474 ba, totaling 4740000000]
-[Production.CmoPackaging; stored inputs=([Batch of bulkDrug:0.0 batches]). Ever started: 9660000000 (966 ba) = (in prod=22 ba; in QA= 1 ba; discarded=200000000 (20 ba); good=9230000000 (923 ba))]
-[Production line (Batch of packagedDrug): accepted 966 ba, totaling 9660000000]
-----------------------------------------------------------------------
-[Distributor.Distributor(Batch of packagedDrug): TotalReceivedResource=1411.0 ba. Shipping plan=1.5717363773E10 u, has shipped=1.322E10 u, in 12 loads. Of this, 0 ba is still being shipped. Remains on hand=89.0 ba]
-================================================
-
-
+Job 0: Quit 0
+1.511u 0.116s 0:00.57 284.2%	0+0k 0+0io 0pf+0w
   </pre>
 
+(Later, I will add output from more nodes of the model).
+  
   <h2>Explanation of the model</h2>
 
-  <p>While the PowerPoint slide and the subsequent email discussion with Viswanath, Aman, Ben, and others provided me with a lot of information about the models, I still needed to make a lot of "reasonable choices" on how exactly its elements operate.
+<p>See <a href="sc-2-sketch.txt">design sketch</a>
 
-    <p>The computational model currenty just models just a single type of medication. This should be fine if the underlying business model treats each product independently of each other, as we can simply run multiple instances of the computational model, one per medication. In real life, however, there likely are depedencies or common factors of various kinds, e.g. fingible storage space or production capacity, shared components (the same API can be used in pills or in liquid drugs), the same disruptions can disrupt the supply chains for multuple products etc.
-
-<p>All Java classes mentioned below are in the package edu.rutgers.pharma3 (and NOT in edu.rutgers.pharma, which represents an entirely different business model, provided by Abhisekh at GMU; nor are they in edu.rutgers.pharma2, which represents an earlier, simpler, Rutgers model).
-      
+ <strike>
   <h3>Resources</h3>
 
 <p>In the previous model (pharma2) all resources were viewed as fungible (a tablet of aspirin being as good as any other tablet), and were modeled by DES <tt>CountableResource</tt> class. In this model (pharma3) we take into account the fact that in reality some products come in identifiable lots; this makes it possible to associate  an expiration date with each lot. Additionally, since each lot has an identifiable provenance, one can model use cases which, for example, involve discovering <em>post factum</em> that a particular factory had an outbreak of a bacterial contamination, not detected by the QA at the time, and now a certain series of lots need to be discarded.
@@ -568,9 +391,13 @@ If <tt>inheritsExpiration</tt> is true, then the expiration date of each newly c
 <p>In the Distribution center, when lots are taken from storage to be sent to the Hospital/Pharmacy Pool, the expirarion date of each Batch is checked. The policy is not to send out products with less than 1 year (365 days) left until its expiration dates; so every batch that's within 1 year from the expiration date is removed from the Queue and  discarded.
 
 <p>In the Production class (modeling various production units), a similar process takes place in each input buffer queue (Production.InputStore) object that represents storage of an input ingredient that has an expiration date. However, here only the lots expired as of the current date are discarded; there is no requirement that the lot had any extra time of shelf life left in it.
+</strike>
 
+  
   <h2>Disruptions</h2>
 
+<p>At this point (March 27), disruptions in SC-2 have not been tested yet. They will, however, be analogous to disruptions in Pharma3.
+  
   <p>See <a href="disrupt.html">Disruptions in Pharma3</a>
   
   </body>
