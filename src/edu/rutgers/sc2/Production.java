@@ -21,6 +21,7 @@ class Production extends AbstractProduction
     implements Reporting, Named 
 {
 
+    /** The buffers for inputs (raw materials) that go into production */
     private InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
 
@@ -28,24 +29,29 @@ class Production extends AbstractProduction
      
     ProdDelay prodDelay;
 
-    /** Transportation from  the production to the QA stage, as may exist in some tracks
+    /** Transportation from the production to the QA stage, as may
+	exist in some tracks. It is null if transportation takes no time
+	in the model.
     */
     private SimpleDelay transDelay = null;
     
     final ThrottleQueue needProd;
-    /** These only exist if the respective stages are throttled */
+    /** These only exist if the respective stages are throttled (FIFO,
+	capacity-1), rather than "parallel" (infinite capacity) */
     private final ThrottleQueue needTrans, needQa;
 
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent */
     //    ThrottleQueue getNeedQa() { return needQa;}
     /** If an external producer sends it product for us to do QA, this
-	is where it should be sent. Either the QA delay itself (if
-	parallel processing is allowed), or the waiting buffer (if throttled).
+	is where it should be sent. This is either the QA delay itself (if
+	parallel processing is allowed), or the waiting buffer (if throttled FIFO processing).
     */
     Receiver getQaEntrance() { return needQa!=null? needQa: qaDelay;}
 
-    /** Where batches go for transportation */
+    /** Where batches go for transportation. Either the transportation delay
+	(if unlimited capacity) or the pre-transportation queue (if throttled)
+     */
     Receiver getTransEntrance() { return needTrans!=null? needTrans: transDelay; }
 	
 
@@ -53,7 +59,10 @@ class Production extends AbstractProduction
     public ProdDelay getProdDelay() { return prodDelay; }
 
     /** Returns the last existing stage of this production unit. Typically
-	this is the qaDelay, but some units (CMO Track A) don't have QA. */
+	this is the qaDelay, but some units (CMO Track A) don't have QA,
+	so this will be the transportation delay, or even the production
+	delay.
+    */
     public Provider getTheLastStage() {
 	return qaDelay!=null? qaDelay:
 	    transDelay!=null? transDelay: prodDelay;
@@ -106,7 +115,9 @@ class Production extends AbstractProduction
 	outBatchSize = para.getDouble("batch");
 
 
-	final boolean qaIsThrottled=false, transIsThrottled=false;
+	//-- Are trans and QA stages throttled (FIFO) or parallel?
+	final boolean qaIsThrottled= para.getBoolean("qaThrottled", false),
+	    transIsThrottled=para.getBoolean("transThrottled", false);
 	
 	//batchesPerDay = para.getLong("batchesPerDay", null);
 

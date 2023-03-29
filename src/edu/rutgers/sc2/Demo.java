@@ -90,7 +90,7 @@ public class Demo extends SimState {
     WaitingPatientQueue wpq;
     ServicedPatientPool spp;
 
-    Batch eeBatch;
+    Batch eeBatch, dsBatch;
     
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
@@ -107,11 +107,20 @@ public class Demo extends SimState {
 	    add(wpq);
 	    
 	    CountableResource rmEE = new CountableResource("RMEE", 1);
-	    //MaterialBuffer rmBuffer = new MaterialBuffer( this, config, rmEE, new String[0]);
-
 	    eeBatch = Batch.mkPrototype(EE.uEE, config);
 
-	    
+	    CountableResource rmDS = new CountableResource("RMDS", 1);
+	    CountableResource ds = new CountableResource("RMDS", 1);
+	    dsBatch = Batch.mkPrototype(ds, config);
+
+	    //---- EE production chain ----
+	    /*
+	    Production 
+	    eeRMSupplier = new Production(this, "eeRMSupplier", config,
+				       new Resource[] {},
+				       rmEE);
+	    */
+				       
 	    eeCmoProd = new Production(this, "eeCmoProd", config,
 				       new Resource[] {rmEE},
 				       eeBatch);
@@ -143,6 +152,44 @@ public class Demo extends SimState {
 
 	    eeHEP = new Pool(this, "eeHEP", config,  eeBatch, new String[0]);
 	    add(eeHEP);
+
+	    //---- DS production chain ----	    
+
+	    /*
+	    dsCmoProd = new Production(this, "dsCmoProd", config,
+				       new Resource[] {rmDS},
+				       dsBatch);
+
+	    add(dsCmoProd);
+
+
+	    CountableResource pmDS = new CountableResource("PMDS", 1);
+
+	    dsPackaging = new Production(this, "dsPackaging", config,
+					 new Resource[] {dsBatch, pmDS},
+					 dsBatch);
+	    dsPackaging.setNoPlan(); // driven by inputs
+	    add(dsPackaging);
+
+	    dsCmoProd.setQaReceiver(dsPackaging.getEntrance(0), 1.0);	
+	    dsMedTech = new MedTech("dsMedTech", dsCmoProd);
+	    
+	    add(dsMedTech);
+
+	    dsDC = new Pool(this, "dsDC", config,  dsBatch, new String[0]);
+	    add(dsDC);
+
+	    Delay d2 = dsPackaging.mkOutputDelay(dsDC);
+	    dsPackaging.setQaReceiver(d2, 1.0);	
+	    */
+	    
+	    /*
+	    eeDP = new Pool(this, "eeDP", config,  eeBatch, new String[0]);
+	    add(eeDP);
+
+	    eeHEP = new Pool(this, "eeHEP", config,  eeBatch, new String[0]);
+	    add(eeHEP);
+	    */
 
 	    
 	    //-- link the pools, based on the "from1" fields in its ParaSet
