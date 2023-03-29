@@ -98,9 +98,9 @@ public class SafetyStock extends Pool  {
 	
 	double deficit = reorderPoint - (currentStock + onOrder);
 
-	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
-			   "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
-				   " + OO:" + onOrder + ")=deficit=" + deficit + ". Delay=" +  refillDelay.report());
+	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
+	//		   "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
+	//			   " + OO:" + onOrder + ")=deficit=" + deficit + ". Delay=" +  refillDelay.report());
 
 	if (deficit <= 0) return;
 
