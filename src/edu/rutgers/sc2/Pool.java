@@ -138,7 +138,6 @@ public class Pool extends sim.des.Queue
 	doChartHeader(moreHeaders);
 
 
-	//System.out.println("DEBUG:" + getName() + ", init done, stock=" +getContentAmount());
     }
 
     
@@ -349,6 +348,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     }
     */
 
+
+    private double deficit() {
+	return everReceived + initialReceived - everSent - currentStock;
+    }
+    
     /** Process a request from a consumer (a downstream pool) to give
 	it some stuff. To the extent stuff is available, 
 	moves stuff from this pool directly to another pool etc,
@@ -380,9 +384,10 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	if (amt<=0) return 0;
 	double sent = 0, expired=0;
+	double now = state.schedule.getTime();
 
 	if (prototype instanceof Batch) {
-	
+		    
 	    Batch b;
 	    Delay delay = (consolidate && (r instanceof Delay))? (Delay)r: null;
 	    int n = 0;
@@ -396,21 +401,24 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    while(//getAvailable()>0 &&
 		  sent<amt &&
 		  (b = expiredProductSink.getNonExpiredBatch(this, entities))!=null) {
+		double a = b.getContentAmount();
 		if (!offerReceiver(r, b)) throw new IllegalArgumentException("Expected acceptance by " + r);
 		n++;
 		if (n==1 && delay!=null) {
 		    //delay.setFreezingDelay(true);
 		    delay.setUsesLastDelay(true);
 		}
-		double a = b.getContentAmount();
 		sent += a;
 		entities.remove(b);
+
 	    }
 	    expired = expiredProductSink.getEverConsumed() - expired0;
 	    if (delay!=null) {
 		delay.setUsesLastDelay(false);
 	    }
 	    currentStock -= (sent + expired);
+
+
 	} else if (prototype instanceof CountableResource) {
 	    offerReceiver(r, amt);
 	    currentStock = getAvailable();
@@ -423,6 +431,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	// make a separate backOrder call for the unfilled amount, and that
 	// amount will be recorded at that point
 	if (doRecordDemand) recordDemand(sent);
+	    
+
 	return sent;
     }
 
@@ -432,6 +442,15 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
      */
     private HashMap<Receiver,Double> needToSend = new HashMap<>();
 
+    double sumNeedToSend() {
+	double s=0;
+	for(Double x: needToSend.values()) {
+	    if (x!=null) s+=x;
+	}
+	return s;
+    }
+	
+    
     /** The Pool receives an order for something that it does not
 	have, and files it for later filling. This method can be
 	used once the caller knows that the Pool cannot ship anything
@@ -540,6 +559,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    sumOfAgesReceivedToday += (now - ((Batch)amount).getLot().getEarliestAncestorManufacturingDate());
 	}
 
+	//double now = state.schedule.getTime();
+	//if (deficit()!=0) System.out.println("accept("+a+") done: t="+now+". "+report());
+
 	//	System.out.println("DEBUG:" + getName() + ", everReceived=" +everReceived +", receivedToday=" + receivedToday + ", currentStock=" + currentStock);
 
 	
@@ -598,13 +620,14 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    amt = Math.round(amt);
 	    double sent = sup.src.feedTo(sup.entryPoint, amt);
 
-	    if (amt<sent) {
+	    double backOrderAmt = Math.max(0, amt-sent);
+	    if (backOrderAmt>0) {
 		if (!(sup.src instanceof Pool)) throw new AssertionError("Non-pools are supposed to 'fill' entire orders");
-		((Pool)sup.src).backOrder(sup.entryPoint, amt-sent);
+		((Pool)sup.src).backOrder(sup.entryPoint, backOrderAmt);
 	    }
 	    
 	    unfilled -= sent;
-	    orderedToday += sent;
+	    orderedToday += sent + backOrderAmt;
 	    if (done) break;
 	}
 	onOrder += orderedToday;
@@ -668,7 +691,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     
 
     public String report() {	
-	String s = "[" + getName()+ " has received " + everReceived + " u (not counting initial="+initialReceived+" u), has sent "+everSent+" u";
+	String s = "[" + getName()+ " has received " + (long)everReceived + " u (not counting initial="+(long)initialReceived+" u), has sent "+(long)everSent+" u";
 
 	if (expiredProductSink != null && expiredProductSink.getEverConsumed() >0) {	
 	    s += ". Discarded as expired=" + expiredProductSink.getEverConsumedBatches() +  " ba";
@@ -676,7 +699,14 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (stolenProductSink.getEverConsumed() >0) {
 	    s +=  ". Stolen=" + stolenProductSink.getEverConsumedBatches() +  " ba";
 	}
-	s += ". Available=" + currentStock + " u";
+	s += ". Available=" + (long)currentStock + " u";
+	s += ". Expecting receipt of " + (long)onOrder + " u";
+	s += ". Still need to send=" + (long)sumNeedToSend() + " u";
+
+	double deficit = everReceived + initialReceived - everSent - currentStock;
+
+	if (deficit!=0) s += ". Deficit=" + deficit;
+	
 	s += "]";
        return wrap(s);
    }
@@ -711,6 +741,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 		currentStock -= a;
 	    }
 	}
+	double now = state.schedule.getTime();
+	//	if (deficit()!=0) System.out.println("deplete("+amt+") done: t="+now+". "+report());
+
 	return  destroyed;		
     }
 
@@ -767,6 +800,10 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    ee = new EE(b.split(1));		
 	}
 	currentStock -= 1;
+	everSent+=1;
+	double now = state.schedule.getTime();
+	// if (deficit()!=0) System.out.println("extract() done: t="+now+". "+report());
+
 	return ee;
     }
     

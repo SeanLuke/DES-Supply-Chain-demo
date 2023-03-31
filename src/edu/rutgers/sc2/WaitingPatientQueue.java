@@ -41,7 +41,8 @@ public class WaitingPatientQueue extends sim.des.Queue implements Named, Reporti
     }
 
       public String report() {	
-	  String s = "[" + getName(); //+ " has received orders for " + everReceivedOrders + " u";
+	  String s = "[" + getName();
+	  s += "; waiting patients=" + (long)getAvailable();
 
 	s += "]";
        return wrap(s);

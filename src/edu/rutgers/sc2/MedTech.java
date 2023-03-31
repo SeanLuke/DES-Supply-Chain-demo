@@ -15,12 +15,15 @@ import edu.rutgers.util.*;
 
 class MedTech implements Named, BatchProvider, Reporting {
 
-    Production prod;
+    /** Production nodes (including suppiers) to whom the order
+	must be transmitted */
+    Production[] prod;
+
 
     /**
        @param _prod To whom orders will be sent
      */
-    MedTech(String _name, Production _prod) {
+    MedTech(String _name, Production[] _prod) {
 	prod = _prod;
 	setName(_name);
     }
@@ -32,7 +35,9 @@ class MedTech implements Named, BatchProvider, Reporting {
 	but requests the producer to produce some products which will eventually
 	propagate to the receiver */       
     public double feedTo(Receiver r, double amt) {
-	prod.addToPlan(amt);
+	for(Production p: prod) {
+	    p.addToPlan(amt);
+	}
 	// FIXME: should also order some raw materials for the production node,
 	// so that it won't have to rely on safety stocks
 	everReceivedOrders += amt;
@@ -49,7 +54,7 @@ class MedTech implements Named, BatchProvider, Reporting {
 
 
     public String report() {	
-	String s = "[" + getName()+ " has received orders for " + everReceivedOrders + " u";
+	String s = "[" + getName()+ " has received orders for " + (long)everReceivedOrders + " u";
 
 	s += "]";
        return wrap(s);

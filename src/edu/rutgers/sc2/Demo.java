@@ -83,6 +83,9 @@ public class Demo extends SimState {
 	if (verbose) doReport("Start");
     }
 
+    Production 	eeRMSupplier;
+    Production 	dsRMSupplier;
+
     Production eeCmoProd, eePackaging;
     Pool eeDC, eeDP, eeHEP;
     MedTech eeMedTech;
@@ -107,6 +110,8 @@ public class Demo extends SimState {
 	    add(wpq);
 	    
 	    CountableResource rmEE = new CountableResource("RMEE", 1);
+	    Batch rmEEBatch = Batch.mkPrototype(rmEE, config);
+
 	    eeBatch = Batch.mkPrototype(EE.uEE, config);
 
 	    CountableResource rmDS = new CountableResource("RMDS", 1);
@@ -114,22 +119,22 @@ public class Demo extends SimState {
 	    dsBatch = Batch.mkPrototype(ds, config);
 
 	    //---- EE production chain ----
-	    /*
-	    Production 
+
 	    eeRMSupplier = new Production(this, "eeRMSupplier", config,
-				       new Resource[] {},
-				       rmEE);
-	    */
+					  new Resource[] {},
+					  rmEEBatch);
+	    add(eeRMSupplier);
 				       
 	    eeCmoProd = new Production(this, "eeCmoProd", config,
-				       new Resource[] {rmEE},
+				       new Resource[] {rmEEBatch},
 				       eeBatch);
-
+	    
+	    eeRMSupplier.setQaReceiver(eeCmoProd.getEntrance(0), 1.0);	
 	    add(eeCmoProd);
-
-
+	    
+	    
 	    CountableResource pmEE = new CountableResource("PMEE", 1);
-
+	    
 	    eePackaging = new Production(this, "eePackaging", config,
 					 new Resource[] {eeBatch, pmEE},
 					 eeBatch);
@@ -137,7 +142,8 @@ public class Demo extends SimState {
 	    add(eePackaging);
 
 	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
-	    eeMedTech = new MedTech("eeMedTech", eeCmoProd);
+	    eeMedTech = new MedTech("eeMedTech",
+				    new Production[] {eeCmoProd,eeRMSupplier});
 	    
 	    add(eeMedTech);
 
@@ -235,6 +241,7 @@ public class Demo extends SimState {
     
     String report() {
 	Vector<String> v= new Vector<>();
+	v.add(eeRMSupplier.report());
 	v.add(eeCmoProd.report());
 	v.add(eePackaging.report());
 	v.add(eeDC.report());

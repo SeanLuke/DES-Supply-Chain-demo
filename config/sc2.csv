@@ -14,9 +14,13 @@ EE,tbf,Triangular,0,5*365,10*365
 #RMEE,targetLevel,10362
 #RMEE,supplierDelay,Uniform,30,60
 
+RMEE,expiration,+Infinity
+
+
 RMDS,expiration,+Infinity
 
 
+eeRMSupplier,batch,100
 eeRMSupplier,transDelay,Uniform,30,60
 
 eeCmoProd.safety.RMEE,initial,10362

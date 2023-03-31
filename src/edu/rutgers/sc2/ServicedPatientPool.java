@@ -52,6 +52,9 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     double everEeBroke=0;
     /** How many patients have been released after completing treatment */
     double everCured=0;
+    /** How many patients were sent back to the waiting queue because
+	their EE broke or died */
+    double everAnnoyed=0;
 
    
     /** For patients whose EE device breaks on them. They are routed back to WPQ */
@@ -80,6 +83,7 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	    } else  throw new AssertionError("Unknown EE device state");
 
 	    ee.finishUse(p);
+	    everAnnoyed++;
 	    return super.accept(provider, amount, atLeast,  atMost);
 	}
      }
@@ -177,9 +181,10 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	String s = "[" + getName();//+ " has received orders for " + everReceivedOrders + " u";
 	s += "; accepted " + (long)everAccepted + " patients; currently treated=" + (long)getDelayed();
 	s += "; patients cured=" +  (long)everCured +
-	    "; EE destroyed=" + (long)everEeDied +
-	    "; EE sent to repair=" + (long)everEeBroke;
-	s += ". EE in repair pool="+ (long)repairPool.getDelayed();
+	    ", sent back to wait=" + (long)everAnnoyed +
+	    ". EE destroyed=" + (long)everEeDied +
+	    ", sent to repair=" + (long)everEeBroke;
+	s += ". EE still in repair pool="+ (long)repairPool.getDelayed();
 
 	s += "]";
 	return wrap(s);

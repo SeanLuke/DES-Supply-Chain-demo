@@ -99,7 +99,7 @@ class Production extends AbstractProduction
 	para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 
-	inBatchSizes = para.getDoubles("inBatch");
+	inBatchSizes = (inResources.length==0)? new double[0]: para.getDoubles("inBatch");
 	if (inBatchSizes.length!=inResources.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inResources.length + " resources ("+Util.joinNonBlank(";",inResources)+"), but " + inBatchSizes.length + " input batch sizes");
 
 
@@ -155,14 +155,20 @@ class Production extends AbstractProduction
 	
 	prodDelay = new ProdDelay(state,outResource);
 
-	prodDelay.addReceiver(getTransEntrance()!=null? getTransEntrance(): getQaEntrance());
+	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
+	if (w!=null) prodDelay.addReceiver(w);
 
 	AbstractDistribution d0 = para.getDistribution("prodDelay",state.random);
-	AbstractDistribution dn = new CombinationDistribution(d0, (int)outBatchSize);
-	needProd = new ThrottleQueue(prodDelay, cap, dn);
+	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)outBatchSize);
 
-	needProd.setWhose(this);
-	needProd.setAutoReloading(true);
+	if (dn!=null) {
+	    needProd = new ThrottleQueue(prodDelay, cap, dn);
+
+	    needProd.setWhose(this);
+	    needProd.setAutoReloading(true);
+	} else {
+	    needProd  = null;
+	}
 	
 	if (qaDelay !=null && qaDelay.reworkProb >0) {
 	    qaDelay.setRework( needProd);
@@ -249,10 +255,13 @@ class Production extends AbstractProduction
     Double startPlan = 0.0;
 
     /** Configure this unit to be controlled by the rationing of inputs */
+
+    double everPlanned = 0;
     
     void setNoPlan() { startPlan = null; }
-    void setPlan(double x) { startPlan = x; }
+    //void setPlan(double x) { startPlan = x; }
     void addToPlan(double x) {
+	everPlanned += x;
 	if (startPlan != null) x += startPlan;
 	startPlan = x;
     }
@@ -288,11 +297,20 @@ class Production extends AbstractProduction
 		return;
 	    }
 
-	    // This will "prime the system" by starting the first
-	    // mkBatch(), if needed and possible. After that, the
-	    // production cycle will repeat via the slackProvider
-	    // mechanism
-	    needProd.provide(prodDelay);
+	    if (needProd!=null) {
+		// This will "prime the system" by starting the first
+		// mkBatch(), if needed and possible. After that, the
+		// production cycle will repeat via the slackProvider
+		// mechanism
+		needProd.provide(prodDelay);
+	    } else {
+		int n = 0;
+		while( mkBatch()) {
+		    n++;
+		}
+		//System.out.println("At t=" + now + ", " + getName() +	" mkBatch done  "+n+ " batches");
+	    }
+		       
 
 	} finally {
 	    dailyChart();
@@ -369,7 +387,7 @@ class Production extends AbstractProduction
 
 	Batch onTheTruck = outResource.mkNewLot(outBatchSize, now, null); //usedBatches);
 	Provider provider = null;  // why do we need it?		
-	needProd.accept(provider, onTheTruck, 1, 1);
+	(needProd!=null? needProd: prodDelay).accept(provider, onTheTruck, 1, 1);
 
 	batchesStarted++;
 	everStarted += outBatchSize;
@@ -410,11 +428,15 @@ class Production extends AbstractProduction
     public String report() {
 	
 	String s = "[" + cname()+"."+getName()+"; stored inputs=("+ reportInputs() +"). "+
+	    "Ever planned: "+(long)everPlanned + "; still to do "+startPlan+". " +
 	    "Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 
-	s += " = (in prod=" +   needProd.hasBatches() +	    " ba;";
-	if (needTrans!=null) s +="  in trans=" +   needTrans.hasBatches() +")";
-	else if (transDelay!=null) s +="  in trans=" +   (long)transDelay.getDelayedPlusAvailable() +")";
+	if (needProd!=null) {
+	    s += " = (in prod=" + needProd.hasBatches() +	    " ba;";
+	} else s +=" (in prod=" + (long)prodDelay.getDelayedPlusAvailable() +")";
+
+	if (needTrans!=null) s +=" in trans=" +   needTrans.hasBatches() +")";
+	else if (transDelay!=null) s +=" in trans=" +   (long)transDelay.getDelayedPlusAvailable() +")";
 	if (qaDelay!=null) {
 	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
 	    s += " " + qaDelay.report();	    

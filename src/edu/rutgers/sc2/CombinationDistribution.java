@@ -28,6 +28,7 @@ public class CombinationDistribution extends AbstractContinuousDistribution {
     
     CombinationDistribution(AbstractDistribution _d0, int _n) {
 	d0 = _d0;
+	if (d0==null) throw new IllegalArgumentException();
 	n = _n;
     }
     public double nextDouble() {

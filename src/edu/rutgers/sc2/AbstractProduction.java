@@ -39,7 +39,7 @@ public abstract class AbstractProduction extends sim.des.Macro {
     abstract boolean mkBatch();
 
     //--------- Managing the downstream operations
-
+    /** The constructor of each derived class must initialize this */
     SplitManager sm;
 
     /** Adds a destination to the output of this production unit
