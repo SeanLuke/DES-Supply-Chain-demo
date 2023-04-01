@@ -334,11 +334,15 @@ extends Probe implements Reporting
     }
 
 
-    public String report() {	
+    public String report() {
+
+
+	String ba = whose.getTypical() instanceof Entity? " ba": " u";
+	
 	String s = "[" + getName()+
-	    " has ordered " + everOrdered + " u, " +
-	    " has received " + everReceived + " u. " +
-	    "On order=" + onOrder +"; in transit " + refillDelay.getDelayedPlusAvailable();
+	    " has ordered " + (long)everOrdered + " u, " +
+	    " has received " + (long)everReceived + " u. " +
+	    "On order=" + (long)onOrder +"; in transit " + refillDelay.getDelayedPlusAvailable() + ba;
 
 	s += "]";
        return wrap(s);

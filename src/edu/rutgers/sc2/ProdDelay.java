@@ -37,6 +37,8 @@ public class ProdDelay extends SimpleDelay
     ProdDelay(SimState state,  Resource resource) {
 	super(state, resource);
 	setName("ProdDelay of " + resource.getName());
+	// 2023-03-31: try to prevent disappearance
+	setDropsResourcesBeforeUpdate(false);
     }
 
     /** A wrapper on super.accept() that also does some statistics.	
@@ -85,4 +87,41 @@ public class ProdDelay extends SimpleDelay
     }
  
 
+    //  protected boolean offerReceivers() { //ArrayList<Receiver> receivers) {
+    /** Just for debugging */
+    /*
+    public void step(SimState state) {
+  	double now = state.schedule.getTime();
+	boolean doDebug = getName().indexOf("BatchOfRMEE")>=0;
+	if (doDebug) {
+	    System.out.println("At t=" + now + ", " + getName() + ".step.in");
+	    System.out.println("DEBUG: this prodDelay=" + report0());
+	    System.out.println("DEBUG: receiver=" + ((SimpleDelay)(getReceivers().get(0))).report0());
+	}
+	
+	super.update();
+
+	if (doDebug) {
+	    System.out.println("At t=" + now + ", " + getName() + ".update done");
+	    System.out.println("DEBUG: this prodDelay=" + report0());
+	    System.out.println("DEBUG: receiver=" + ((SimpleDelay)(getReceivers().get(0))).report0());
+	}
+
+
+	super.offerReceivers();
+  
+
+	//super.step(state);
+    //boolean z = super.offerReceivers();
+
+	if (doDebug) {
+	    System.out.println("At t=" + now + ", " + getName() + ".step.out");
+	    System.out.println("DEBUG: this prodDelay=" + report0());
+	    System.out.println("DEBUG: receiver=" + ((SimpleDelay)(getReceivers().get(0))).report0());
+	}
+
+
+	//return z;
+    }
+    */    
 }

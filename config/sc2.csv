@@ -19,10 +19,11 @@ RMEE,expiration,+Infinity
 
 RMDS,expiration,+Infinity
 
-
+#------ The EE RM supply pool ------
 eeRMSupplier,batch,100
 eeRMSupplier,transDelay,Uniform,30,60
 
+#----- Safety stock for EE manufacturing
 eeCmoProd.safety.RMEE,initial,10362
 eeCmoProd.safety.RMEE,targetLevel,10362
 eeCmoProd.safety.RMEE,reorderPoint,6908
@@ -56,7 +57,7 @@ eePackaging.safety.PMEE,needsAnomaly,-1
 eePackaging,inBatch,10,10
 eePackaging,batch,10
 eePackaging,qaDelay,Uniform,0,0
-eePackaging,transDelay,0
+#eePackaging,transDelay,Uniform,0,0
 eePackaging,prodDelay,Uniform,0.01,0.03
 eePackaging,faulty,0
 eePackaging,rework,0.01
@@ -74,7 +75,11 @@ eeDC,mode,Mode1
 
 eeDC,initial,1500
 eeDC,batch,10
-eeDC,reorderPoint,6908
+#eeDC,reorderPoint,6908
+#eeDC,targetLevel,10362
+
+#--  testing ZZZ
+eeDC,reorderPoint,30000
 eeDC,targetLevel,10362
 
 
@@ -117,6 +122,10 @@ eeHEP,parallelOrder,eeMedTech,1.0
 # DS Initial Inventory: Unif(24176, 72528)
 eeHEP,initial,2590   
 eeHEP,batch,10
-eeHEP,reorderPoint,3454
-eeHEP,targetLevel,6907
+#eeHEP,reorderPoint,3454
+#eeHEP,targetLevel,6907
+
+#-- testing ZZZZ
+eeHEP,reorderPoint,10000
+eeHEP,targetLevel,30000
 

@@ -250,6 +250,10 @@ class InputStore extends sim.des.Queue {
     /** Performs certain auxiliary operation piggy-backed on acceptance
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
+	//	if (whose.getName().equals("eeCmoProd")) {
+//	    System.out.println("DEBUG: " + getName() + ".accept(" + amount +
+//			       ") from " + provider);
+//	}
 	return doAccept(provider,  amount, atLeast, atMost, false);
     }
 
@@ -271,7 +275,7 @@ class InputStore extends sim.des.Queue {
 	
 	// See if the production system is empty, and needs to be "primed"
 	// to start.
-	if (whose.needProd.getAvailable()==0 && whose.prodDelay.getSize()==0) {
+	if (whose.needsPriming()) {
 	    double t = state.schedule.getTime();
 	    //System.out.println("At " + t + ", the "+getName()+" tries to prime " + whose.getName());
 	    
@@ -279,8 +283,7 @@ class InputStore extends sim.des.Queue {
 	    // mkBatch(), if needed and possible. After that, the
 	    // production cycle will repeat via the slackProvider
 	    // mechanism
-	    whose.mkBatch(//getState()
-              );
+	    whose.mkBatch();
 	}
 
 	return z;
@@ -319,13 +322,15 @@ class InputStore extends sim.des.Queue {
     String report(boolean showBatchSize)  {
 	Vector<String> v= new Vector<>();
 	v.add(  getTypical().getName() +":" +
-	    (getTypical() instanceof Batch? 
-	     (long)getAvailable() + " ba" :
-	     getAvailable() + " u" ));
+		(long)getContentAmount() + " u");
+		//	    (getTypical() instanceof Batch? 
+		//	     (long)getAvailable() + " ba" :
+		//	     getAvailable() + " u" ));
 
 	if (expiredProductSink!=null) v.add( expiredProductSink.reportShort());
 	if (stolen>0) v.add("(Stolen=" + stolen+ " u = " + stolenBatches + " ba)");
 	String s = Util.joinNonBlank(". ", v);
+	s += ". Received (from all sources) " + everReceived + " u";
 	if (safety!=null) s += ". " + safety.report();			      
 	return s;
     }
