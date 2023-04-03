@@ -35,6 +35,8 @@ class MedTech implements Named, BatchProvider, Reporting {
 	but requests the producer to produce some products which will eventually
 	propagate to the receiver */       
     public double feedTo(Receiver r, double amt) {
+	if (amt<0) throw new IllegalArgumentException(getName() +".feedTo(" + amt+")");
+	
 	for(Production p: prod) {
 	    p.addToPlan(amt);
 	}

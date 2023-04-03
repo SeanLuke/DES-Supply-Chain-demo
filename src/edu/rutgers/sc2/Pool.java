@@ -182,6 +182,11 @@ public class Pool extends sim.des.Queue
 	*/
 	final Receiver entryPoint;
 
+	public String toString() {
+
+	    return "("+((Named)src).getName()+", f="+fraction+")";
+	}
+	
 	/**
 	    @param delayDistr The delay distribution, or null for immediate delivery
 	*/
@@ -233,12 +238,15 @@ HospitalPool,backOrder,WholesalerPool
 	    if (sup!=null)     normalSuppliers.add(sup);
 	}
 
+	if (Demo.verbose) System.out.println("For Pool " + getName() +", the normal suppliers are " + Util.joinNonBlank("; ", normalSuppliers));
+
+	
 	String key = "backOrder";
 	String key2 = "delayBackOrder";
 	backOrderSupplier = mkSupplier(key, key2, knownPools, true);
 
 	key = "parallelOrder";
-	key2 = "parallelOrderDelay";
+	key2 = "delayParallelOrder";
 	parallelSupplier =  mkSupplier(key, key2, knownPools, false);
     }
 
@@ -501,9 +509,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     public void step(sim.engine.SimState state) {
 
 	double now = getState().schedule.getTime();
-	//System.out.println("DEBUG:" + getName() + ", t="+now+", step");
-
-
+	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", step");
 	
 	reorderCheck();
 	fillBackOrders();
@@ -542,7 +548,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
 
-	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery
+	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery. This way we exclude deliveries from the repair pool to HEP, which should not be counted in onOrder
 	    onOrder -= a;
 	    if (onOrder < a) { // they have over-delivered
 		onOrder=0;
@@ -568,7 +574,24 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	return z;
     }
 
+    /** Chooses a supplier at random, using sup.fraction values as probabilities */
+    static private Supplier pickRandomSupplier(Vector<Supplier> suppliers, ec.util.MersenneTwisterFast random) {
+	double probSum = 0;
+	for(Supplier sup: suppliers) {
+	    probSum += sup.fraction;
+	}
+	if (probSum <=0) throw new AssertionError();
 
+	double who = random.nextDouble() * probSum, s = 0;
+	
+	for(Supplier sup: suppliers) {
+	    s += sup.fraction;
+	    if (s >= who) return sup;
+	}
+	throw new AssertionError();
+	//return null;
+    }
+    
     /** Reorder Mode 1: simple MTS. The supplier is chosen randomly,
 	and the entire order goes to it (with a back-order portion,
 	if necessary). Additionally, if the config prescribes it,
@@ -576,50 +599,44 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	a manufacturing order in addition to a pull order).
      */
     protected void reorderCheck1() {
+	if (targetLevel <= reorderPoint) throw new IllegalArgumentException(getName() + ": illogical MTS plan, with targetLevel=" + targetLevel + "<=reorderPoint=" + reorderPoint);
 	
 	double now = getState().schedule.getTime();
-	//	if (Demo.verbose && currentStock != getContentAmount()) {
-	//	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
-	//	}
+	if (Demo.verbose && currentStock != getContentAmount()) {
+	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
+	    throw new AssertionError();
+	}
 
 	double has =  getContentAmount() + onOrder;
-	double deficit = reorderPoint - has;
 
 	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
-	//			   "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
-	//			   " + OO:" + onOrder + ")=deficit=" + deficit + ". Delay=" +  refillDelay.report());
+	//				     "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
+	//				     " + OO:" + onOrder + ")");
 
-	if (deficit <= 0) return;
+	if (has > reorderPoint) return;
 
 	final double needed = targetLevel - has;
 	double unfilled=needed, orderedToday=0;
 
 	boolean randomChoice = true; // as opposed to a fraction
-	
 
-	double probSum = 0;
-	for(Supplier sup: normalSuppliers) {
-	    probSum += sup.fraction;
-	}
-	if (probSum <=0) throw new AssertionError();
+	Supplier[] vs = randomChoice?
+	    new Supplier[] {pickRandomSupplier(normalSuppliers,getState().random)} :
+	    normalSuppliers.toArray(new Supplier[0]);			
+	    
+	for(Supplier sup: vs) {
 
-	double who = getState().random.nextDouble() * probSum, s = 0;
-	
-	for(Supplier sup: normalSuppliers) {
-
-	    double amt;
-	    boolean done = false;
-	    if (randomChoice) {
-		s += sup.fraction;
-		if (s < who) continue;
-		amt = needed;
-		done = true;
-	    } else {
-		amt = sup.fraction * needed;
-	    } 
-	    amt = Math.round(amt);
+	    double w = (randomChoice? 1: sup.fraction);
+	    double amt = Math.round(w * needed);
 	    double sent = sup.src.feedTo(sup.entryPoint, amt);
 
+
+	    //	    if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", "+
+	    //					 "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
+	    //					 " + OO:" + onOrder + "). Requested " + amt + " from " + sup.src +", got " + sent);
+
+
+	    
 	    double backOrderAmt = Math.max(0, amt-sent);
 	    if (backOrderAmt>0) {
 		if (!(sup.src instanceof Pool)) throw new AssertionError("Non-pools are supposed to 'fill' entire orders");
@@ -628,7 +645,6 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    
 	    unfilled -= sent;
 	    orderedToday += sent + backOrderAmt;
-	    if (done) break;
 	}
 	onOrder += orderedToday;
 	everOrdered += orderedToday;

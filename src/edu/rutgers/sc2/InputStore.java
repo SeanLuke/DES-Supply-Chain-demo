@@ -203,17 +203,12 @@ class InputStore extends sim.des.Queue {
 	    double expiredAmt[]={0};
 	    double t = state.schedule.getTime();
 
-	    Batch b = expiredProductSink.getNonExpiredBatch(this, entities, expiredAmt);
+	    boolean has = expiredProductSink.hasEnoughNonExpired(this, entities, expiredAmt, inBatchSize);
 	    currentStock -= expiredAmt[0];
-
-	    if (b!=null) return true;
-	    return false;
-	    //(safety!=null) &&
-	    //	safety.accessAllowed(t, anomalySince) &&
-	    //	safety.hasEnough(inBatchSize);
+	    return has;
 	} else if (getTypical()  instanceof CountableResource) {
-		double spare = getAvailable() -  inBatchSize;
-		return spare>=0;// || (safety!=null && safety.hasEnough(-spare));
+	    double spare = getAvailable() -  inBatchSize;
+	    return spare>=0;// || (safety!=null && safety.hasEnough(-spare));
 	} else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
     }
 

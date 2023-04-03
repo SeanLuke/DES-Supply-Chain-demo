@@ -75,12 +75,11 @@ eeDC,mode,Mode1
 
 eeDC,initial,1500
 eeDC,batch,10
-#eeDC,reorderPoint,6908
-#eeDC,targetLevel,10362
+eeDC,reorderPoint,6908
+eeDC,targetLevel,10362
 
 #--  testing ZZZ
-eeDC,reorderPoint,30000
-eeDC,targetLevel,10362
+# eeDC,targetLevel,20000
 
 
 # EE Order Incoming Transportation Delay from EE Packaging and Inspection: see Section 5
@@ -120,12 +119,13 @@ eeHEP,parallelOrder,eeMedTech,1.0
 
 # EE Initial Inventory: Unif(2590, 6907)
 # DS Initial Inventory: Unif(24176, 72528)
-eeHEP,initial,2590   
+#eeHEP,initial,2590   
 eeHEP,batch,10
-#eeHEP,reorderPoint,3454
-#eeHEP,targetLevel,6907
+eeHEP,reorderPoint,3454
+eeHEP,targetLevel,6907
 
 #-- testing ZZZZ
-eeHEP,reorderPoint,10000
-eeHEP,targetLevel,30000
+eeHEP,initial,50000
+#eeHEP,reorderPoint,10000
+#eHEP,targetLevel,30000
 

@@ -278,6 +278,7 @@ class Production extends AbstractProduction
     void setNoPlan() { startPlan = null; }
     //void setPlan(double x) { startPlan = x; }
     void addToPlan(double x) {
+	if (x<0) throw new IllegalArgumentException(getName() +".addToPlan(" + x+")");
 	everPlanned += x;
 	if (startPlan != null) x += startPlan;
 	startPlan = x;
@@ -423,7 +424,7 @@ class Production extends AbstractProduction
 	    //if (b!=null) usedBatches.add(b);    
 	}
 
-	if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	//	if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 
 	double outAmt = (prorate)? startPlan: outBatchSize;

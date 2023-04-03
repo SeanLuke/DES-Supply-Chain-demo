@@ -48,7 +48,8 @@ public class ExpiredSink extends MSink  {
 	if (!super.accept( provider,  resource, atLeast,atMost)) throw new AssertionError("Sinks ought not to refuse stuff!");
 	return true;	
     }
-    
+
+   
     public Batch getNonExpiredBatch(Provider p, LinkedList<Entity> entities) {
 	return getNonExpiredBatch( p,  entities, new double [1]);
     }
@@ -91,6 +92,33 @@ public class ExpiredSink extends MSink  {
 	}
 	return null;
     }
+
+    /** Does the specified provider has a sufficient amount of
+	non-expired resource? As a side effect, this method may remove
+	some expired batches.
+	
+	@return True if at least atLeast non-expired resource has been found
+     */    
+    public boolean hasEnoughNonExpired(Provider p, LinkedList<Entity> entities, double removedAmt[], double atLeast) {
+	Batch b0 = getNonExpiredBatch(p, entities, removedAmt);
+	if (b0==null) return false;
+	double sum = b0.getContentAmount();
+	if (sum >= atLeast) return true;
+
+	for(Entity e: p.getEntities()) {
+	    Batch b= (Batch)e;
+	    if (b==b0) continue;
+	    if (accept(p, b, 1, 1)) {
+		entities.remove(b);
+		removedAmt[0] += b.getContentAmount();
+	    } else {
+		sum += b.getContentAmount();
+		if (sum>=atLeast) return true;
+	    }
+	}
+	return false;
+    }
+    
 
     /** @return A short stats message, or an empty string if nothing has ever been discarded as expired */
     public String reportShort() {
