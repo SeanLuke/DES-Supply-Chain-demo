@@ -312,7 +312,7 @@ public class Production extends AbstractProduction
 	    
 	    if (!hasEnoughInputs()) {
 		if (Demo.verbose)
-		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " + reportInputs(true));
+		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypicalProvided()+" is starved. Input stores: " + reportInputs(true));
 		return;
 	    }
 
@@ -387,7 +387,7 @@ public class Production extends AbstractProduction
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    
 	    InputStore p = inputStore[j];
-	    //System.out.println("mkBatch: Available ("+p.getTypical()+")=" + p.reportAvailable());
+	    //System.out.println("mkBatch: Available ("+p.getTypicalProvided()+")=" + p.reportAvailable());
 	    Batch b = p.consumeOneBatch();
 	    if (b!=null) usedBatches.add(b);    
 	}

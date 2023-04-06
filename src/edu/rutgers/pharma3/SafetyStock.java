@@ -73,7 +73,7 @@ public class SafetyStock extends Pool  {
 	refillDelay.setName("RefillDelay." + name);
 	refillDelay.addReceiver(this);
 	// to ensure multi-batch shipments are consolidated safely
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    refillDelay.setDropsResourcesBeforeUpdate(false);
 	}
 	
@@ -157,7 +157,7 @@ public class SafetyStock extends Pool  {
 
     /** Checks if the safety stock has the desired amount of product */
     boolean hasEnough(double inBatchSize) {
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    double expiredAmt[]={0};
 	    double t = state.schedule.getTime();
 
@@ -169,10 +169,10 @@ public class SafetyStock extends Pool  {
 	    if (b==null) return false;
 	    if (b.getContentAmount()!=inBatchSize) throw new IllegalArgumentException("Unexpected batch size in " + getName() + ": wanted " + inBatchSize +", found " + b.getContentAmount());
 	    return true;
-	} else if (getTypical()  instanceof CountableResource) {
+	} else if (getTypicalProvided()  instanceof CountableResource) {
 		double ava = getAvailable();
 		return (ava >= inBatchSize);
-	} else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
+	} else throw new IllegalArgumentException("Wrong input resource type; getTypicalProvided()="  +getTypicalProvided());
     }
 
     private Batch getFirst() {
@@ -202,12 +202,12 @@ public class SafetyStock extends Pool  {
     Batch consumeOneBatch(MSink sink, double inBatchSize) {
 	Batch b = null;
 	double sent=0;
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    b=getFirst();
 	    if (b.getContentAmount() !=  inBatchSize)  throw new IllegalArgumentException("Unexpected batch size in " + getName() + ": wanted " + inBatchSize +", found " + b.getContentAmount());
 	    if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not to refuse stuff!");
 	    remove(b);	    
-	} else if (getTypical() instanceof CountableResource) {
+	} else if (getTypicalProvided() instanceof CountableResource) {
 	    if (getAvailable()<inBatchSize)  throw new IllegalArgumentException(getName() + ".consumeOneBatch(): have="+getAvailable()+", need=" +  (long)inBatchSize);
 	    boolean z = provide(sink, inBatchSize);
 	    if (!z) throw new AssertionError("Sinks ought not to refuse stuff!");

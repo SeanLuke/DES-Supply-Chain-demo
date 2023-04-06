@@ -616,7 +616,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (has > reorderPoint) return;
 
 	final double needed = targetLevel - has;
-	double unfilled=needed, orderedToday=0;
+	double unfilled=needed;
 
 	boolean randomChoice = true; // as opposed to a fraction
 
@@ -657,7 +657,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     }
 
     /** Reported in a time series chart file */
-    double orderedToday = 0;
+    private double orderedToday = 0;
 
     /** Checks if this pool needs stuff reordered, and makes an order if needed */
     protected void reorderCheck() {
@@ -716,7 +716,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    s +=  ". Stolen=" + stolenProductSink.getEverConsumedBatches() +  " ba";
 	}
 	s += ". Available=" + (long)currentStock + " u";
-	s += ". Expecting receipt of " + (long)onOrder + " u";
+	s += ". Ever ordered "+(long)everOrdered+", expecting receipt of " + (long)onOrder + " u";
 	s += ". Still need to send=" + (long)sumNeedToSend() + " u";
 
 	double deficit = everReceived + initialReceived - everSent - currentStock;
@@ -739,7 +739,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     */
     protected synchronized double deplete(double amt) {
 	double destroyed = 0;
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    while(destroyed<amt && getAvailable()>0) {
 		Batch b=(Batch)entities.getFirst();
 		if (!offerReceiver( stolenProductSink, b)) throw new AssertionError("Sinks ought not refuse stuff!");
@@ -781,7 +781,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
      */
     void doChart(double... moreValues) {
 	double stock =  getContentAmount();
-	double stillOnOrder = everOrdered - everReceived;
+	double stillOnOrder = onOrder; //everOrdered - everReceived;
 	double[] a = {stock,orderedToday,receivedToday,stillOnOrder,demandedToday,sentToday};
 	double[] b = Arrays.copyOf(a, a.length + moreValues.length);
 	int j=a.length;
@@ -791,6 +791,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	receivedToday=0;
 	demandedToday=0;
 	sentToday=0;
+	//if (orderedToday!=0) System.out.println("DEBUG: " + getName() +", orderedToday was " + orderedToday);
 	orderedToday=0;
 	batchesReceivedToday = sumOfAgesReceivedToday = 0;
 

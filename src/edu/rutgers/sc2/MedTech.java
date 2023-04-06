@@ -13,12 +13,11 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-class MedTech implements Named, BatchProvider, Reporting {
+class MedTech implements Named, BatchProvider, Reporting, Steppable {
 
     /** Production nodes (including suppiers) to whom the order
 	must be transmitted */
     Production[] prod;
-
 
     /**
        @param _prod To whom orders will be sent

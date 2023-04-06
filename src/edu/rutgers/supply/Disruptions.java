@@ -59,6 +59,9 @@ public class Disruptions {
 	/** The stoppage of a certain production facility; it will continue
 	    for the number of days specified by magnitude. */
 	Halt,
+	/** The safety stock stops sending replenishment requests for
+	    a specified number of days */
+	DisableTrackingSafetyStock,
     };
 
     /** A single disruption event. A disruption may take place of a momentary
@@ -152,6 +155,12 @@ public class Disruptions {
 <pre>
 time,unit,type,amount
 </pre>
+or
+<pre>
+timeStart-timeEnd,unit,type,amount
+</pre>
+In the latter case, the disruption repears every day, with the same type and magnitude, from timeStart to timeEnd, inclusively.  E.g. 10-20 will have the disruption repeat 11 times, from day 10 thru day 20.
+
 
 @param f The disruption scenario CSV file to read
 @return The new disruption scenario based on the CSV file
@@ -169,18 +178,35 @@ time,unit,type,amount
 	    j++;
 	    CsvData.BasicLineEntry e = (CsvData.BasicLineEntry)_e;
 	    if (e.nCol()!=4) throw new  IllegalInputException("Illegal number of columns in file "+h.readFrom+": " + e.nCol() +". Expected 4. Data line no. " + j);
-	    Double time = e.getColDouble(0);
+	    Double[] tt = {null, null};
+
+	    //	    Double time = e.getColDouble(0);
+
+	    String ss[] = e.getCol(0).split("-");
+	    if (ss.length<1 || ss.length>2) throw new  IllegalInputException("Illegal time format ("+e.getCol(0)+")number of columns in file "+h.readFrom+". Data line no. " + j);
+	    for(int k=0; k<ss.length; k++) {
+		try {
+		    tt[k] = Double.parseDouble(ss[k]);
+		} catch(Exception ex) {}
+	    }
+	    
 	    String unit = e.getCol(1);
 	    String typeString = e.getCol(2);
 	    Double magnitude = e.getColDouble(3);
-	    if (time==null || magnitude==null || unit==null || unit.length()==0) throw new IllegalInputException("Illegal data in data line no. " + j + ". Data=" + e);
+	    if (tt[0]==null || magnitude==null || unit==null || unit.length()==0) throw new IllegalInputException("Illegal data in data line no. " + j + ". Data=" + e);
 	    Type type;
 	    try {
 		type =  Enum.valueOf(Type.class,  typeString);
 	    } catch(Exception ex) {
 		throw new IllegalInputException("Invalid disruption type ("+ typeString+") in file "+h.readFrom+", data line no. " + j);
-	    }	    
-	    h.add(type, unit, time, magnitude);
+	    }
+	    
+	    h.add(type, unit, tt[0], magnitude);
+	    if (tt[1]!=null) {
+		for(double time=tt[0]+1; time<=tt[1]; time += 1) {
+		    h.add(type, unit, time, magnitude);
+		}
+	    }
 	}
 	
 	return h;

@@ -73,7 +73,7 @@ public class ProdDelay extends SimpleDelay
     public String report() {
 	double t = state.schedule.getTime();
 	double util = (t==0)? 1.0 : totalUsedTime/t;
-	return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+df.format(util*100)+"%]";
+	return "[Production line ("+getTypicalProvided().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+df.format(util*100)+"%]";
     }
 
     

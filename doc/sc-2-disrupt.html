@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <title>Disruptions in SC-2</title>
+  </head>
+  <body>
+    <h1>Disruptions in SC-2</h1>
+
+<div align="center"><em>Updated: 2023-04-04, for SC-2 ver. 1.001</em></div>
+
+    <p>Generally, the mechanism for providing a disruption scenario to the SC-2 application is the same as used in the SC-1 (aka Pharma3) application. (See: <a href="disrupt.html">Disruptions in Pharma3</a>
+
+      <h2>Disruption scenario syntax enhancements</h2>
+      
+    <p>One enhancement from the Pharma3 syntax is that now it's possible to use the <em>time1-time2</em> notation in the first column ("time") of the scenario file in order to specify that a disruption of the same type and magnitude repeats daily on several consecutive days. For example, to describe a repeated daily attack on the EE RM input buffer of the eeCmoProd unit (e.g. mice destroying up to 10000 units of the stuff every night) occurring daily for 7 days, from day 60 thru day 66, you can write one line,
+      <pre>
+60-66,eeCmoProd.RMEE,Depletion,10000
+      </pre>
+instead of seven lines,
+      <pre>
+60,eeCmoProd.RMEE,Depletion,10000
+61,eeCmoProd.RMEE,Depletion,10000
+62,eeCmoProd.RMEE,Depletion,10000
+63,eeCmoProd.RMEE,Depletion,10000
+64,eeCmoProd.RMEE,Depletion,10000
+65,eeCmoProd.RMEE,Depletion,10000
+66,eeCmoProd.RMEE,Depletion,10000
+      </pre>
+
+<p>There is no corresponding change in the Java API; to add these 7 disruption events, you still need to make 7 calls to <tt>Disruptions.add()</tt>      
+
+<h2>Sample scenario files</h2>
+  
+    <p>Sample scenario files for several of Abhisekh's disruption types can be found in the directory  <tt>config/dis-sc2</tt> under the main project directory *as exported from GitHub; that would be e.g. <tt>~vmenkov/mason/work</tt> on <tt>robo1</tt>), for example       <tt>config/dis-sc2/sample-D1.csv</tt>.
+
+  </body>
+  </html>

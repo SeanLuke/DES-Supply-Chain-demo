@@ -67,7 +67,7 @@ class Production extends sim.des.Queue
 
 	sink = new Sink[preprocStore.length];
 	for(int j=0; j<sink.length; j++) {
-	    sink[j] = new MSink(state,preprocStore[j].getTypical());
+	    sink[j] = new MSink(state,preprocStore[j].getTypicalProvided());
 	}
   
     }
@@ -99,7 +99,7 @@ class Production extends sim.des.Queue
 	    }
 	    
 	    //	    System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; pp0 still has "+ preprocStore[0].getAvailable()+", pp1 still has "+ preprocStore[1].getAvailable() );
-	    Resource onTheTruck = new CountableResource((CountableResource)getTypical(), outBatchSize);
+	    Resource onTheTruck = new CountableResource((CountableResource)getTypicalProvided(), outBatchSize);
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, outBatchSize, outBatchSize);
 	    batchesStarted++;

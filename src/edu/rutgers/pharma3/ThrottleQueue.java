@@ -86,12 +86,12 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 
      */
     public  ThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
-	super(_delay.getState(), _delay.getTypical());
+	super(_delay.getState(), _delay.getTypicalProvided());
 	delay = _delay;
 	delayDistribution = _delayDistribution;
 	setOffersImmediately(true);
 	setName("TQ for " + delay.getName());
-	if (delay.getTypical() instanceof Entity) {
+	if (delay.getTypicalProvided() instanceof Entity) {
 	    if (cap!=1) throw new IllegalArgumentException("Entity-based ThrottleQueue must have cap=1 for its delay"); 
 	} 
 	    
@@ -116,7 +116,7 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	if (receiver != delay)  throw new IllegalArgumentException("Wrong receiver for ThrottleQueue");
 
 	/*
-	if (!(delay.getTypical() instanceof Entity) && (atMost!=delay.getCapacity())) {
+	if (!(delay.getTypicalProvided() instanceof Entity) && (atMost!=delay.getCapacity())) {
 	    throw new IllegalArgumentException("Wrong batch size (given="+
 					       receiver.getAmount()+", expected=" +
 					       delay.getCapacity());

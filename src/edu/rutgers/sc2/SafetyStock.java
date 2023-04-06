@@ -127,7 +127,7 @@ extends Probe implements Reporting
 	refillDelay.addReceiver(this);
 	this.addReceiver(whose);
 	// to ensure multi-batch shipments are consolidated safely
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    refillDelay.setDropsResourcesBeforeUpdate(false);
 	}
 	
@@ -208,7 +208,7 @@ extends Probe implements Reporting
     /** Checks if the safety stock has the desired amount of product */
     /*
     boolean hasEnough(double inBatchSize) {
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    double expiredAmt[]={0};
 	    double t = state.schedule.getTime();
 
@@ -220,10 +220,10 @@ extends Probe implements Reporting
 	    if (b==null) return false;
 	    if (b.getContentAmount()!=inBatchSize) throw new IllegalArgumentException("Unexpected batch size in " + getName() + ": wanted " + inBatchSize +", found " + b.getContentAmount());
 	    return true;
-	} else if (getTypical()  instanceof CountableResource) {
+	} else if (getTypicalProvided()  instanceof CountableResource) {
 		double ava = getAvailable();
 		return (ava >= inBatchSize);
-	} else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
+	} else throw new IllegalArgumentException("Wrong input resource type; getTypicalProvided()="  +getTypicalProvided());
     }
 
     private Batch getFirst() {
@@ -253,12 +253,12 @@ extends Probe implements Reporting
     Batch consumeOneBatch(MSink sink, double inBatchSize) {
 	Batch b = null;
 	double sent=0;
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    b=getFirst();
 	    if (b.getContentAmount() !=  inBatchSize)  throw new IllegalArgumentException("Unexpected batch size in " + getName() + ": wanted " + inBatchSize +", found " + b.getContentAmount());
 	    if (!offerReceiver(sink, b)) throw new AssertionError("Sinks ought not to refuse stuff!");
 	    remove(b);	    
-	} else if (getTypical() instanceof CountableResource) {
+	} else if (getTypicalProvided() instanceof CountableResource) {
 	    if (getAvailable()<inBatchSize)  throw new IllegalArgumentException(getName() + ".consumeOneBatch(): have="+getAvailable()+", need=" +  (long)inBatchSize);
 	    boolean z = provide(sink, inBatchSize);
 	    if (!z) throw new AssertionError("Sinks ought not to refuse stuff!");
@@ -337,7 +337,7 @@ extends Probe implements Reporting
     public String report() {
 
 
-	String ba = whose.getTypical() instanceof Entity? " ba": " u";
+	String ba = whose.getTypicalProvided() instanceof Entity? " ba": " u";
 	
 	String s = "[" + getName()+
 	    " has ordered " + (long)everOrdered + " u, " +

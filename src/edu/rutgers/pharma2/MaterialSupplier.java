@@ -48,8 +48,8 @@ public class MaterialSupplier extends Sink //Delay
     /** Transportation delay */
     private final Delay delay;
 
-    //    public Resource	getTypical() {
-    //    	return delay.getTypical();
+    //    public Resource	getTypicalProvided() {
+    //    	return delay.getTypicalProvided();
     //    }
     
     /**
@@ -94,7 +94,7 @@ public class MaterialSupplier extends Sink //Delay
     void receiveOrder(double amt) {
 	everOrdered += amt;
 	Provider provider = null;	
-	CountableResource amount = new CountableResource( (CountableResource)getTypical(), amt);
+	CountableResource amount = new CountableResource( (CountableResource)getTypicalReceived(), amt);
 	delay.accept( provider, amount, amt, amt);
     }
 
@@ -133,7 +133,7 @@ public class MaterialSupplier extends Sink //Delay
 
     public String report() {
 	String s =// "[" + cname()
-	    //+ "."+getName()+ "("+getTypical().getName()+")" +
+	    //+ "."+getName()+ "("+getTypicalProvided().getName()+")" +
 	    "Ever ordered="+everOrdered+
 	    "; of this, still on ships=" +  delay.getDelayed();
 	if (delay.getAvailable()>0) s += "+" +  delay.getAvailable();

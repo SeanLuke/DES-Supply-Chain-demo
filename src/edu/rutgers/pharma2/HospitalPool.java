@@ -70,7 +70,7 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
 	    lastOrderedAt  = t;
 	    everOrdered += orderSize;
 
-	    Resource orderPaper = new CountableResource((CountableResource)pharmaCompany.getTypical(), orderSize);
+	    Resource orderPaper = new CountableResource((CountableResource)pharmaCompany.getTypicalReceived(), orderSize);
 	    Provider provider = null;  // FIXME: replace with a bottomless Source
 	    
 	    pharmaCompany.accept(provider, orderPaper, orderSize, orderSize);
@@ -91,7 +91,7 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
  
     
    public String report() {
-       String s = "Has ordered="+everOrdered+"; has " + resource.getAmount() + " units of " + getTypical().getName() + " on hand. Has Received="+
+       String s = "Has ordered="+everOrdered+"; has " + resource.getAmount() + " units of " + getTypicalProvided().getName() + " on hand. Has Received="+
 	   everReceived;
        return wrap(s);
    }

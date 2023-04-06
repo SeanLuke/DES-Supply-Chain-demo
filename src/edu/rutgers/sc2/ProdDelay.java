@@ -75,7 +75,7 @@ public class ProdDelay extends SimpleDelay
     public String report() {
 	double t = state.schedule.getTime();
 	double util = (t==0)? 1.0 : totalUsedTime/t;
-	return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+df.format(util*100)+"%]";
+	return "[Production line ("+getTypicalProvided().getName()+"): accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+df.format(util*100)+"%]";
     }
 
        
@@ -85,7 +85,26 @@ public class ProdDelay extends SimpleDelay
     void setFaultRateIncrease(double x, Double _untilWhen) {
 	faultRateIncrease.setValueUntil(x,_untilWhen);
     }
- 
+
+       /** Overrides the super.offerReceiver(Receiver,Entity) in order to sometimes
+	reduce the quality of the offered batch.
+	
+	FIXME: this will only work for RM and Excipient, and not for
+	PacMat, because PacMat is fungible and does not use this
+	method. Fortunately, Abhisekh's menu of disruptions does not
+	include one that affects PacMat in this way...
+     */
+    protected boolean offerReceiver(Receiver receiver, Entity entity) {
+	double t = state.schedule.getTime();
+	
+	Batch b  = (Batch)entity;
+	double r = faultRateIncrease.getValue(t);
+	//	if (r!=0) System.out.println("DEBUG: at " +t +", "+ getName() + " creates a batch with dr=" + r);
+	b.getLot().setIncreaseInFaultRate( r );
+	boolean z=super.offerReceiver( receiver, entity);
+
+	return z; 
+    }    
 
     //  protected boolean offerReceivers() { //ArrayList<Receiver> receivers) {
     /** Just for debugging */

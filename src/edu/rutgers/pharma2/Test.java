@@ -79,7 +79,7 @@ public class Test extends SimState {
 	    everStarted += outBatchSize;
 	    
 	    //if (verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production about to start on batch no. "+batchesStarted+"; in the works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
-	    Resource onTheTruck = new CountableResource((CountableResource)prodDelay.getTypical(), outBatchSize);
+	    Resource onTheTruck = new CountableResource((CountableResource)prodDelay.getTypicalProvided(), outBatchSize);
 	    Provider provider = source; //null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, outBatchSize, outBatchSize);
 	    if (verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production has started  on batc no. "+batchesStarted+"; in the works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());

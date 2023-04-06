@@ -89,9 +89,18 @@ class Production extends AbstractProduction
 
     final Resource[] inResources;
     final Batch outResource; 
+
+
+    /** Simulates stolen shipments */
+    final MSink stolenShipmentSink;
+
+
+
     final ParaSet para;
     ParaSet getPara() { return para; }
 
+
+    
     private SimState state;
 
     /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
@@ -191,6 +200,10 @@ class Production extends AbstractProduction
 	    qaDelay.setRework( needProd!=null? needProd: prodDelay);
 	}
 
+	stolenShipmentSink = new MSink(state, outResource);
+	stolenShipmentSink.setName("StolenShipmentsFrom." + getName());
+
+	
 	sm = new SplitManager(this, outResource, getTheLastStage());
 
 	charter=new Charter(state.schedule, this);
@@ -232,11 +245,16 @@ class Production extends AbstractProduction
 
 
     /** Checks if there are any "depletion" disruptions on any of our
-	input resources. This is only done in FC, and not in CMO, as
-	per Abhisekh's specs.
+	input resources. The "afected unit" name in the disruption
+	entry should be of the form
+	productionUnitName.resourceName. For example, "eeCmoProd.RMEE"
+	will deplete the input store of RMEE (raw material for EE) at
+	the eeCmoProd unit.
+
+       The 
     */
     private void disruptInputs(SimState state) {
-	if (getName().startsWith("Cmo")) return;
+	//if (getName().startsWith("Cmo")) return;
 
 	double t = state.schedule.getTime();
 	
@@ -244,15 +262,38 @@ class Production extends AbstractProduction
 	    //Resource r = inResources[j];
 
 	    InputStore p = inputStore[j];
-	    String name = p.getUnderlyingName();
-	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(Disruptions.Type.Depletion, name);
+	    String rname = p.getUnderlyingName();
+	    String dname = getName() +  "." + rname;
+
+
+	    Disruptions.Type type = Disruptions.Type.Depletion;
+
+	    
+	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(type, dname);
 	    if (vd.size()==1) {
 		// deplete inventory
-		double amt = Math.round(vd.get(0).magnitude * 1e7);
-		p.deplete(amt);			    
+		//double amt = Math.round(vd.get(0).magnitude * 1e7);
+		double amt = Math.round(vd.get(0).magnitude);
+		double x = p.deplete(amt);
+		if (!Demo.quiet) System.out.println("Input buffer " + dname + ": disruption could destroy up to " + amt + " units, actually destroys " + x);
+
 	    } else if (vd.size()>1) {
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	    }
+
+	    type = Disruptions.Type.DisableTrackingSafetyStock;
+	    
+	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(type, dname);
+	    if (vd.size()==1) {
+		// stop SS level tracking for a while
+		double days = Math.round(vd.get(0).magnitude);
+
+		//if (!Demo.quiet) System.out.println("Input buffer " + dname + ": disruption stops SS level tracking for " + days + " days");
+		//p.deplete(amt);			    
+	    } else if (vd.size()>1) {
+		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	    }
+
     
 	}
 	
@@ -262,7 +303,7 @@ class Production extends AbstractProduction
 
 
     /** Checks if there is a "Halt" disruption in effect for this unit. */
-    private boolean isHalted(double now) {
+    boolean isHalted(double now) {
 	return haltedUntil.isOn( now );
     }
 
@@ -284,6 +325,40 @@ class Production extends AbstractProduction
 	startPlan = x;
     }
 
+    private double everStolen=0;
+
+    private void disruptShipments(SimState state) {
+	    Disruptions.Type type = Disruptions.Type.ShipmentLoss;
+	    double now = state.schedule.getTime();
+	    
+	    for(Disruption d:  ((Demo)state).hasDisruptionToday(type, getName())) {
+		int m = (int)d.magnitude;
+
+		//for(int j=0; j<m && transDelay.getAvailable()>0; j++) {
+		//  boolean z = transDelay.provide(stolenShipmentSink);
+		//  if (!z) throw new AssertionError("Sink failed to accept");
+		//}
+		DelayNode[] nodes = transDelay.getDelayedResources();
+		//int allCnt=0;
+		int loseCnt=0, nowStolen=0;
+		for(DelayNode node: nodes) {
+		    if (node.isDead()) continue;
+		    //allCnt++;
+		    //System.out.println("DEBUG: Deleting shipment, size=" + Batch.getContentAmount(node.getResource()));
+		    loseCnt++;
+		    nowStolen += Batch.getContentAmount(node.getResource());
+		    node.setDead(true);
+
+		}
+		everStolen += nowStolen;
+		
+		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +", disruption '"+type+"' could affect up to " + m + " shipments; actually deleted " + loseCnt +" ("+nowStolen+" u)");
+		
+	    }
+	    
+	
+    }
+    
       /** See if the production plan and the available inputs mandate the
 	production of more batches, and if so, ensure that the prodDelay
 	is 'primed' by needProd.
@@ -294,24 +369,33 @@ class Production extends AbstractProduction
 
 	try {
 	    disruptInputs( state);
+	    disruptShipments( state);
 
 	    double now = state.schedule.getTime();
+
+	    Disruptions.Type type = Disruptions.Type.ShipmentLoss;
+
 	    
 	    for(Disruption d:  ((Demo)state).hasDisruptionToday(Disruptions.Type.Adulteration, getName())) {
 		
 		// reduce quality of newly produced lots, in effect for 1 day
-		prodDelay.setFaultRateIncrease(0.1 * d.magnitude, now+1);
+		//double r = 0.1 * d.magnitude;
+		double r = d.magnitude;
+		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" increasing failure rate by " + r +", until " + (now+1));
+		prodDelay.setFaultRateIncrease(r, now+1);
 	    }
 
 
-	    for(Disruption d: ((Demo)state).hasDisruptionToday(Disruptions.Type.Halt, getName())) { 
+	    type = Disruptions.Type.Halt;
+	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) { 
 		haltedUntil.enableUntil( now+d.magnitude );
+		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" started disruption '"+type+"' until " + (now+d.magnitude));
 	    }
    
 	    
 	    if (!hasEnoughInputs()) {
 		if (Demo.verbose)
-		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " + reportInputs(true));
+		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypicalProvided()+" is starved. Input stores: " + reportInputs(true));
 		return;
 	    }
 
@@ -357,7 +441,8 @@ class Production extends AbstractProduction
 	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	releasedAsOfYesterday = releasedAsOfToday;
 	
-	double[] data = new double[2 + 2*inputStore.length];
+	//double[] data = new double[2 + 2*inputStore.length];
+	double[] data = new double[2 + inputStore.length];
 	int k=0;
 	data[k++] = releasedToday;
 	data[k++] = (startPlan==null)? 0 : startPlan;
@@ -414,7 +499,7 @@ class Production extends AbstractProduction
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    
 	    InputStore p = inputStore[j];
-	    //System.out.println("mkBatch: Available ("+p.getTypical()+")=" + p.reportAvailable());
+	    //System.out.println("mkBatch: Available ("+p.getTypicalProvided()+")=" + p.reportAvailable());
 
 	    double need = inBatchSizes[j];
 	    if (prorate) need = (need * startPlan) / outBatchSize;
@@ -484,8 +569,8 @@ class Production extends AbstractProduction
 	    s += " = (in prod=" + needProd.hasBatches() +	    " ba;";
 	} else s +=" (in prod=" + (long)prodDelay.getDelayedPlusAvailable() + ba + ")";
 
-	if (needTrans!=null) s +=" (in trans1=" +   needTrans.hasBatches() +")";
-	else if (transDelay!=null) s +=" (in trans2=" +   (long)transDelay.getDelayedPlusAvailable() + ba +")";
+	if (needTrans!=null) s +=" (in trans=" +   needTrans.hasBatches() +")";
+	else if (transDelay!=null) s +=" (in trans=" +   (long)transDelay.getDelayedPlusAvailable() + ba +")";
 	if (qaDelay!=null) {
 	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
 	    s += " " + qaDelay.report();	    
@@ -494,9 +579,12 @@ class Production extends AbstractProduction
 	    
 	s += "\n" + prodDelay.report();
 
-
-	if (sm.outputSplitter !=null) 	s += "\n" + sm.outputSplitter.report();
+	//if (stolenShipmentSink.getEverConsumed()>0) s+="\n" + stolenShipmentSink.report();
+	if (everStolen>0) s+="\nLost in shipment " + everStolen + " u";
 	
+	if (sm.outputSplitter !=null) 	s += "\n" + sm.outputSplitter.report();
+
+	s+="]";
 	return s;
 
     }

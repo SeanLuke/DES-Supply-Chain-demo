@@ -36,7 +36,7 @@ class MSink extends Sink implements Reporting {
     }
 
     public String report() {
-	return "[Sink for " + getTypical() + " has consumed " + everConsumed + "]";
+	return "[Sink for " + getTypicalReceived() + " has consumed " + everConsumed + "]";
     }
 
   

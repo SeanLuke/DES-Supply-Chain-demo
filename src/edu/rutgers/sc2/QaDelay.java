@@ -84,6 +84,9 @@ public class QaDelay extends SimpleDelay
 	faultyPortionDistribution = _faultyPortionDistribution;
   	discardSink = new MSink( state, typicalBatch);
 
+	//	System.out.println("DEBUG: Created QaDelay(" + getName()+"," + discardProb + "," + reworkProb);
+
+	
 	if (faultyPortionDistribution!=null) {
 	    if (discardProb!=0 || reworkProb !=0) throw new IllegalArgumentException("Cannot set both faultyPortionDistribution and discardProb/reworkProb on the same QaDelay!");
 	} 
@@ -155,6 +158,7 @@ public class QaDelay extends SimpleDelay
 	boolean showAge = false; // !Demo.quiet;
 	boolean z;
 
+	double t = state.schedule.getTime();
 
 	if (faultyPortionDistribution!=null) {
 	    double amt, faulty;
@@ -164,7 +168,6 @@ public class QaDelay extends SimpleDelay
 		amt = Math.min( cr.getAmount(), atMost);		
 		if (amt==0) return false; // this happens sometimes, triggered by SimpleDelay.step()
 
-		double t = state.schedule.getTime();
 
 		double r = faultyPortionDistribution.nextDouble();
 		if (r<0) r=0;
@@ -203,6 +206,12 @@ public class QaDelay extends SimpleDelay
 		amt = e.getContentAmount();
 
 		double r = faultyPortionDistribution.nextDouble() + e.getLot().getIncreaseInFaultRate();
+
+
+		//if (prototype.getName().equals("BatchOfEE")) {
+		//System.out.println("DEBUG: QA("+getName()+") at t=" + t+", r=" + r);
+		    //}
+		
 		if (r<0) r=0;
 		if (r>1) r=1;
 
@@ -235,6 +244,12 @@ public class QaDelay extends SimpleDelay
 	    double dp = discardProb + b.getLot().getIncreaseInFaultRate();
 	    dp = Math.min(dp, 1);
 
+
+	    //	    if (prototype.getName().equals("BatchOfEE")) {
+	    //	System.out.println("DEBUG: QA("+getName()+") at t=" + t+", dp=" + dp);
+	    //}
+	    
+	    
 	    // The probability that the lot is "not good", i.e must be
 	    // either discarded or reworked
 	    double notGoodProb = Math.min( dp + reworkProb, 1);

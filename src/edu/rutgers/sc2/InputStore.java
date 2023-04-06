@@ -85,7 +85,7 @@ class InputStore extends sim.des.Queue {
 	
 	stolenDump = new Sink(state, resource);
 	
-	sink = new MSink(state, getTypical());
+	sink = new MSink(state, getTypicalProvided());
 	// this is just for the purpose of the graphical display
 	addReceiver(sink);
 	if (expiredProductSink!=null) addReceiver(expiredProductSink);
@@ -134,7 +134,7 @@ class InputStore extends sim.des.Queue {
     */
     Batch consumeOneBatch(final double batchSize) {
 	
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    //z = p.provide(p.sink, 1);
 
 	    double needed=batchSize, consumed = 0;
@@ -164,7 +164,7 @@ class InputStore extends sim.des.Queue {
 
 	    return newBatch;
 		
-	} else if (getTypical() instanceof CountableResource) {
+	} else if (getTypicalProvided() instanceof CountableResource) {
 	     
 	    double a1 = Math.min( getAvailable(), batchSize);
 	    double a2 =  batchSize - a1;
@@ -199,17 +199,17 @@ class InputStore extends sim.des.Queue {
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
     */
     boolean hasEnough(double inBatchSize) {
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    double expiredAmt[]={0};
 	    double t = state.schedule.getTime();
 
 	    boolean has = expiredProductSink.hasEnoughNonExpired(this, entities, expiredAmt, inBatchSize);
 	    currentStock -= expiredAmt[0];
 	    return has;
-	} else if (getTypical()  instanceof CountableResource) {
+	} else if (getTypicalProvided()  instanceof CountableResource) {
 	    double spare = getAvailable() -  inBatchSize;
 	    return spare>=0;// || (safety!=null && safety.hasEnough(-spare));
-	} else throw new IllegalArgumentException("Wrong input resource type; getTypical()="  +getTypical());
+	} else throw new IllegalArgumentException("Wrong input resource type; getTypicalProvided()="  +getTypicalProvided());
     }
 
 
@@ -221,7 +221,7 @@ class InputStore extends sim.des.Queue {
     synchronized double deplete(double amt) {
 	double destroyed = 0;
 	amt = Math.round(amt); // because offerReceiver does not like fractions
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    while(destroyed<amt && getAvailable()>0) {
 		Batch b=getFirst();
 		if (!offerReceiver( stolenDump, b)) throw new AssertionError("Sinks ought not refuse stuff!");
@@ -316,9 +316,9 @@ class InputStore extends sim.des.Queue {
 
     String report(boolean showBatchSize)  {
 	Vector<String> v= new Vector<>();
-	v.add(  getTypical().getName() +":" +
+	v.add(  getTypicalProvided().getName() +":" +
 		(long)getContentAmount() + " u");
-		//	    (getTypical() instanceof Batch? 
+		//	    (getTypicalProvided() instanceof Batch? 
 		//	     (long)getAvailable() + " ba" :
 		//	     getAvailable() + " u" ));
 

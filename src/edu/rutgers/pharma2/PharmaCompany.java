@@ -52,7 +52,7 @@ public class PharmaCompany extends Sink // Delay
 	setName(name);
 
 
-	CountableResource pacDrug  = (CountableResource)hospitalPool.getTypical();
+	CountableResource pacDrug  = (CountableResource)hospitalPool.getTypicalProvided();
 	
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");

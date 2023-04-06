@@ -66,7 +66,7 @@ public class Production // extends sim.des.Queue
 	}
 	       
 	public String report() {
-	    return "[Production line ("+getTypical().getName()+"): accepted " +  batchCnt+" batches, totaling " + totalStarted+"]";
+	    return "[Production line ("+getTypicalProvided().getName()+"): accepted " +  batchCnt+" batches, totaling " + totalStarted+"]";
 	}
 	    
     }
@@ -144,7 +144,7 @@ public class Production // extends sim.des.Queue
 	
 	sink = new Sink[inputStore.length];
 	for(int j=0; j<sink.length; j++) {
-	    sink[j] = new MSink(state,inputStore[j].getTypical());
+	    sink[j] = new MSink(state,inputStore[j].getTypicalProvided());
 	}
 	 
     }
@@ -178,7 +178,7 @@ public class Production // extends sim.des.Queue
 	//if (haveNow  + outBatchSize < getCapacity() &&
 
 	if (!hasEnoughInputs()) {
-	    if (Demo.verbose)  System.out.println("At t=" + state.schedule.getTime() + ", Production of "+ prodDelay.getTypical()+" is starved. Input stores: " +
+	    if (Demo.verbose)  System.out.println("At t=" + state.schedule.getTime() + ", Production of "+ prodDelay.getTypicalProvided()+" is starved. Input stores: " +
 			       reportInputs(true));
 	}
 	
@@ -196,7 +196,7 @@ public class Production // extends sim.des.Queue
 	    }
 	    
 	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
-	    Resource onTheTruck = new CountableResource((CountableResource)qaDelay.getTypical(), outBatchSize);
+	    Resource onTheTruck = new CountableResource((CountableResource)qaDelay.getTypicalProvided(), outBatchSize);
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, outBatchSize, outBatchSize);
 	    batchesStarted++;
@@ -211,7 +211,7 @@ public class Production // extends sim.des.Queue
 	Vector<String> v= new Vector<>();
 	int j=0;
 	for(sim.des.Queue input: inputStore) {	    
-	    String s = input.getTypical().getName() +":" +  input.getAvailable();
+	    String s = input.getTypicalProvided().getName() +":" +  input.getAvailable();
 	    if (showBatchSize) s += "/" + inBatchSizes[j];
 	    v.add(s);
 	    j++;

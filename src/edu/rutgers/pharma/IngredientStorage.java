@@ -43,7 +43,7 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
     }
 
     public String report() {
-	return "[IngStor."+getName()+"(cap="+getCapacity()+"), has " + resource.getAmount() + " units of " + getTypical().getName() + ". EverReceived="+
+	return "[IngStor."+getName()+"(cap="+getCapacity()+"), has " + resource.getAmount() + " units of " + getTypicalProvided().getName() + ". EverReceived="+
 	    everReceieved     +"]";
     }
 
@@ -68,8 +68,8 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	if (nothingInSupplyQueue() &&
 	    resource.getAmount() < threshold) {
 	    double neededAmount = Math.min(restock, getCapacity() - resource.getAmount());
-	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypical());
-	    Resource onTheTruck = new CountableResource((CountableResource)getTypical(), neededAmount);
+	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypicalProvided());
+	    Resource onTheTruck = new CountableResource((CountableResource)getTypicalProvided(), neededAmount);
 	    Provider provider = null;  // FIXME: replace with a bottomless Source
 	    supplierDelay.accept(provider, onTheTruck, neededAmount, neededAmount);
 	    batchesOrdered++;

@@ -167,7 +167,7 @@ public class Splitter extends If {
         
     public String toString()
         {
-        return "Splitter@" + System.identityHashCode(this) + "(" + (getName() == null ? "" : getName()) + typical.getName() + ")";
+	    return "Splitter@" + System.identityHashCode(this) + "(" + (getName() == null ? "" : getName()) + getTypicalReceived().getName() + ")";
         }
 
 

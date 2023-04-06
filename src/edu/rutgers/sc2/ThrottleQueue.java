@@ -52,11 +52,12 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 {
 
     /** Part of which production unit am I? This is needed in GraphAnalysis, as well as for auto-reloading */
-    private //Production
-	AbstractProduction 	whose=null;
-    void setWhose(AbstractProduction  _whose) {whose = _whose;}
-    //    Production
-	AbstractProduction 	getWhose() { return whose; }
+    private    //AbstractProduction
+	 Production whose=null;
+    void setWhose(//Abstract
+		  Production  _whose) {whose = _whose;}
+    //	AbstractProduction
+    Production 	getWhose() { return whose; }
     
     private AbstractDistribution delayDistribution;
 
@@ -86,12 +87,12 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 
      */
     public  ThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
-	super(_delay.getState(), _delay.getTypical());
+	super(_delay.getState(), _delay.getTypicalProvided());
 	delay = _delay;
 	delayDistribution = _delayDistribution;
 	setOffersImmediately(true);
 	setName("TQ for " + delay.getName());
-	if (delay.getTypical() instanceof Entity) {
+	if (delay.getTypicalProvided() instanceof Entity) {
 	    if (cap!=1) throw new IllegalArgumentException("Entity-based ThrottleQueue must have cap=1 for its delay"); 
 	} 
 	    
@@ -116,7 +117,7 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	if (receiver != delay)  throw new IllegalArgumentException("Wrong receiver for ThrottleQueue");
 
 	/*
-	if (!(delay.getTypical() instanceof Entity) && (atMost!=delay.getCapacity())) {
+	if (!(delay.getTypicalProvided() instanceof Entity) && (atMost!=delay.getCapacity())) {
 	    throw new IllegalArgumentException("Wrong batch size (given="+
 					       receiver.getAmount()+", expected=" +
 					       delay.getCapacity());
@@ -124,6 +125,10 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	*/
 
 	if (delay.getDelayed() > 0) return false; // the SimpleDelay is not empty
+
+	double now = getState().schedule.getTime();
+
+	if (whose.isHalted(now)) return false; // Halt disruption in effect
 
 	
 	double delayTime = Math.abs(delayDistribution.nextDouble());

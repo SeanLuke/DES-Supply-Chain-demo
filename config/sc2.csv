@@ -15,6 +15,7 @@ EE,tbf,Triangular,0,5*365,10*365
 #RMEE,supplierDelay,Uniform,30,60
 
 RMEE,expiration,+Infinity
+PMEE,expiration,+Infinity
 
 
 RMDS,expiration,+Infinity
@@ -40,13 +41,16 @@ eeCmoProd,prodDelay,Triangular,0.01,0.02,0.03
 eeCmoProd,faulty,0.02
 eeCmoProd,rework,0.08
 
+#------ The EE Pack mat supply pool ------
+eePMSupplier,batch,100
+eePMSupplier,transDelay,Triangular,54,60,66
+
 #---- The supply of packaging material for EE
 
 eePackaging.safety.PMEE,initial,1500
 eePackaging.safety.PMEE,targetLevel,1500
 eePackaging.safety.PMEE,reorderPoint,1000
 eePackaging.safety.PMEE,delay,Triangular,54,60,66
-# eePackaging.safety.PMEE,delay,Triangular,4,6,8
 eePackaging.safety.PMEE,needsAnomaly,-1
 
 #--- The normal route:
@@ -77,9 +81,6 @@ eeDC,initial,1500
 eeDC,batch,10
 eeDC,reorderPoint,6908
 eeDC,targetLevel,10362
-
-#--  testing ZZZ
-# eeDC,targetLevel,20000
 
 
 # EE Order Incoming Transportation Delay from EE Packaging and Inspection: see Section 5

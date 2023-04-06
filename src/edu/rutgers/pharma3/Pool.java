@@ -550,7 +550,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     */
     protected synchronized double deplete(double amt) {
 	double destroyed = 0;
-	if (getTypical() instanceof Batch) {
+	if (getTypicalProvided() instanceof Batch) {
 	    while(destroyed<amt && getAvailable()>0) {
 		Batch b=(Batch)entities.getFirst();
 		if (!offerReceiver( stolenProductSink, b)) throw new AssertionError("Sinks ought not refuse stuff!");

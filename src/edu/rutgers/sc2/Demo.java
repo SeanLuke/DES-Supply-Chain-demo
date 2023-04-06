@@ -83,7 +83,7 @@ public class Demo extends SimState {
 	if (verbose) doReport("Start");
     }
 
-    Production 	eeRMSupplier;
+    Production 	eeRMSupplier, eePMSupplier;
     Production 	dsRMSupplier;
 
     Production eeCmoProd, eePackaging;
@@ -134,16 +134,29 @@ public class Demo extends SimState {
 	    
 	    
 	    CountableResource pmEE = new CountableResource("PMEE", 1);
+	    Batch pmEEBatch = Batch.mkPrototype(pmEE, config);
+
+	    //----
+	    eePMSupplier = new Production(this, "eePMSupplier", config,
+					  new Resource[] {},
+					  pmEEBatch);
+	    add(eePMSupplier);
+				       
 	    
+
+	    //---[
 	    eePackaging = new Production(this, "eePackaging", config,
-					 new Resource[] {eeBatch, pmEE},
+					 new Resource[] {eeBatch, pmEEBatch},
 					 eeBatch);
 	    eePackaging.setNoPlan(); // driven by inputs
 	    add(eePackaging);
 
 	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
+	    eePMSupplier.setQaReceiver(eePackaging.getEntrance(1), 1.0);	
+
 	    eeMedTech = new MedTech("eeMedTech",
-				    new Production[] {eeCmoProd,eeRMSupplier});
+				    new Production[] {
+					eeCmoProd,eeRMSupplier,eePMSupplier});
 	    
 	    add(eeMedTech);
 
@@ -242,6 +255,7 @@ public class Demo extends SimState {
     String report() {
 	Vector<String> v= new Vector<>();
 	v.add(eeRMSupplier.report());
+	v.add(eePMSupplier.report());
 	v.add(eeCmoProd.report());
 	v.add(eePackaging.report());
 	v.add(eeDC.report());

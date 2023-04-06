@@ -56,8 +56,8 @@ class Packaging extends sim.des.Queue implements Reporting {
 	prodDelay.addReceiver(qaDelay);
 
 	
-	sinkProduct = new Sink(state,  _postprocStore.getTypical());
-	sinkPackaging = new Sink(state, _testedPackmatStore.getTypical());
+	sinkProduct = new Sink(state,  _postprocStore.getTypicalProvided());
+	sinkPackaging = new Sink(state, _testedPackmatStore.getTypicalProvided());
 
 	addReceiver(dispatchStore);
     }
@@ -94,7 +94,7 @@ class Packaging extends sim.des.Queue implements Reporting {
 	    testedPackmatStore.provide( sinkPackaging, batchSize);
 	    
 	    //	    System.out.println("At t=" + state.schedule.getTime() + ", Packaging starts on a batch");
-	    Resource batch = new CountableResource((CountableResource)getTypical(), batchSize);
+	    Resource batch = new CountableResource((CountableResource)getTypicalProvided(), batchSize);
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, batch, batchSize, batchSize);
 	    batchesStarted++;

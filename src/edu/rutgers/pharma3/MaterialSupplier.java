@@ -262,7 +262,7 @@ public class MaterialSupplier extends AbstractProduction
 	String ba = (prototype instanceof Batch) ? " ba" : "";
 	
 	String s =// "[" + cname()
-	    //+ "."+getName()+ "("+getTypical().getName()+")" +
+	    //+ "."+getName()+ "("+getTypicalProvided().getName()+")" +
 	    "Ever ordered="+everOrdered+
 	    "; ever started production="+	startedProdBatches+ " ba" +
 	    ". Of this, "+
