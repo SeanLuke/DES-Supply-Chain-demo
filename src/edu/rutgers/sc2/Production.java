@@ -256,18 +256,15 @@ class Production extends AbstractProduction
     private void disruptInputs(SimState state) {
 	//if (getName().startsWith("Cmo")) return;
 
-	double t = state.schedule.getTime();
+	double now = state.schedule.getTime();
 	
 	for(int j=0; j<inBatchSizes.length; j++) {
-	    //Resource r = inResources[j];
 
 	    InputStore p = inputStore[j];
 	    String rname = p.getUnderlyingName();
 	    String dname = getName() +  "." + rname;
 
-
 	    Disruptions.Type type = Disruptions.Type.Depletion;
-
 	    
 	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(type, dname);
 	    if (vd.size()==1) {
@@ -283,13 +280,17 @@ class Production extends AbstractProduction
 
 	    type = Disruptions.Type.DisableTrackingSafetyStock;
 	    
-	    Vector<Disruption> vd = ((Demo)state).hasDisruptionToday(type, dname);
+	    vd = ((Demo)state).hasDisruptionToday(type, dname);
 	    if (vd.size()==1) {
 		// stop SS level tracking for a while
-		double days = Math.round(vd.get(0).magnitude);
+		double days = vd.get(0).magnitude;
 
-		//if (!Demo.quiet) System.out.println("Input buffer " + dname + ": disruption stops SS level tracking for " + days + " days");
-		//p.deplete(amt);			    
+		if (p.safety==null) {
+		    throw new IllegalArgumentException("It is impossible to disable the safety stock (disruption " + vd.get(0) +" on input buffer " + p + "), because that input buffer has no safety stock to begin with");
+		}
+		if (!Demo.quiet) System.out.println("Input buffer " + dname + ": at "+now+", disruption stops SS level tracking for " + days + " days");
+		p.safety.haltUntil( now+days );
+		
 	    } else if (vd.size()>1) {
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	    }

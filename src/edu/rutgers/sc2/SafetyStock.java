@@ -67,6 +67,20 @@ extends Probe implements Reporting
     /** Reported in a time series chart file */
     double orderedToday = 0, receivedToday=0;
 
+    private Timed haltedUntil = new Timed();    
+
+    /** Checks if there is a safety-stock disruption in effect, which
+	stops the SS level check until a certain point.
+    */
+    boolean isHalted(double now) {
+	return haltedUntil.isOn( now );
+    }
+
+    /** Disable the safety stock level-checking until the specified time point */
+    void haltUntil(double t) {
+	haltedUntil.enableUntil( t );
+    }
+
     
     /** Creates the SafetyStock for the specified resource at the specified
 	production unit.
@@ -141,6 +155,9 @@ extends Probe implements Reporting
     protected void reorderCheck() {
 
 	double now = getState().schedule.getTime();
+	if (isHalted(now)) return; // disruption
+
+	
 	//	if (Demo.verbose && currentStock != getContentAmount()) {
 	//	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
 	//	}
