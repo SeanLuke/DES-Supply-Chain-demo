@@ -33,7 +33,7 @@ import sim.des.portrayal.*;
 /** The main class for the SC-2 model */
 public class Demo extends SimState {
 
-    public String version = "1.000";
+    public String version = "1.002";
 
     
     /** Set this to true to print a lot of stuff */

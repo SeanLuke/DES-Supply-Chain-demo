@@ -1,11 +1,11 @@
 <html>
   <head>
-    <title>Supply Chain Demo 3</title>
+    <title>SC-2</title>
   </head>
   <body>
-    <h1>Supply Chain Demo 3</h1>
+    <h1>SC-2</h1>
 
-<div align="center"><em>Updated: 2023-03-27</em></div>
+<div align="center"><em>Updated: 2023-04-06, for sc2 ver. 1.002</em></div>
 
 
     <p>This demo is based on the "SC-2" model provided by Rutgers' School of Business team (Ben M./ Chen Weiwei / Aman Goswami /et al), as of March 2023.
@@ -50,7 +50,7 @@ git pull origin master
 If you are outside of Sean's GMU team, ask Vladimir or Sean Luke to provide you with this customized version.
 
 	  
-	<li><strike>Obtain the DES library source code from its own GitHub repo (Link:
+	<li>Obtain the DES library source code from its own GitHub repo (Link:
  <a href="https://github.com/eclab/mason/tree/distributed-3.0/contrib/des/sim/des">MASON DES library</a>), compile it and package it into <tt>des.jar</tt>, and place the JAR file into the same <tt>~/mason/lib</tt> directory. Sample commands for doing this (assuming you place the DES library source code under <tt>~/mason/git</tt>):
 	  <pre>
 #!/bin/csh
@@ -73,9 +73,6 @@ jar cf des.jar sim/des/*.class
 cp des.jar ../lib    
 	  </pre>
 Warning: the above may take forever, as GitHub will tend to give you megabutyes and gigabytes of stuff you don't need. So, alternatively, you can just ask me for precompiled  des.jar, and put it into your ~/mason/lib
-</strike>
-
-<li>At present (March 2023) we compile and run the SC-2 model app not with the most current version of a the DES library, but with the locally customized version of the October 2023 version of it.  This is compiled to the JAR file found in <tt>~vmenkov/mason/lib/des.jar</tt> on robo1.
 
   </ul>
       
@@ -160,26 +157,29 @@ means the that the parameter <tt>faulty</tt> for the element called <tt>Producti
   <p>
   The output file, for a run without the <tt>-verbose</tt> option, may look like this:
   <pre>
- ./run-sc2.sh -until 360
-MASON Version 20.  For further options, try adding ' -help' at end.
-Job: 0 Seed: 769313669
-Demo.start
-Disruptions=null
-SC2 DES/MASON simulation, ver=1.000, config=config/sc2.csv
-===== 360.0028004500225: Finish =================
-[Production.eeCmoProd; stored inputs=([RMEE:2.0 u. [SafetyStock.eeCmoProd.safety.RMEE(RMEE): [eeCmoProd.safety.RMEE has ordered 6950.0 u,  has received 0.0 u. On order=6950.0; in transit 6950.0]]]). Ever started: 10360 (1036 ba) = (in prod=0+(0) ba;  in trans=0) (in QA= 0+1 ba; discarded=380 (38 ba); rework=960 (96 ba); good=9980 (998 ba))
-[Production line (BatchOfEE): accepted 1132 ba, totaling 11320; utilization=62.663%]
-[Production.eePackaging; stored inputs=([BatchOfEE:848 ba, PMEE:0.0 u. [SafetyStock.eePackaging.safety.PMEE(PMEE): [eePackaging.safety.PMEE has ordered 1090.0 u,  has received 0.0 u. On order=1090.0; in transit 1090.0]]]). Ever started: 1500 (150 ba) = (in prod=0+(0) ba;  in trans=0) (in QA= 0+1 ba; discarded=0 (0 ba); rework=0 (0 ba); good=1500 (150 ba))
-[Production line (BatchOfEE): accepted 150 ba, totaling 1500; utilization=8.318%]
-[Pool.eeDC(BatchOfEE): [eeDC has received 1500.0 u (not counting initial=1500.0 u), has sent 3000.0 u. Available=0.0 u]]
-[Pool.eeDP(BatchOfEE): [eeDP has received 1280.0 u (not counting initial=690.0 u), has sent 1970.0 u. Available=0.0 u]]
-[Pool.eeHEP(BatchOfEE): [eeHEP has received 37476.0 u (not counting initial=2590.0 u), has sent 0.0 u. Available=0.0 u]]
-[MedTech.eeMedTech: [eeMedTech has received orders for 2486572.0 u]]
-[WaitingPatientQueue.WaitingPatientQueue(Patient): [WaitingPatientQueue]]
-[ServicedPatientPool.ServicedPatientPool(Patient): [ServicedPatientPool; accepted 40066 patients; currently treated=6270; patients cured=33672; EE destroyed=0; EE sent to repair=124. EE in repair pool=10]]
+    %run-sc2.sh -until 2000
+    
+Disruptions=Scheduled 0 disruptions:
+
+SC2 DES/MASON simulation, ver=1.002, config=/Users/vmenkov/mason/work/config/sc2.csv
+===== 2000.0001629851329: Finish =================
+[Production.eeRMSupplier. Ever planned: 15775; still to do 0.0. Ever started: 15775 (159 ba) (in prod=0 ba) (in trans=0 ba)
+[Production line (BatchOfRMEE): accepted 159 ba, totaling 15775; utilization=0.001%]]
+[Production.eePMSupplier. Ever planned: 15775; still to do 0.0. Ever started: 15775 (159 ba) (in prod=0 ba) (in trans=0 ba)
+[Production line (BatchOfPMEE): accepted 159 ba, totaling 15775; utilization=0.001%]]
+[Production.eeCmoProd; stored inputs=([BatchOfRMEE:10362 u. Received (from all sources) 15775.0 u. [SafetyStock.eeCmoProd.safety.RMEE(BatchOfRMEE): [eeCmoProd.safety.RMEE has ordered 0 u,  has received 0 u. On order=0; in transit 0.0 ba]]]). Ever planned: 15775; still to do 0.0. Ever started: 15775 (1578 ba) = (in prod=0+(0) ba; (in trans=0 ba) (in QA= 0+1 ba; discarded=325 (33 ba); rework=1350 (135 ba); good=15450 (1545 ba))
+[Production line (BatchOfEE): accepted 1713 ba, totaling 17125; utilization=17.128%]]
+[Production.eePackaging; stored inputs=([BatchOfEE:0 u. Received (from all sources) 15450.0 u, BatchOfPMEE:2345 u. Received (from all sources) 16295.0 u. [SafetyStock.eePackaging.safety.PMEE(BatchOfPMEE): [eePackaging.safety.PMEE has ordered 520 u,  has received 520 u. On order=0; in transit 0.0 ba]]]). No planning (driven by input). Ever started: 15450 (1545 ba) = (in prod=0+(0) ba; (in QA= 0+1 ba; discarded=0 (0 ba); rework=210 (21 ba); good=15450 (1545 ba))
+[Production line (BatchOfEE): accepted 1566 ba, totaling 15660; utilization=15.683%]]
+[Pool.eeDC(BatchOfEE): [eeDC has received 15450 u (not counting initial=1500 u), has sent 3810 u. Available=13140 u. Ever ordered 12322, expecting receipt of 0 u. Still need to send=0 u]]
+[Pool.eeDP(BatchOfEE): [eeDP has received 350 u (not counting initial=690 u), has sent 0 u. Available=1040 u. Ever ordered 350, expecting receipt of 0 u. Still need to send=0 u]]
+[Pool.eeHEP(BatchOfEE): [eeHEP has received 1536288 u (not counting initial=50000 u), has sent 1581705 u. Available=4583 u. Ever ordered 3453, expecting receipt of 0 u. Still need to send=0 u]]
+[MedTech.eeMedTech: [eeMedTech has received orders for 15775 u]]
+[WaitingPatientQueue.WaitingPatientQueue(Patient): [WaitingPatientQueue; waiting patients=0]]
+[ServicedPatientPool.ServicedPatientPool(Patient): [ServicedPatientPool; accepted 1581705 patients; currently treated=48595; patients cured=1506397, sent back to wait=26713. EE destroyed=1, sent to repair=26712. EE still in repair pool=281]]
 ================================================
-Job 0: Quit 0
-1.511u 0.116s 0:00.57 284.2%	0+0k 0+0io 0pf+0w
+7.305u 0.293s 0:04.69 161.8%	0+0k 0+0io 0pf+0w
+
   </pre>
 
 (Later, I will add output from more nodes of the model).
@@ -188,6 +188,40 @@ Job 0: Quit 0
 
 <p>See <a href="sc-2-sketch.txt">design sketch</a>
 
+  <h3>Names of resources</h3>
+
+  <p>These names appear in reports and configuration files.
+    
+    <ul>
+ <li>EE -- an EE device
+ <li>DS -- a DS device
+<li>RMEE -- raw material for EE
+<li>PMEE -- a unit of packaging material for EE
+<li>RMDS -- raw material for DS
+<li>PMDS -- a unit of packaging material for DS
+    </ul>
+      
+  </h3>
+
+  <h3>Names of supply chain elements</h3>
+
+  <p>These names appear in reports and configuration files, as well as in the names of time-series CSV files.
+
+   <uL>
+<li>ServicedPatientPool 
+<li>WaitingPatientQueue
+<li>eeCmoProd  -- EE CMO Production unit
+<li>eeCmoProd.safety.RMEE  -- the EE Raw Material safety stock parameters for eeCmoProd
+<li>eeDC -- EE Distribution Center
+<li>eeDP -- EE Distibution Pool
+<li>eeHEP -- EE Hospital Equipment Pool
+<li>eeRMSupplier -- EE Raw Material Supplier Pool
+<li>eePMSupplier -- EE Packaging Material Supplier Pool
+<li>eePackaging -- EE Packaging facility
+<li>eePackaging.safety.PMEE  -- the EE Packaging Material safety stock parameters for eePackaging
+<lI>names for the DS branch to be added...
+</ul>
+  
  <strike>
   <h3>Resources</h3>
 
@@ -396,9 +430,13 @@ If <tt>inheritsExpiration</tt> is true, then the expiration date of each newly c
   
   <h2>Disruptions</h2>
 
-<p>At this point (March 27), disruptions in SC-2 have not been tested yet. They will, however, be analogous to disruptions in Pharma3.
+<p>The disruptions mechanism in the SC-2 app is build upon that of Pharma3 (aka SC-1), with some enhancments. 
   
-  <p>See <a href="disrupt.html">Disruptions in Pharma3</a>
+<p>See:
+  <ul>
+    <li><a href="disrupt.html">Disruptions in Pharma3 (aka SC-1)</a>
+    <li><a href="sc-2-disrupt.html">Disruptions in SC-2</a>
+  </ul>
   
   </body>
 </html>

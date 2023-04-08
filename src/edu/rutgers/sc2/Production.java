@@ -562,8 +562,10 @@ class Production extends AbstractProduction
 	if (inputStore.length>0) {
 	    s += "; stored inputs=("+ reportInputs() +")";
 	}
-	s += 
-	    ". Ever planned: "+(long)everPlanned + "; still to do "+startPlan +
+	s += (startPlan==null) ?
+	    ". No planning (driven by input)" :
+	    ". Ever planned: "+(long)everPlanned + "; still to do "+startPlan;
+	s +=
 	    ". Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 
 	if (needProd!=null) {

@@ -7,8 +7,14 @@
 
 <div align="center"><em>Updated: 2023-04-04, for SC-2 ver. 1.001</em></div>
 
-    <p>Generally, the mechanism for providing a disruption scenario to the SC-2 application is the same as used in the SC-1 (aka Pharma3) application. (See: <a href="disrupt.html">Disruptions in Pharma3</a>
+    <p>Generally, the mechanism for providing a disruption scenario to the <a href="sc-2.html">SC-2 application</a> is the same as used in the SC-1 (aka Pharma3) application. (See: <a href="disrupt.html">Disruptions in Pharma3</a>
 
+      <h2>New disruption types</h2>
+
+      <ul>
+	<li>	DisableTrackingSafetyStock
+      </ul>
+      
       <h2>Disruption scenario syntax enhancements</h2>
       
     <p>One enhancement from the Pharma3 syntax is that now it's possible to use the <em>time1-time2</em> notation in the first column ("time") of the scenario file in order to specify that a disruption of the same type and magnitude repeats daily on several consecutive days. For example, to describe a repeated daily attack on the EE RM input buffer of the eeCmoProd unit (e.g. mice destroying up to 10000 units of the stuff every night) occurring daily for 7 days, from day 60 thru day 66, you can write one line,
@@ -26,11 +32,32 @@ instead of seven lines,
 66,eeCmoProd.RMEE,Depletion,10000
       </pre>
 
-<p>There is no corresponding change in the Java API; to add these 7 disruption events, you still need to make 7 calls to <tt>Disruptions.add()</tt>      
+
+    <p>There is no corresponding change in the Java API; to add these 7 disruption events, you still need to make 7 calls to <tt>Disruptions.add()</tt>
+
+    <p>This enhancement is meant to at least partially address the following problem: With our basic scenario syntax, it is possible to describe a multi-day disruption if it is purely qualitative, and has no quantitative attribute (amount/level/degree), such as "Halt", by a single <tt>Disruption</tt> object; but for the "quantitative" disruptions, such as "Adulteration" or "Depletion", a single <tt>Disruption</tt> object can only describe a single-day disruption. This asymmetry is because the Disruption object has only a single "magnitude" field, which is used for the duration in the qualitative events (Halt) but for "amount/degree" in quantitative one. A more radical solution would be to change the the Disruption object definition, and the disruption scenario file format, so that each Disruption entry would have separate fields for the duration of the disruption and its magnitude. At present (SC-2 v. 1.002), such a restructuring is nor pursued.
+
 
 <h2>Sample scenario files</h2>
   
     <p>Sample scenario files for several of Abhisekh's disruption types can be found in the directory  <tt>config/dis-sc2</tt> under the main project directory *as exported from GitHub; that would be e.g. <tt>~vmenkov/mason/work</tt> on <tt>robo1</tt>), for example       <tt>config/dis-sc2/sample-D1.csv</tt>.
 
+    <p>The file <tt>sample-baseline.csv</tt> represents an empty scenario (no disruptions), and is included for comparison's sake.
+
+      
+      
+      <h2>How to run</h2>
+
+    <p>The script <tt> scripts/sc-2-run-all-disruptions.sh</tt> runs the SC-2 simulation up multiple times, making one run for each sample scenario file ( <tt>config/dis-sc2/sample-*.csv</tt>). For each run, a directory (with a name such as <tt>charts-sample-D1</tt> is created in your current directory; it contains the run's main output file (out.log) and the CSV files with time series. You can then analyze those.
+
+    <p>For example:
+      <pre>
+cd
+mkdir tmp	
+~vmenkov/work/scripts/sc-2-run-all-disruptions.sh	
+more charts-sample-baseline/out.log
+grep 'waiting patients' charts-sample-*/out.log
+      </pre>
+      
   </body>
   </html>
