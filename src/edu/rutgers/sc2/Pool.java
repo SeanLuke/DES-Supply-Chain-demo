@@ -108,7 +108,8 @@ public class Pool extends sim.des.Queue
 	initial = para.getDouble("initial");
 	targetLevel = para.getDouble("targetLevel", initial);
 	batchSize = para.getDouble("batch");
-	initialReceived = initSupply(initial);
+	boolean aged = para.getBoolean("initial.aged", false);
+	initialReceived = initSupply(initial, aged);
 	everReceived = 0; // not counting the initial supply
 
 	expiredProductSink = (resource instanceof Batch) ?
@@ -142,22 +143,38 @@ public class Pool extends sim.des.Queue
 
     
     /** Instantly loads the Queue with the "initial supply", in standard size
-	batches made today */
-    private double initSupply(double initial) {
+	batches made today.
+
+	@param aged If true, load the pool with "aged" items, rather
+	than freshly made ones, to simulate a steady-state
+	situation. Only supported for EE.
+    */
+    private double initSupply(double initial, boolean aged) {
 	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") in");
 	double sent=0;
 	if (prototype instanceof Batch) {
-
-	    int n = (int)Math.round( initial / batchSize);
 	    double now = state.schedule.getTime();
-	    for(int j=0; j<n; j++) {
-		Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
-		Provider provider = null;  // why do we need it?
-		if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
-		sent += batchSize;
+
+	    if (aged) {
+		for(long j=0; j<(long)initial; j++) {
+		    Batch eeb = ((Batch)prototype).mkNewLot(1, now);
+		    EE ee = new EE(eeb, true);
+		    Provider provider = null;  // why do we need it?
+		    if (!accept(provider, ee, 1, 1)) throw new AssertionError("Queue did not accept");
+		    sent += 1;
+		}		
+	    } else {
+		int n = (int)Math.round( initial / batchSize);
+		for(int j=0; j<n; j++) {
+		    Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
+		    Provider provider = null;  // why do we need it?
+		    if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
+		    sent += batchSize;
+		}
 	    }
 
 	} else {
+	    if (aged) throw new IllegalArgumentException("Cannot 'age' CountableResource");
 	    CountableResource b = new CountableResource((CountableResource)prototype, sent=initial);
 	    Provider provider = null;  // why do we need it?
 	    if (!accept(provider, b, initial, initial)) throw new AssertionError("Queue did not accept");

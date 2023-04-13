@@ -128,6 +128,8 @@ eeHEP,batch,10
 eeHEP,reorderPoint,3454
 eeHEP,targetLevel,6907
 
+eeHEP,initial.aged,true
+
 #-- testing ZZZZ
 # eeHEP,initial,50000
 #eeHEP,reorderPoint,10000
