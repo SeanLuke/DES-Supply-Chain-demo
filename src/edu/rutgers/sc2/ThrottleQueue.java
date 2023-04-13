@@ -205,12 +205,21 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 
     /** This method ensures that whenever this queue is called
 	upon to provide a batch for the ProdDelay (via its slackProvider
-	mechanism) it will make itself non-empty, if at all possible. */
-    public boolean provide(Receiver receiver) {
+	mechanism), it will make itself non-empty, if at all possible.
+
+	<p>The name has been changed from provide() to offer() because of the
+	change in the DES API (see the slack call in SimpleDelay) between
+	2022 and 2023.
+    */
+    //     public boolean provide(Receiver receiver) {
+    public boolean offer(Receiver receiver) {
+	double now = state.schedule.getTime();
+	if (Demo.verbose) System.out.println("At t="+now+", " +getName() + ".provide()");
 	if (getAvailable()==0 && autoReloading) {
+	    if (Demo.verbose) System.out.println(getName() + " call mkBatch");
 	    whose.mkBatch();
 	}
-	return super.provide(receiver);
+	return super.offer(receiver);
     }
 
  

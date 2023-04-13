@@ -14,7 +14,7 @@ set h=`(cd $d/..; pwd)`
 setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*'
 
 
-#time java -Xprof edu.rutgers.pharma3.Demo  $argv[1-]
+# time java -Xprof edu.rutgers.sc2.Demo  $argv[1-]
 time java  edu.rutgers.sc2.Demo  $argv[1-]
 
 #-time 10

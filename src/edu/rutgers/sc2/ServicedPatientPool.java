@@ -94,7 +94,7 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     //MSink repairQueue;
     MSink deadEESink;
     
-    public ServicedPatientPool(SimState state, Config config, WaitingPatientQueue _wpq, Pool _eeHEP) throws IllegalInputException {
+    public ServicedPatientPool(SimState state, Config config, WaitingPatientQueue _wpq, Pool _eeHEP) throws IllegalInputException, IOException {
 	super(state, Patient.prototype);
 	setName(Util.cname(this));
 	wpq = _wpq;
@@ -114,22 +114,40 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	
 	deadEESink = new MSink(state, eeHEP.getPrototype());
 	//wpq.addReceiver(this);
-	
+	charter=new Charter(state.schedule, this);
+        String moreHeaders[] = {"servicedPatients"};
+        charter.printHeader(moreHeaders);       
+  
+	initialFill( state, config);
     }
 
-    /* Takes patients from the queue, fits them with EE and DS, and puts
-       them into the treatment process (this Delay).
+    /* This method has a dual role. First, since it's an
+       (auto-scheduled) delay, it's automatically called every time
+       when a patient is released from treatment (at the end of his
+       treatment time).  Here, the super.step() part takes care of
+       getting items out. Second, we schedule it on daily intervals,
+       so that it can take patients from the queue, fit them with EE
+       and DS, and put them into the treatment process (this Delay).
 
-       The super.step() part takes care of getting items out
      */
     public void step(SimState state) {
-	super.step(state);
+	super.step(state); 
 
+	// this part really only needs to be done daily... but it's ok to
+	// check more often as well
 	while(wpq.getAvailable()>0) {
 	    boolean z = wpq.provide(this);
 	    if (!z) break;
 	}
+
+	double now = state.schedule.getTime();
+	if (Math.round(now) == now) { // our own daily schedule
+	    dailyChart();
+	}
+
     }
+
+    
 
     int everAccepted=0;
 
@@ -170,7 +188,9 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     protected double getDelay(Provider provider, Resource amount) {
 	if (!(amount instanceof Patient)) throw new IllegalArgumentException();
 	Patient p= (Patient)amount;
-	return p.getEE().getEEInfo().delayTime;	
+	double d = p.getEE().getEEInfo().delayTime;
+	//	System.out.println("DEBUG: return delayTime="+d);
+	return d;
     }
  
     //     protected boolean offerReceivers(ArrayList<Receiver> receivers)
@@ -179,7 +199,7 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 
     public String report() {	
 	String s = "[" + getName();//+ " has received orders for " + everReceivedOrders + " u";
-	s += "; accepted " + (long)everAccepted + " patients; currently treated=" + (long)getDelayed();
+	s += "; accepted " + (long)everAccepted + " patients (plus the init pop="+initPop+"); currently treated=" + (long)getDelayed();
 	s += "; patients cured=" +  (long)everCured +
 	    ", sent back to wait=" + (long)everAnnoyed +
 	    ". EE destroyed=" + (long)everEeDied +
@@ -189,5 +209,67 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	s += "]";
 	return wrap(s);
    }
+
+    int initPop = 0;
+    
+    /** Initialization. Used on startup to fill in the SPP with
+	patients, approximating a steady-state population.
+	The purpose of this is to reduce start-up effects in the
+	behavior of the system.
+
+	<p>Since this method is run during the startup, the current
+	time at this point is -1; therefore, we add 1 to all lifetimes
+	etc, to ensure that they will come "ripe" at positive times.
+    */
+    public void initialFill(SimState state,
+			    Config config
+			    //, ParaSet para
+			    ) 
+	throws IllegalInputException {
+	String name2 = getName() + ".init";
+	ParaSet para = config.get(name2);
+	if (name2==null) return;
+
+	//System.out.println("DEBUG: init, now=" +state.schedule.getTime() );
+	//System.exit(1);
+
+	// How many days ago did we start filling the SPP?
+	Double initDepth = para.getDouble("depth", null);
+	if (initDepth==null) throw new IllegalInputException("Para set " + name2 + " must have field `depth'");
+	if (initDepth<1) throw new IllegalInputException("Para set " + name2 + " invalid value for  `depth'; must be positive");
+	final double now = 1; // start with 1 (rather than 0), because it works better in Mason this way
+	for(int ago=0; ago<initDepth; ago++) {
+	    int n = wpq.computeDaysArrivals();
+
+	    for(int i=0; i<n; i++) {
+		Batch eeb = ((Batch)eeHEP.getPrototype()).mkNewLot(1, now);
+		EE ee = new EE(eeb, true);
+		
+
+		
+		Patient p = new Patient();
+		boolean stillIn = p.startTreatment( now, ee, serviceTimeDistribution, ago, +1);
+		if (stillIn) {
+		    Provider provider = null;  // why do we need it?
+		    // We call super.accept(), rather than accept(),
+		    // because the patient has already be fitted with an EE
+		    boolean z = super.accept( provider, p, 1, 1);
+		    if (!z) throw new AssertionError();
+		    initPop ++;
+		}
+	    }
+	    
+	}
+
+	
+    }
+
+
+    private Charter charter;
+    private void dailyChart() {               
+        double[] data = {getDelayed()};   
+        charter.print(data);
+    }
+
     
 }

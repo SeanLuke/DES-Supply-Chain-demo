@@ -29,7 +29,8 @@ public class EE extends Batch
     }
     
     private static  AbstractDistribution lifetimeDistribution, tbfDistribution;
- 
+    private static DistributionUtil lifetimeDistributionUtil, tbfDistributionUtil;
+
 
     /** Should be called once, before any actual patients are created */
     public static void init(SimState state, Config config ) throws IllegalInputException {
@@ -40,6 +41,11 @@ public class EE extends Batch
 	if (para==null) throw new  IllegalInputException("No config parameters specified for '" + uname +"' in config file read from " + config.readFrom);
 	lifetimeDistribution = para.getDistribution("lifetime",state.random);
 	tbfDistribution = para.getDistribution("tbf", state.random);
+
+
+	lifetimeDistributionUtil = new DistributionUtil(lifetimeDistribution);
+	tbfDistributionUtil = new DistributionUtil(tbfDistribution);
+
     }
 
     enum EndCode { PATIENT_CURED, EE_DIED, EE_BROKEN };
@@ -64,13 +70,20 @@ public class EE extends Batch
 	double remainingTbf;
 	/** The clock time point at which the clocks decreasing the remainingLifetime and remainingTbf started. This is typically the time point when treatment was started or resumed. The value is null if at present the clock is not running (because the device is not in use with a patient). */
 	Double useStartedAt=null;
-	EEInfo(LotInfo li) {
+	/** @param aged If true, set the device remaining lifetime etc as if this device has had some (random) amount of life already. If false, set them as for a newly made device.
+	 */
+	EEInfo(LotInfo li, boolean aged) {
 	    super(li);
-	    init();
+	    init(aged);
 	}
-	private void init() {
-	    remainingLifetime =  Math.abs(lifetimeDistribution.nextDouble());
-	    remainingTbf =  Math.abs(tbfDistribution.nextDouble());
+	private void init(boolean aged) {
+	    if (aged) {
+		remainingLifetime =  Math.abs(lifetimeDistributionUtil.nextAgedDouble());
+		remainingTbf =  Math.abs(tbfDistributionUtil.nextAgedDouble());
+	    } else {
+		remainingLifetime =  Math.abs(lifetimeDistribution.nextDouble());
+		remainingTbf =  Math.abs(tbfDistribution.nextDouble());
+	    }
 	}
 
 	/** How much time this device will spend with a patient this time */
@@ -88,10 +101,24 @@ public class EE extends Batch
 	    treatment now. This method is called at the moment when
 	    the EE device is attached to the patient, at the start of the
 	    treatment.
+
+	    @param addToTimes Normally, 0. As a cludge used when preparing pre-aged EE devices at t=-1, we pass 1 here.
+
+	
 	*/
-	void startUse(double now, double treatmentTime) {
+	void startUse(double now, double treatmentTime, double addToTimes) {
+	    if (addToTimes>0) {
+		remainingLifetime += addToTimes;
+		remainingTbf += addToTimes;
+	    }
+
+	    
 	    useStartedAt = now;
 	    endCode = EndCode.PATIENT_CURED;
+	    //  System.out.println("DEBUG:  treatmentTime=" + treatmentTime +
+	    //		       ", remainingLifetime=" + remainingLifetime +
+	    //		       ", remainingTbf=" + remainingTbf);
+
 	    delayTime = treatmentTime;
 	    if (remainingLifetime <= remainingTbf) {
 		if (remainingLifetime <  treatmentTime) {
@@ -105,8 +132,10 @@ public class EE extends Batch
 		}
 	    }
 	    remainingTreatmentTime = treatmentTime - delayTime;
+	    //System.out.println("DEBUG: delayTime="+delayTime);
 	}
 
+	
 	/** This must be called when the device is separated from the
 	    patient, either due to the successful end of the
 	    treatment, or the breakdown of the device. It adjusts time
@@ -147,11 +176,15 @@ public class EE extends Batch
 	individualized EE-specific information.
      */
     public EE(Batch b) {
+	this(b, false);
+    }
+    
+    public EE(Batch b, boolean aged) {
 	super(b, b.getLot(), b.getContentAmount());
 	if (!b.getUnderlying().isSameType(uEE) ||
 	    b.getContentAmount()!=1 ||
 	    !(getInfo() instanceof LotInfo)) throw new IllegalArgumentException("Cannot convert " + b + " to EE");
-	setInfo( new EEInfo(b.getLot()));
+	setInfo( new EEInfo(b.getLot(), aged));
 	
     }
 
@@ -160,7 +193,11 @@ public class EE extends Batch
     }
 
     void startUse(double now, double treatmentTime) {
-	getEEInfo().startUse( now, treatmentTime);
+	startUse(now, treatmentTime, 0);
+    }
+    
+    void startUse(double now, double treatmentTime, double addToTimes) {
+	getEEInfo().startUse( now, treatmentTime, addToTimes);
 
     }
     

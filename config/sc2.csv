@@ -4,6 +4,9 @@ WaitingPatientQueue,avgDailyArrival,5439/7
 ServicedPatientPool,serviceTime,Triangular,1,4,180
 ServicedPatientPool,repairTime,Uniform,8,10
 
+#---- Initializing SPP
+ServicedPatientPool.init,depth,180
+
 #----  Properties of EE devices ---------
 EE,lifetime,Uniform,5*365,10*365
 EE,tbf,Triangular,0,5*365,10*365
@@ -120,13 +123,13 @@ eeHEP,parallelOrder,eeMedTech,1.0
 
 # EE Initial Inventory: Unif(2590, 6907)
 # DS Initial Inventory: Unif(24176, 72528)
-#eeHEP,initial,2590   
+eeHEP,initial,2590   
 eeHEP,batch,10
 eeHEP,reorderPoint,3454
 eeHEP,targetLevel,6907
 
 #-- testing ZZZZ
-eeHEP,initial,50000
+# eeHEP,initial,50000
 #eeHEP,reorderPoint,10000
 #eHEP,targetLevel,30000
 

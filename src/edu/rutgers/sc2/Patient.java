@@ -76,16 +76,44 @@ public class Patient extends Entity {
     void startTreatment(double now, EE _ee,
 			// DS ds, // FIXME
 			AbstractDistribution serviceTimeDistribution) {
+	startTreatment(now, _ee,  serviceTimeDistribution, 0, 0);
+    }
+
+
+    /**
+       @param makeOlderBy Normally, it's 0. If a positive number is given, we're
+       initializing a patient (at now=0) whose treatment was started a specified
+       number of days ago. This is used to prepopulate the SPP on startup,
+       simulating an established population of patients.
+       @param addToAll Normally 0. When used from the initialization routine (at t=-1), this value is 1. This is kludge used to deal with the fact that MASON initialization runs at t=-1, but DES Delay won't like a negative "ripe" date.
+      
+       @return true on success, false on failure (the patient should be gone by
+	now)
+    */
+    boolean startTreatment(double now, EE _ee,
+			// DS ds, // FIXME
+			AbstractDistribution serviceTimeDistribution,
+			   double makeOlderBy, double addToAll
+			) {
 	PatientInfo pi = getPatientInfo();
+
 	if (pi.ee!=null) throw new AssertionError("Patient already has an EE");
 	pi.ee = _ee;
 
 	if ( pi.treatmentTimeLeft == null) {
 	    pi.treatmentTimeLeft = serviceTimeDistribution.nextDouble();
+	    pi.treatmentTimeLeft -= makeOlderBy;
+	    if (pi.treatmentTimeLeft <= 0) return false;
+	    pi.treatmentTimeLeft += addToAll;
 	}
-	pi.ee.startUse(now, pi.treatmentTimeLeft);
+	
+	pi.ee.startUse(now, pi.treatmentTimeLeft, addToAll);
+	return true;
     }
 
+
+
+    
     public String toString() {
 	String s = "Patient no. " +  getPatientInfo().id;
 	EE ee = getEE();

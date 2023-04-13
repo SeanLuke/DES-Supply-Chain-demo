@@ -219,7 +219,7 @@ class Production extends AbstractProduction
 	//    moreHeaders[k++] = "Anomaly." + inputStore[j].getUnderlyingName();
 	//}
 	charter.printHeader(moreHeaders);
-	 
+
     }
 
   /** Do we have enough input materials of each kind to make a batch? 
@@ -396,7 +396,7 @@ class Production extends AbstractProduction
 	    
 	    if (!hasEnoughInputs()) {
 		if (Demo.verbose)
-		    System.out.println("At t=" + now + ", Production of "+ prodDelay.getTypicalProvided()+" is starved. Input stores: " + reportInputs(true));
+		    System.out.println("At t=" + now + ", "+ getName() + " production is starved. Input stores: " + reportInputs(true));
 		return;
 	    }
 
@@ -411,13 +411,13 @@ class Production extends AbstractProduction
 		while( mkBatch()) {
 		    n++;
 		}
-		/*
-		if (getName().equals("eeRMSupplier")) {
+		
+		if (getName().equals("eeCmoProd")) {
 		    System.out.println("At t=" + now + ", " + getName() +	" mkBatch done  "+n+ " batches");
-		    System.out.println("DEBUG: prodDelay=" + prodDelay.report0());
-		    System.out.println("DEBUG: transDelay=" + transDelay.report0());
+		    //System.out.println("DEBUG: prodDelay=" + prodDelay.report0());
+		    //System.out.println("DEBUG: transDelay=" + transDelay.report0());
 		}
-		*/
+		
 
 	    }
 		       
@@ -486,10 +486,10 @@ class Production extends AbstractProduction
 
 	
 	if (isHalted(now)) {
-	    //System.out.println("H");
+	    //System.out.println(getName()+ " H");
 	    return false;
 	}
-	//System.out.println("W");
+	//System.out.println(getName()+ " W");
 	if (!hasEnoughInputs()) return false;
 		
 	//Vector<Batch> usedBatches = new Vector<>();
@@ -510,7 +510,7 @@ class Production extends AbstractProduction
 	    //if (b!=null) usedBatches.add(b);    
 	}
 
-	//	if (Demo.verbose) System.out.println("At t=" + now + ", Production starts on a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	if (Demo.verbose) System.out.println("At t=" + now + ", " + getName() + " starts a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 
 	double outAmt = (prorate)? startPlan: outBatchSize;
