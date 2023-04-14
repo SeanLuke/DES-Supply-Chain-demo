@@ -1,0 +1,4 @@
+#time,unit,type,amount
+40-640,eePMSupplier,ShipmentLoss,10
+#time,unit,type,amount
+40,eePackaging.PMEE,DisableTrackingSafetyStock,600

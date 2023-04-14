@@ -130,8 +130,8 @@ eeHEP,targetLevel,6907
 
 eeHEP,initial.aged,true
 
-#-- testing ZZZZ
+#-- testing 
 # eeHEP,initial,50000
-#eeHEP,reorderPoint,10000
-#eHEP,targetLevel,30000
+# eeHEP,reorderPoint,10000
+# eHEP,targetLevel,30000
 

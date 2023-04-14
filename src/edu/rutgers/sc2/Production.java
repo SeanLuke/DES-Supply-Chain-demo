@@ -349,7 +349,7 @@ class Production extends AbstractProduction
 		    loseCnt++;
 		    nowStolen += Batch.getContentAmount(node.getResource());
 		    node.setDead(true);
-
+		    if (loseCnt >= m) break;
 		}
 		everStolen += nowStolen;
 		

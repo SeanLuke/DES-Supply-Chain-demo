@@ -6,7 +6,8 @@ set from=~vmenkov/mason/work
 #-- The config file to use for all runs
 set config=config/sc2.csv
 
-foreach x (config/dis-sc2/sample-baseline.csv)
+# foreach x (config/dis-sc2/sample-baseline.csv)
+foreach x (config/dis-sc2/severe-*.csv)
 
 set y=`basename -s .csv $x`
 
