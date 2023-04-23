@@ -13,7 +13,11 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** Models the "safety stock" of some input resource at a Production 
+/** SC-2: The "safety stock" is merely an alternative ordering (MTS-based)
+    mechanism for a particular input buffer. 
+
+    <p>SC-1:
+   Models the "safety stock" of some input resource at a Production 
     node. The "safety stock" can be used when the InputStore for the
     resource in question is empty. The safety stock is replenished
     from an inexhaustible and un-disturbable "magic source", so it's
@@ -76,7 +80,8 @@ extends Probe implements Reporting
 	return haltedUntil.isOn( now );
     }
 
-    /** Disable the safety stock level-checking until the specified time point */
+    /** Disables the safety stock level-checking until the specified
+	time point. This implements one of the disruption types in SC-2. */
     void haltUntil(double t) {
 	haltedUntil.enableUntil( t );
     }
@@ -84,7 +89,12 @@ extends Probe implements Reporting
     
     /** Creates the SafetyStock for the specified resource at the specified
 	production unit.
-	@return the new SafetyStock, or null if the config file has no 
+	@param whose The InputStore with whom this SafetyStock is
+	associated, and whose supply level it will be monitoring.
+	@param production The production unit whose InputStore this SS
+	will be monitoring. This parameter is only used to generate
+	a suitable name for this SS. 
+	@return the new SafetyStock, or null if the config file has no	
 	parameters for this (production unit, resource) pair.
     */
     static SafetyStock mkSafetyStock(SimState state, Production production,
@@ -98,7 +108,9 @@ extends Probe implements Reporting
     }
    
 
-    /** Used for replenishing the safety stock from the magic supplier */
+    /** Used for replenishing the safety stock from the magic supplier.
+	The null value means "no delay".
+     */
     private Delay refillDelay = null;
 
     /** Are we allowed to access this safety stock only when a
@@ -107,6 +119,7 @@ extends Probe implements Reporting
 	currently detected an anomaly. The double value indicates the
 	actuation delay (i.e. the anomaly must have been in effect for
 	so many days before the safety stock can be accessed.
+	(This was used in SC-1, but apparently won't be used in SC-2).
     */
     final Double needsAnomaly;
     
@@ -151,7 +164,9 @@ extends Probe implements Reporting
 	initSupply(initial);
     }
 
-  
+    /** This methos is called daily, from step(), to check the
+	current stock level and make a replenishment order,
+	if needed. */
     protected void reorderCheck() {
 
 	double now = getState().schedule.getTime();
@@ -179,7 +194,7 @@ extends Probe implements Reporting
     }
 
     
-    /** Has the magic source feed some stuff to the specified
+    /** Has the builtin magic source feed some stuff to the specified
 	receiver. 
 	@param rcv Where to put stuff. It can be the SafetyStock
 	itself (for initialization) or its refillDelay (for a later

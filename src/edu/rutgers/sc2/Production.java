@@ -49,7 +49,7 @@ class Production extends AbstractProduction
     
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent */
-    //    ThrottleQueue getNeedQa() { return needQa;}
+    ThrottleQueue getNeedQa() { return needQa;}
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent. This is either the QA delay itself (if
 	parallel processing is allowed), or the waiting buffer (if throttled FIFO processing).
@@ -69,7 +69,7 @@ class Production extends AbstractProduction
 	this is the qaDelay, but some units (CMO Track A) don't have QA,
 	so this will be the transportation delay, or even the production
 	delay.  The main use of this method is so that we can add a Receiver
-	to the Provider returned by out, thus enabling this Production
+	to the Provider returned by this call, thus enabling this Production
 	to send its product to the next element of the supply chain.
     */
     public Provider getTheLastStage() {
@@ -87,6 +87,24 @@ class Production extends AbstractProduction
 	return inputStore[j];
     }
 
+    /** Creates a transportation delay in front of input buffer No. j,
+	and returns it so that it can be used as an entry point (
+	instead of the usual getEntrance()). The delay parameters
+	must be present in the config time.
+     */
+    Receiver mkInputDelay(int j) throws IllegalInputException {
+	String key="inputDelay."+j;
+	AbstractDistribution d =  para.getDistribution(key ,state.random);
+	if (d==null) throw new  IllegalInputException("Production unit " + getName() + " does not have an " + key + " in its parameter set");
+	Delay delay  = new Delay(state, outResource);
+	//if (getEntrance(j)==null) throw new AssertionError();
+	delay.addReceiver(getEntrance(j));
+	delay.setDelayDistribution( d);
+	return delay;
+    }
+	
+
+    
     final Resource[] inResources;
     final Batch outResource; 
 
@@ -145,7 +163,11 @@ class Production extends AbstractProduction
 	if (qaDelay != null) {
 	    if (this instanceof Macro)  addProvider(qaDelay, false);
 	    if ( qaIsThrottled) {
-		needQa =new ThrottleQueue(qaDelay, cap, para.getDistribution("qaDelay",state.random));
+		AbstractDistribution d = para.getDistribution("qaDelay",state.random);
+		boolean unit = (d==null);
+		if (unit)  d = para.getDistribution("qaDelayUnit",state.random);
+		if (d==null) throw new IllegalInputException("No qaDelay or qaDelayUnit in param set for " + getName()); 
+		needQa =new ThrottleQueue(qaDelay, cap, d, unit);
 		needQa.setWhose(this);
 	    } else {
 		needQa = null;
@@ -159,22 +181,33 @@ class Production extends AbstractProduction
 	    
 	    if (transIsThrottled) {
 		transDelay = new SimpleDelay(state, outResource);
-		needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random));
+		// if there is a trans delay, its cost is  always batch-based (not unit-based) cost
+		needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random), false);
 	    } else {
 		transDelay = new Delay(state, outResource);
 		((Delay)transDelay).setDelayDistribution(  d);		
 		needTrans = null;
 	    }
-	    transDelay.setName("TransDelay of " + outResource.getName());
+	    transDelay.setName(getName() + ".TransDelay");// + outResource.getName());
 	    
-	    if (getQaEntrance()!=null) transDelay.addReceiver(getQaEntrance());
-	    
+	    if (getQaEntrance()!=null) {
+		transDelay.addReceiver(getQaEntrance());
+		System.out.println("In " + getName() +", " + transDelay.getName() +" feeds to " + getQaEntrance().getName());
+	    }  else {		
+		// The receiver will be added later, in the SplitManager() call
+
+		System.out.println("In " + getName() +", " + transDelay.getName() +
+				   " feeds to nowhere yet; should be connected to SM later");
+		
+		//throw new IllegalInputException("In " + getName() +", there is " + transDelay.getName() +", but we don't know where it feeds to");
+	    }
+		
 	} else {
 	    transDelay = null;
 	    needTrans = null;
 	}
 	
-	prodDelay = new ProdDelay(state,outResource);
+	prodDelay = new ProdDelay(state,this,outResource);
 
 	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
 	if (w!=null) prodDelay.addReceiver(w);
@@ -182,8 +215,12 @@ class Production extends AbstractProduction
 	AbstractDistribution d0 = para.getDistribution("prodDelay",state.random);
 	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)outBatchSize);
 
-	if (dn!=null) {
-	    needProd = new ThrottleQueue(prodDelay, cap, dn);
+	AbstractDistribution d = para.getDistribution("prodDelay",state.random);
+	boolean unit = (d==null);
+	if (unit)  d = para.getDistribution("prodDelayUnit",state.random);
+	
+	if (d!=null) {
+	    needProd = new ThrottleQueue(prodDelay, cap, d, unit);
 
 	    needProd.setWhose(this);
 	    needProd.setAutoReloading(true);
@@ -202,6 +239,9 @@ class Production extends AbstractProduction
 
 	stolenShipmentSink = new MSink(state, outResource);
 	stolenShipmentSink.setName("StolenShipmentsFrom." + getName());
+
+	System.out.println("In " + getName() +", " + getTheLastStage().getName() +
+			   " feeds to SM");
 
 	
 	sm = new SplitManager(this, outResource, getTheLastStage());
@@ -578,6 +618,7 @@ class Production extends AbstractProduction
 	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
 	    s += " " + qaDelay.report();	    
 	//s +="  in QA=" +   needQa.hasBatches() +")";
+	} else {
 	}
 	    
 	s += "\n" + prodDelay.report();

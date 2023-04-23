@@ -17,14 +17,26 @@ class MedTech implements Named, BatchProvider, Reporting, Steppable {
 
     /** Production nodes (including suppiers) to whom the order
 	must be transmitted */
-    Production[] prod;
-
+    final Production[] prod;
+    final double[] factors;
+    
     /**
        @param _prod To whom orders will be sent
+       @param _factors How much the order to each node should be
+       scaled. Typically, each value in the array is 1.0 (or a
+       slightly larger value, to account for wastage). However, some
+       values may be different, e.g. because we use 2 units of product
+       X to make a unit of product Y, or because we distribute the
+       order between several producers.
      */
-    MedTech(String _name, Production[] _prod) {
-	prod = _prod;
+    MedTech(String _name, Production[] _prod, double[] _factors) {
 	setName(_name);
+	prod = _prod;
+	if (_factors==null) {
+	    _factors = new double[prod.length];
+	    for(int j=0; j<_factors.length; j++) _factors[j] = 1;
+	} else if (_factors.length!=prod.length) throw new IllegalArgumentException();
+	factors = _factors;
     }
 
     double everReceivedOrders = 0;
@@ -35,9 +47,10 @@ class MedTech implements Named, BatchProvider, Reporting, Steppable {
 	propagate to the receiver */       
     public double feedTo(Receiver r, double amt) {
 	if (amt<0) throw new IllegalArgumentException(getName() +".feedTo(" + amt+")");
-	
+
+	int j=0;
 	for(Production p: prod) {
-	    p.addToPlan(amt);
+	    p.addToPlan( Math.round(amt * factors[j++]));
 	}
 	// FIXME: should also order some raw materials for the production node,
 	// so that it won't have to rely on safety stocks

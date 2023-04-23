@@ -21,7 +21,7 @@ import edu.rutgers.supply.Disruptions.Disruption;
 public class ServicedPatientPool extends Delay implements Named, Reporting {
     AbstractDistribution serviceTimeDistribution;
     WaitingPatientQueue wpq;
-    Pool eeHEP;
+    Pool eeHEP, dsHEP;
 
     /** The 2 receivers accept patients in 3 different situations:
 	finished treatment; EE device broke (but repairable); EE device
@@ -94,11 +94,13 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     //MSink repairQueue;
     MSink deadEESink;
     
-    public ServicedPatientPool(SimState state, Config config, WaitingPatientQueue _wpq, Pool _eeHEP) throws IllegalInputException, IOException {
+    public ServicedPatientPool(SimState state, Config config, WaitingPatientQueue _wpq, Pool _eeHEP, Pool _dsHEP
+			       ) throws IllegalInputException, IOException {
 	super(state, Patient.prototype);
 	setName(Util.cname(this));
 	wpq = _wpq;
 	eeHEP = _eeHEP;
+	dsHEP = _dsHEP;
 	ParaSet para = config.get(getName());
 
 	serviceTimeDistribution = para.getDistribution("serviceTime", state.random);
@@ -107,7 +109,6 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	addReceiver(new CuredPatientSink(state));
 	addReceiver(new AnnoyedPatientProbe(state));
 
-	//repairQueue = new MSink(state, eeHEP.getPrototype());
 	repairPool = new Delay( state,  eeHEP.getPrototype());
 	repairPool.setDelayDistribution(  repairTimeDistribution );
 	repairPool.addReceiver( eeHEP);
@@ -161,8 +162,10 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	  if (!(amount instanceof Patient)) throw new IllegalArgumentException("SPP cannot accept a non-Patient: " + amount);
 	  Patient p = (Patient)amount;
 	  if (eeHEP.getAvailable()==0) return false;
+	  if (dsHEP.getAvailable()==0) return false;
 
-	  
+
+	  if (dsHEP.consumeSome(1) != 1) throw new AssertionError("Why is dsHEP empty?!");
 	  EE ee = eeHEP.extractOneEE();
 	  double now = state.schedule.getTime();
 	  p.startTreatment( now, ee, serviceTimeDistribution);

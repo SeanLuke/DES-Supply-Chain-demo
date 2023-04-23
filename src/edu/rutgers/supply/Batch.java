@@ -201,7 +201,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     */
     private Batch(CountableResource typicalUnderlying,
 		  PrototypeInfo pi) {
-	super(  "BatchOf" + typicalUnderlying.getName());
+	super(  "batch." + typicalUnderlying.getName());
 	setInfo( pi);
 	setStorage( new Resource[] {typicalUnderlying});
 	//System.out.println("Created Prototype Batch = " +this);

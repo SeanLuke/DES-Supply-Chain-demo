@@ -35,6 +35,11 @@ import edu.rutgers.util.*;
 public class Pool extends sim.des.Queue
     implements Reporting, Named, BatchProvider {
 
+
+    double now() {
+	return  state.schedule.getTime();
+    }
+    
     final double batchSize;
 
     /** This can be Batch, or CountableResource. It is similar to
@@ -165,9 +170,10 @@ public class Pool extends sim.des.Queue
 		}		
 	    } else {
 		int n = (int)Math.round( initial / batchSize);
+		Provider provider = new Source(state, prototype);  // why do we need it?
+		provider.setName("initial");
 		for(int j=0; j<n; j++) {
 		    Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
-		    Provider provider = null;  // why do we need it?
 		    if (!accept(provider, whiteHole, 1, 1)) throw new AssertionError("Queue did not accept");
 		    sent += batchSize;
 		}
@@ -214,6 +220,7 @@ public class Pool extends sim.des.Queue
 	    Receiver rcv = Pool.this;
 	    if (delayDistr!=null) {
 		Delay delay = new Delay(state,prototype);
+		delay.setName(rcv.getName() + ".inputDelay");
 		delay.setDelayDistribution(delayDistr);
 		delay.addReceiver(rcv);
 		rcv = delay;
@@ -291,7 +298,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (bePool && !(q instanceof Pool)) throw new IllegalInputException("Supplier ("+supName+") is not a Pool, for " + getName() +"," + key);
 	BatchProvider p = (BatchProvider)q;
 	double frac =    para.parseDoubleEx(key,  v.get(1));
-	Receiver rcv = this;
+	//Receiver rcv = this;
 	AbstractDistribution dis = para.getDistribution(key2,state.random);
 	return new Supplier(p, frac, dis);
     }
@@ -398,6 +405,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	@param doRecordDemand  True if this is the "first call" (likely
 	from another chain element), so that the entire demanded amount
+	can be recorded in the historical record. False in "secondary calls",
+	which try to fill back orders, whose original amount was already
+	added to the record.
 
 	@return The amount actually sent. If the amount was smaller
 	than requested, the caller will decide what to do next,
@@ -443,6 +453,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    }
 	    currentStock -= (sent + expired);
 
+	    if (getName().equals("dsDC") && r.getName().startsWith("dsDP")) {
+		System.out.println("DEBUG: at t="+ now()+", "  + getName()+".feedTo("+r.getName()+") sent=" + sent);				   
+	    }
 
 	} else if (prototype instanceof CountableResource) {
 	    offerReceiver(r, amt);
@@ -566,11 +579,24 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
 
 	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery. This way we exclude deliveries from the repair pool to HEP, which should not be counted in onOrder
+	    // FIXME: need to finesse this, in case we have immediate orders (no delay) betweeen pools
 	    onOrder -= a;
 	    if (onOrder < a) { // they have over-delivered
 		onOrder=0;
 	    }
 	}
+
+
+	if (getName().equals("dsDP")) {
+	    String s= (provider==null) ? "null" :provider.getName();
+	    if (s==null) s = "unknown";
+	    if (!s.equals("initial")) {
+		System.out.println("DEBUG: at t=" +now()+", " + getName()+".accept("+s+", "+a+")");
+	    }
+	}
+
+
+	
 	everReceived += a;
 	receivedToday += a;
 	
@@ -839,6 +865,34 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	// if (deficit()!=0) System.out.println("extract() done: t="+now+". "+report());
 
 	return ee;
+    }
+
+
+    /** Tries to consume (destroy) x unit of the resource stored in this pool.
+	@return the amount actually consumed
+     */
+    double consumeSome(double x) {
+	if (getAvailable()==0) return 0;
+	double z = 0;
+	while(x>0) {
+	    Batch b=(Batch)entities.getFirst();
+	    double q  = b.getContentAmount();
+	    if (q<=x) {
+		entities.remove(b);
+		z += q;
+		x -= q;
+	    } else  {
+		b.getContent().decrease(x); 
+		z += x;
+		x = 0;		
+	    }
+	}
+	currentStock -= z;
+	everSent+=z;
+	//double now = state.schedule.getTime();
+	// if (deficit()!=0) System.out.println("extract() done: t="+now+". "+report());
+
+	return z;
     }
     
 }

@@ -58,12 +58,22 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 		  Production  _whose) {whose = _whose;}
     //	AbstractProduction
     Production 	getWhose() { return whose; }
-    
-    private AbstractDistribution delayDistribution;
 
-    public AbstractDistribution getDelayDistribution() {
-	return delayDistribution;
-    }
+    /** This is interpreted as either the distribution from which the time of 
+	 processing a batch is drawn (if unit==false), or the time of processing
+	 a single unit is drawn (if unit==true). In the latter case, n values
+	 are drawn from this distribution to obtain a time for processing a batch
+	 of n units.
+    */
+    private AbstractDistribution delayDistribution=null;
+    //    private AbstractDistribution delayDistributionUnit=null;
+
+    //    public AbstractDistribution getDelayDistribution() {
+    //	return delayDistribution;
+    //    }
+
+    /** If true, the delayDistribution contains unit cost, rather than batch cost */
+    private final boolean unit;
     
     /** The capacity-1 SimpleDelay for which the ThrottleQueue serves as an
 	input buffer */
@@ -86,10 +96,11 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	@param cap The max number of batches that the production unit (the Delay object) can physically handle simultaneously. (Usually, 1).
 
      */
-    public  ThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution) {
+    public  ThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution, boolean _unit) {
 	super(_delay.getState(), _delay.getTypicalProvided());
 	delay = _delay;
 	delayDistribution = _delayDistribution;
+	unit = _unit;
 	setOffersImmediately(true);
 	setName("TQ for " + delay.getName());
 	if (delay.getTypicalProvided() instanceof Entity) {
@@ -103,9 +114,9 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	delay.setSlackProvider(this);	
     }
 
-    void setDelayDistribution(AbstractDistribution d) {
-	delayDistribution = d;
-    }
+    //void setDelayDistribution(AbstractDistribution d) {
+    //delayDistribution = d;
+    //}
     
     /** This method is called whenever a batch is put into the ThrottleQueue
 	(due to the immediatOffers flag), and whenever the throttled SimpleDelay
@@ -130,8 +141,8 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 
 	if (whose.isHalted(now)) return false; // Halt disruption in effect
 
-	
-	double delayTime = Math.abs(delayDistribution.nextDouble());
+	long n = unit? (long)Math.round(((Batch)entities.getFirst()).getContentAmount()): 1;
+	double delayTime = computeDelayTime( n );
 	
 	delay.setDelayTime( delayTime);
 			    
@@ -143,6 +154,16 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
     }
 
 
+    private double computeDelayTime(long n) {
+	double sum=0;
+	if (!unit) n = 1;
+	for(int j=0; j<n; j++) {
+	    sum += delayDistribution.nextDouble();
+	}
+	return Math.abs(sum);
+    }
+
+    
     /** How many batches are there waiting for processing, and
 	how many are waiting for processing */
     public String hasBatches() {
@@ -219,6 +240,7 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	    if (Demo.verbose) System.out.println(getName() + " call mkBatch");
 	    whose.mkBatch();
 	}
+	if (getAvailable()==0) return false;
 	return super.offer(receiver);
     }
 

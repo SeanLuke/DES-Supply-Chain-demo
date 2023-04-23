@@ -20,10 +20,11 @@ EE,tbf,Triangular,0,5*365,10*365
 RMEE,expiration,+Infinity
 PMEE,expiration,+Infinity
 
+DS,expiration,+Infinity
+PMDS,expiration,+Infinity
 
-RMDS,expiration,+Infinity
 
-#------ The EE RM supply pool ------
+#------ The EE RM supply pool. There is no QA; it feeds straight to EE CMO Prod ------
 eeRMSupplier,batch,100
 eeRMSupplier,transDelay,Uniform,30,60
 
@@ -38,9 +39,9 @@ eeCmoProd.safety.RMEE,needsAnomaly,-1
 #------ EE manufacturing --------
 eeCmoProd,inBatch,10
 eeCmoProd,batch,10
-eeCmoProd,qaDelay,Uniform,0.01,0.03
+eeCmoProd,qaDelayUnit,Uniform,0.01,0.03
 eeCmoProd,transDelay,Uniform,5,10
-eeCmoProd,prodDelay,Triangular,0.01,0.02,0.03
+eeCmoProd,prodDelayUnit,Triangular,0.01,0.02,0.03
 eeCmoProd,faulty,0.02
 eeCmoProd,rework,0.08
 
@@ -65,7 +66,7 @@ eePackaging,inBatch,10,10
 eePackaging,batch,10
 eePackaging,qaDelay,Uniform,0,0
 #eePackaging,transDelay,Uniform,0,0
-eePackaging,prodDelay,Uniform,0.01,0.03
+eePackaging,prodDelayUnit,Uniform,0.01,0.03
 eePackaging,faulty,0
 eePackaging,rework,0.01
 
@@ -135,3 +136,91 @@ eeHEP,initial.aged,true
 # eeHEP,reorderPoint,10000
 # eHEP,targetLevel,30000
 
+#------ The DS RM supply pool ------
+#-- the max batch size is effectively infinity, so that the entire order will form a single (odd) lot
+dsRMSupplier,batch,1000000
+dsRMSupplier,transDelay,Uniform,30,60
+dsRMSupplier,qaDelay,Uniform,5,10
+#-- split into smaller batches after QA, before splitting to 2 destination
+dsRMSupplier,outBatch,250
+dsRMSupplier,faulty,0.02
+
+
+#----- Safety stock for DS manufacturing
+dsProd.safety.DS,initial,65268
+dsProd.safety.DS,targetLevel,65268
+dsProd.safety.DS,reorderPoint,43512
+dsProd.safety.DS,delay,Uniform,30,60
+# dsProd.safety.DS,delay,Uniform,3,4
+#dsProd.safety.DS,needsAnomaly,-1
+
+#------ EE manufacturing --------
+dsProd,inputDelay.0,Uniform,0.5,1
+
+dsProd,inBatch,250
+dsProd,batch,250
+dsProd,qaDelayUnit,Uniform,0.0005,0.0015
+# dsProd,transDelay,Uniform,0,0
+dsProd,prodDelayUnit,Uniform,0.0005,0.0015
+dsProd,faulty,0.01
+# dsProd,rework,0
+
+dsCmoProd,inputDelay.0,Uniform,3,7
+dsCmoProd,inBatch,250
+dsCmoProd,batch,250
+dsCmoProd,prodDelayUnit,Uniform,0.002,0.006
+dsCmoProd,transDelay,Uniform,3,7
+
+#------ The DS pack mat supply pool ------
+dsPMSupplier,batch,250
+dsPMSupplier,transDelay,Uniform,30,60
+
+
+#------- DS Packaging ----------
+dsPackaging.safety.PMDS,initial,65268
+dsPackaging.safety.PMDS,targetLevel,65268
+dsPackaging.safety.PMDS,reorderPoint,43512
+dsPackaging.safety.PMDS,delay,Triangular,54,60,66
+
+dsPackaging,batch,250
+dsPackaging,inBatch,250,250
+dsPackaging,prodDelayUnit,Uniform,0.0005,0.0015
+dsPackaging,qaThrottled,true
+dsPackaging,qaDelayUnit,Uniform,0.0005,0.0015
+
+#------- DS DC. It just sends orders to MedTech, and hopes that DS will flow in ----------
+dsDC,from1,dsMedTech,1.00
+dsDC,mode,Mode1
+dsDC,initial,65268
+dsDC,batch,250
+dsDC,reorderPoint,48951
+dsDC,targetLevel,70707
+
+
+#--------- DS DP
+dsDP,from1,dsDC,1.00
+dsDP,mode,Mode1
+dsDP,initial,7260
+dsDP,batch,250
+dsDP,reorderPoint,4895
+dsDP,targetLevel,7071
+dsDP,delay1,Uniform,5,7
+
+##-- ZZZ: Unif(24176, 72528)
+
+dsHEP,batch,250
+dsHEP,initial,72528
+dsHEP,reorderPoint,48352
+dsHEP,targetLevel,72528
+
+
+dsHEP,mode,Mode1
+
+dsHEP,from1,dsDC,0.90
+# dsHEP,delay1,Triangular,1,3,5
+dsHEP,delay1,Uniform,5,7
+
+dsHEP,from2,dsDP,0.10
+# dsHEP,delay2,Triangular,1,3,5
+dsHEP,delay2,Uniform,5,7
+dsHEP,parallelOrder,dsMedTech,1.0

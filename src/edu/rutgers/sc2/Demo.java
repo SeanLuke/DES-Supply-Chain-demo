@@ -30,7 +30,17 @@ import sim.field.network.*;
 import sim.des.portrayal.*;
 
 
-/** The main class for the SC-2 model */
+/** The main class for the SC-2 model
+
+<pre>
+Demo demo = ....;
+run simulation
+demo.wpq.getAvailable() get at every step
+ALSO will add a method to get the average waiting queue size
+demo.wpq.sumWaiting gives you the integral of the above over all 2000 days of simulation
+("patient-days wasted waiting in line")
+
+ */
 public class Demo extends SimState {
 
     public String version = "1.003";
@@ -58,12 +68,21 @@ public class Demo extends SimState {
     //private HashMap<String,Object> addedNodes = new HashMap<>();
     Steppable lookupNode(String name) { return addedNodes.get(name); }
 
+    Vector<Reporting> reporters = new Vector<>();
+
+    
     private int ordering = 0;
     void add(Steppable z) {
 	if (z instanceof Named) {
-	    addedNodes.put(((Named)z).getName(), z);
+	    String name = ((Named)z).getName();
+	    if (addedNodes.put(name, z)!=null) throw new IllegalArgumentException("Attempt to add duplicate node named " + name);
 	}
+	if (z instanceof Reporting) reporters.add((Reporting)z);
 	IterativeRepeat ir =	schedule.scheduleRepeating(z, ordering++, 1.0);
+    }
+
+    void addFiller(String text) {
+	reporters.add(new Filler(text));
     }
     
     public Demo(long seed)    {
@@ -84,16 +103,20 @@ public class Demo extends SimState {
     }
 
     Production 	eeRMSupplier, eePMSupplier;
-    Production 	dsRMSupplier;
+    Production 	dsRMSupplier, dsPMSupplier;
 
     Production eeCmoProd, eePackaging;
     Pool eeDC, eeDP, eeHEP;
-    MedTech eeMedTech;
+    Pool dsDC, dsDP, dsHEP;
+    MedTech eeMedTech, dsMedTech;
     
-    WaitingPatientQueue wpq;
+    public WaitingPatientQueue wpq;
     ServicedPatientPool spp;
 
     Batch eeBatch, dsBatch;
+
+    Splitter dsRMSplitter;
+    Production dsCmoProd, dsProd, dsPackaging;
     
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
@@ -106,18 +129,20 @@ public class Demo extends SimState {
 	    Patient typicalPatient = Patient.prototype;
 
 	    
-	    wpq = new WaitingPatientQueue(this, config);
-	    add(wpq);
-	    
+	    addFiller("   --- EE BRANCH ---");		      
+
 	    CountableResource rmEE = new CountableResource("RMEE", 1);
 	    Batch rmEEBatch = Batch.mkPrototype(rmEE, config);
 
 	    eeBatch = Batch.mkPrototype(EE.uEE, config);
 
-	    CountableResource rmDS = new CountableResource("RMDS", 1);
-	    CountableResource ds = new CountableResource("RMDS", 1);
-	    dsBatch = Batch.mkPrototype(ds, config);
+	    CountableResource rmDS = new CountableResource("DS", 1);
+	    Batch rmDSBatch = Batch.mkPrototype(rmDS, config);
 
+	    //-- for simplicity, make DS identical to RMDS, since it won't cause any confusion
+	    CountableResource ds = rmDS;
+	    dsBatch = rmDSBatch;
+	    
 	    //---- EE production chain ----
 
 	    eeRMSupplier = new Production(this, "eeRMSupplier", config,
@@ -144,7 +169,7 @@ public class Demo extends SimState {
 				       
 	    
 
-	    //---[
+	    //---
 	    eePackaging = new Production(this, "eePackaging", config,
 					 new Resource[] {eeBatch, pmEEBatch},
 					 eeBatch);
@@ -156,7 +181,8 @@ public class Demo extends SimState {
 
 	    eeMedTech = new MedTech("eeMedTech",
 				    new Production[] {
-					eeCmoProd,eeRMSupplier,eePMSupplier});
+					eeCmoProd,eeRMSupplier,eePMSupplier},
+				    null);
 	    
 	    add(eeMedTech);
 
@@ -174,41 +200,86 @@ public class Demo extends SimState {
 
 	    //---- DS production chain ----	    
 
-	    /*
+	    addFiller("   --- DS BRANCH ---");		      
+
+
+	    
+	    dsRMSupplier = new Production(this, "dsRMSupplier", config,
+					  new Resource[] {},
+					  rmDSBatch);
+	    add(dsRMSupplier);
+
+	    BatchDivider dsRMBD = new BatchDivider(this, rmDSBatch,
+						   dsRMSupplier.getPara().getDouble("outBatch"));
+
+	    dsRMSupplier.setQaReceiver(dsRMBD, 1.0);
+
+	    dsRMSplitter = new Splitter(this, rmDSBatch);
+	    
+	    
+
+	    
+	    dsRMBD.addReceiver(dsRMSplitter);
+	    
 	    dsCmoProd = new Production(this, "dsCmoProd", config,
-				       new Resource[] {rmDS},
+				       new Resource[] {rmDSBatch},
 				       dsBatch);
+	    dsCmoProd.setNoPlan(); // driven by inputs (has no safety stock)
 
 	    add(dsCmoProd);
+	    dsRMSplitter.addReceiver(dsCmoProd.mkInputDelay(0), 0.08);
+
+	    dsProd = new Production(this, "dsProd", config,
+				    new Resource[] {rmDSBatch},
+				    dsBatch);
+
+	    add(dsProd);
+	    dsRMSplitter.addReceiver(dsProd.mkInputDelay(0), 0.90);
+	    // DS CMO Prod has no QA stage of its own, and uses DS Prod's QA
+	    dsCmoProd.setQaReceiver( dsProd.getQaEntrance(), 1.0);
 
 
 	    CountableResource pmDS = new CountableResource("PMDS", 1);
+	    Batch pmDSBatch = Batch.mkPrototype(pmDS, config);
 
+
+	    //----
+	    dsPMSupplier = new Production(this, "dsPMSupplier", config,
+					  new Resource[] {},
+					  pmDSBatch);
+	    add(dsPMSupplier);
+				       
 	    dsPackaging = new Production(this, "dsPackaging", config,
-					 new Resource[] {dsBatch, pmDS},
+					 new Resource[] {dsBatch, pmDSBatch},
 					 dsBatch);
 	    dsPackaging.setNoPlan(); // driven by inputs
 	    add(dsPackaging);
+	    
+	    dsProd.setQaReceiver(dsPackaging.getEntrance(0), 1.0);	
+	    dsPMSupplier.setQaReceiver(dsPackaging.getEntrance(1), 1.0);	
 
-	    dsCmoProd.setQaReceiver(dsPackaging.getEntrance(0), 1.0);	
-	    dsMedTech = new MedTech("dsMedTech", dsCmoProd);
+	    dsMedTech = new MedTech("dsMedTech",
+				    new Production[] {
+					//dsCmoProd,
+					dsProd,
+					dsRMSupplier,dsPMSupplier},
+				    new double[] {0.8, 1, 1}
+				    );
 	    
 	    add(dsMedTech);
-
+	    	   
 	    dsDC = new Pool(this, "dsDC", config,  dsBatch, new String[0]);
 	    add(dsDC);
 
-	    Delay d2 = dsPackaging.mkOutputDelay(dsDC);
-	    dsPackaging.setQaReceiver(d2, 1.0);	
-	    */
 	    
-	    /*
-	    eeDP = new Pool(this, "eeDP", config,  eeBatch, new String[0]);
-	    add(eeDP);
+	    dsPackaging.setQaReceiver(dsPackaging.mkOutputDelay(dsDC), 1.0);	
+	    
+	    
+	    dsDP = new Pool(this, "dsDP", config,  dsBatch, new String[0]);
+	    add(dsDP);
 
-	    eeHEP = new Pool(this, "eeHEP", config,  eeBatch, new String[0]);
-	    add(eeHEP);
-	    */
+	    dsHEP = new Pool(this, "dsHEP", config,  dsBatch, new String[0]);
+	    add(dsHEP);
 
 	    
 	    //-- link the pools, based on the "from1" fields in its ParaSet
@@ -216,7 +287,17 @@ public class Demo extends SimState {
 	    eeDP.setSuppliers(addedNodes);
 	    eeHEP.setSuppliers(addedNodes);
 
-	    spp = new ServicedPatientPool(this, config, wpq, eeHEP);
+	    dsDC.setSuppliers(addedNodes);
+	    dsDP.setSuppliers(addedNodes);
+	    dsHEP.setSuppliers(addedNodes);
+
+	    addFiller("   --- PATIENTS ---");		      
+	    
+	    wpq = new WaitingPatientQueue(this, config);
+	    add(wpq);
+	    
+	    
+	    spp = new ServicedPatientPool(this, config, wpq, eeHEP, dsHEP);
 	    add(spp);
 
 	    
@@ -254,6 +335,7 @@ public class Demo extends SimState {
     
     String report() {
 	Vector<String> v= new Vector<>();
+	/*
 	v.add(eeRMSupplier.report());
 	v.add(eePMSupplier.report());
 	v.add(eeCmoProd.report());
@@ -264,6 +346,11 @@ public class Demo extends SimState {
 	v.add(eeMedTech.report());
 	v.add(wpq.report());
 	v.add(spp.report());
+	*/
+	for(Reporting r: reporters) v.add(r.report());
+
+	v.add(dsRMSplitter.report());
+	
 	return String.join("\n", v);
     }
 
