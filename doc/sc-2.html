@@ -5,7 +5,7 @@
   <body>
     <h1>SC-2</h1>
 
-<div align="center"><em>Updated: 2023-04-06, for sc2 ver. 1.002</em></div>
+<div align="center"><em>Updated: 2023-04-23, for sc2 ver. 1.004</em></div>
 
 
     <p>This demo is based on the "SC-2" model provided by Rutgers' School of Business team (Ben M./ Chen Weiwei / Aman Goswami /et al), as of March 2023.
@@ -23,8 +23,13 @@
       
       <h2>Prepare</h2>
 
-<p>You need a Java compile, which can be obtained from Oracle or OpenJDK. For convenience, I also use a Git client and Apache Ant (a <tt>make</tt>-like tool for Java).
-      
+      <h3>Software tools</h3>
+<p>You need a Java compiler, which can be obtained from Oracle or OpenJDK. For convenience, I also use a Git client and Apache Ant (a <tt>make</tt>-like tool for Java). 
+
+<p>A visualization tool such as Gnuplot is handy, but is not required.
+
+  <h3>Check out the code</h3>
+  
       <ul>
 	<li>Check out the source code for this project from GitHub. Let's say you've put it to ~/mason/work on your machine:
 	  <pre>
@@ -184,6 +189,12 @@ SC2 DES/MASON simulation, ver=1.002, config=/Users/vmenkov/mason/work/config/sc2
 
 (Later, I will add output from more nodes of the model).
   
+  <h2>Time series files and visualization</h2>
+
+  <p>When you run the application with the <tt>-charts <em>dir_name</em></tt> option, the application writes a number of time series files into the charts directory for the run. Each file pertains to a particular node of the supply chain (e.g. eeCmoProd.csv describes the behavior of the EE CMO Production node); it has one row per day, with a number of columns containing the value of various relevant variables.
+
+  <p>The time series can be visualized with a tool such as <tt>gnuplot</tt>. For a sample gnuplot command file, see <tt>gnu/sc2/sc2.gnu</tt>.
+
   <h2>Explanation of the model</h2>
 
 <p>See <a href="sc-2-sketch.txt">design sketch</a>
@@ -219,7 +230,8 @@ SC2 DES/MASON simulation, ver=1.002, config=/Users/vmenkov/mason/work/config/sc2
 <li>eePMSupplier -- EE Packaging Material Supplier Pool
 <li>eePackaging -- EE Packaging facility
 <li>eePackaging.safety.PMEE  -- the EE Packaging Material safety stock parameters for eePackaging
-<lI>names for the DS branch to be added...
+<li>eeMedTech -- the "headquarters" of the MedTech company (variables related to the EE supply)
+<li>the names for the DS branch nodes are similar, with "ds" instead of "ee".
 </ul>
   
  <strike>

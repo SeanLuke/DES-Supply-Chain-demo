@@ -10,7 +10,13 @@
 # is. Change this as appropriate if you use your own copy of the code
 # (which you have pulled from GitHub yourself.
 #------------------------------------------------------------------
-set from=~vmenkov/mason/work
+# set from=~vmenkov/mason/work
+
+
+#-- The directory where this script is
+set sc=`dirname $0`
+set from=`(cd $sc/..; pwd)`
+
 
 #------------------------------------------------------------------
 # The config file to use for all runs. Change this if you use your
