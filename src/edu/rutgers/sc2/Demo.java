@@ -48,14 +48,22 @@ public class Demo extends SimState {
     
     /** Set this to true to print a lot of stuff */
     static boolean verbose=false;
+
     /** Set this to true to print less stuff, and turn off all interactive things */
     static boolean quiet=false;
-
+    public void setQuiet(boolean _quiet) { quiet = _quiet; }
+    
     public DES2D field = new DES2D(200, 200);
 
     /** Should be set by MakeDemo.newInstance(), and then used in start() */
     protected Config config=null;
     protected Disruptions disruptions = null;
+    /** Sets the disruption scenario for this model */
+    public void setDisruptions(Disruptions _disruptions) {
+	disruptions = _disruptions;
+    }
+
+    
     Vector<Disruption> hasDisruptionToday(Disruptions.Type type, String unit) {
 	if (disruptions == null) return new Vector<Disruption>();
 	double time = schedule.getTime();
@@ -98,7 +106,7 @@ public class Demo extends SimState {
 	initSupplyChain();
 	final int CENSUS_INTERVAL=360;
 	if (verbose) schedule.scheduleRepeating(new Reporter(), CENSUS_INTERVAL);
-	System.out.println("SC2 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
+	if (!quiet) System.out.println("SC2 DES/MASON simulation, ver=" + version +", config=" + config.readFrom);
 	if (verbose) doReport("Start");
     }
 
@@ -354,7 +362,7 @@ public class Demo extends SimState {
 	return String.join("\n", v);
     }
 
-      static class MakesDemo implements  MakesSimState {
+    public static class MakesDemo implements  MakesSimState {
    
 	/** The Config object contains the parameters for
 	    various supply chain elements, read from a
@@ -364,7 +372,7 @@ public class Demo extends SimState {
 	final private Disruptions disruptions0;
 	/** The data from the command line argument array, after the removal of options
 	    interpreted by the constructor (such as -config XXX) will be put here. */
-	final String[] argvStripped;
+	public final String[] argvStripped;
 
 	/** For use in RepeatTest */
 	//	int repeat=1;
@@ -375,7 +383,7 @@ public class Demo extends SimState {
 	    @param argv The actual command line array. The constructor will look for
 	    the -config and -disrupt options in it.
 	 */
-	MakesDemo(String[] argv) throws IOException, IllegalInputException    {
+	public MakesDemo(String[] argv) throws IOException, IllegalInputException    {
 
 	    String confPath = "config/sc2.csv";
 	    String disruptPath = null;

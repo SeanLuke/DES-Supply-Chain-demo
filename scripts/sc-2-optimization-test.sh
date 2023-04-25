@@ -7,11 +7,10 @@
 
 #------------------------------------------------------------------
 # The directory in which my copy of the code (pulled from GitHub)
-# is. Change this as appropriate if you use your own copy of the code
-# (which you have pulled from GitHub yourself.
+# is. This is determined dynamically, based on the location of this script,
+# so it should work no matter where you deploy the code too.
+#
 #------------------------------------------------------------------
-# set work=~vmenkov/mason/work
-
 
 #-- The directory where this script is
 set sc=`dirname $0`
@@ -24,26 +23,16 @@ set work=`(cd $sc/..; pwd)`
 #------------------------------------------------------------------
 set config=$work/config/sc2.csv
 
-#-- Try every sample disruption scenario file
-foreach x ($work/config/dis-sc2/sample-*.csv)
 
-set y=`basename -s .csv $x`
-
-#-- The directory to be created for the output of this run
-set charts="charts-$y"
-echo "For scenario $x, the output will go to directory $charts"
-
-$work/run-sc2.sh -config $config -charts $charts -disrupt $x -until 2000  > out.log
-mv out.log $charts/
-cp $config $charts/
-cp $x $charts/
-
-#-- Plotting with Gnuplot
-#$work/scripts/extract-anomaly-columns.sh $charts
-#(cd $charts; gnuplot ../charts-batch.gnu)
-#(cd $charts; ls | $work/scripts/mk-index.pl > index.html)
-
-end
+set d=`dirname $0`
 
 
-#ls | $from/scripts/mk-index.pl > index.html
+set h=`(cd $work/..; pwd)`
+setenv CLASSPATH $work/lib/demo.jar:$h/lib/'*'
+
+
+# time java -Xprof edu.rutgers.sc2.Demo  $argv[1-]
+time java  edu.rutgers.test.TestSc2  $argv[1-]
+
+
+

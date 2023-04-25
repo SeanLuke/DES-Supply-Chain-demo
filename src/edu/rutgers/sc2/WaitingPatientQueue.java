@@ -80,7 +80,7 @@ public class WaitingPatientQueue extends sim.des.Queue implements Named, Reporti
     */
 
     public double sumWaiting=0;
-    int nWaiting=0;
+    public int nWaiting=0;
     
     /** Writes this days' time series values to the CSV file. 
 	Does that for the safety stocks too, if they exist.

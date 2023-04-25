@@ -96,7 +96,7 @@ public class SplitManager {
 	    return;
 	} else if (fraction==1.0) {
 	    if (has.size()!=0)  throw new IllegalArgumentException("Trying to add a receiver with fraction=" + fraction + " to node " + getName() + " that already has other receivers");
-	    System.out.println("DBEUG: SetQaReceiver: " + provider.getName() + " feeds to " + rcv.getName());
+	    //System.out.println("DBEUG: SetQaReceiver: " + provider.getName() + " feeds to " + rcv.getName());
 
 	    provider.addReceiver( rcv);
 	} else {

@@ -262,7 +262,7 @@ HospitalPool,backOrder,WholesalerPool
 	    if (sup!=null)     normalSuppliers.add(sup);
 	}
 
-	if (Demo.verbose) System.out.println("For Pool " + getName() +", the normal suppliers are " + Util.joinNonBlank("; ", normalSuppliers));
+	if (Demo.verbose) System.out.println("DEBUG: For Pool " + getName() +", the normal suppliers are " + Util.joinNonBlank("; ", normalSuppliers));
 
 	
 	String key = "backOrder";
@@ -453,7 +453,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    }
 	    currentStock -= (sent + expired);
 
-	    if (getName().equals("dsDC") && r.getName().startsWith("dsDP")) {
+	    if (Demo.verbose && getName().equals("dsDC") && r.getName().startsWith("dsDP")) {
 		System.out.println("DEBUG: at t="+ now()+", "  + getName()+".feedTo("+r.getName()+") sent=" + sent);				   
 	    }
 
@@ -587,11 +587,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	}
 
 
-	if (getName().equals("dsDP")) {
+	if (Demo.verbose && getName().equals("dsDP")) {
 	    String s= (provider==null) ? "null" :provider.getName();
 	    if (s==null) s = "unknown";
 	    if (!s.equals("initial")) {
-		System.out.println("DEBUG: at t=" +now()+", " + getName()+".accept("+s+", "+a+")");
+		//System.out.println("DEBUG: at t=" +now()+", " + getName()+".accept("+s+", "+a+")");
 	    }
 	}
 

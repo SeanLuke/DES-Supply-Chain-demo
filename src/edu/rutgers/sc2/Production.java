@@ -192,12 +192,12 @@ class Production extends AbstractProduction
 	    
 	    if (getQaEntrance()!=null) {
 		transDelay.addReceiver(getQaEntrance());
-		System.out.println("In " + getName() +", " + transDelay.getName() +" feeds to " + getQaEntrance().getName());
+		//System.out.println("DEBUG: " + transDelay.getName() +" feeds to " + getQaEntrance().getName());
 	    }  else {		
 		// The receiver will be added later, in the SplitManager() call
 
-		System.out.println("In " + getName() +", " + transDelay.getName() +
-				   " feeds to nowhere yet; should be connected to SM later");
+		//System.out.println("DEBUG: " + transDelay.getName() +
+		//			   " feeds to nowhere yet; should be connected to SM later");
 		
 		//throw new IllegalInputException("In " + getName() +", there is " + transDelay.getName() +", but we don't know where it feeds to");
 	    }
@@ -240,8 +240,7 @@ class Production extends AbstractProduction
 	stolenShipmentSink = new MSink(state, outResource);
 	stolenShipmentSink.setName("StolenShipmentsFrom." + getName());
 
-	System.out.println("In " + getName() +", " + getTheLastStage().getName() +
-			   " feeds to SM");
+    //System.out.println("DEBUG: in " + getName() +", " + getTheLastStage().getName() +			   " feeds to SM");
 
 	
 	sm = new SplitManager(this, outResource, getTheLastStage());

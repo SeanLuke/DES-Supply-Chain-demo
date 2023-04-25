@@ -5,7 +5,7 @@
   <body>
     <h1>SC-2</h1>
 
-<div align="center"><em>Updated: 2023-04-23, for sc2 ver. 1.004</em></div>
+<div align="center"><em>Updated: 2023-04-24, for sc2 ver. 1.004</em></div>
 
 
     <p>This demo is based on the "SC-2" model provided by Rutgers' School of Business team (Ben M./ Chen Weiwei / Aman Goswami /et al), as of March 2023.
@@ -126,6 +126,19 @@ The <tt>-until 365</tt> is a standard MASON option, which will cause the applica
 
 <p>You can also use any of the options that all MASON applications take, such as the already-mentioned <tt>-until</tt>. See the MASON manual (found at the same web site) for details.
 
+  <h2>Run - with charts</h2>
+
+<p>See the description of   <tt> scripts/sc-2-run-all-disruptions.sh</tt> in 
+  <a href="sc-2-disrupt.html#runAll">Disruptions in SC-2: How to run</a>.
+
+    <h2>Run - in an optimization program</h2>
+   
+<p>Suppose you want to run the SC2 application many times, with different disruption scenarios, collecting some important statistics (your objective function(s)) each time. For a simple (trivial) example of such a program, see the class <tt>edu.rutgers.test.TestSc2</tt>. In this class, the <tt>main()</tt> method runs a loop in which a model (<tt>Demo</tt> object) is created several times, and each time it's run with a different disruption scenario; the objective function is then retrieved from it and printed.
+
+<p>This can be run with the script <tt>scripts/sc-2-optimization-test.sh</tt>. (Despite the name, there is no optimization going on there, of course). But your optimization code can use the Demo class the same way as shown in that trivial example.
+
+  
+	       
 	       <h2>Run - GUI</h2>
 
 	       <strike>
