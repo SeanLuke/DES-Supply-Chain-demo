@@ -32,7 +32,7 @@ setenv CLASSPATH $work/lib/demo.jar:$h/lib/'*'
 
 
 # time java -Xprof edu.rutgers.sc2.Demo  $argv[1-]
-time java  edu.rutgers.test.TestSc2  $argv[1-]
+time java  edu.rutgers.test.TestSc2 -config $config $argv[1-]
 
 
 
