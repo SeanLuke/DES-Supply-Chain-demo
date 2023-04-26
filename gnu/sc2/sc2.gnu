@@ -36,3 +36,8 @@ set title 'DS DP'
 plot 'dsDP.csv'  using ($1):($2) w l t 'in stock', \
  'dsDP.csv'  using ($1):($5) w l t 'on order'
 
+set term aqua 5
+set title 'DS Production'
+plot 'dsCmoProd.csv' using ($1):($2) w l t 'at DS CMO Prod',\
+ 'dsProd.csv' using ($1):($2) w l t 'at DS Prod (in-house)
+ 

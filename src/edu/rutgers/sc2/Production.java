@@ -367,6 +367,7 @@ class Production extends AbstractProduction
 
     private double everStolen=0;
 
+    /** Destroys some shipments in the transportation delay (between production and QA) */
     private void disruptShipments(SimState state) {
 	    Disruptions.Type type = Disruptions.Type.ShipmentLoss;
 	    double now = state.schedule.getTime();
@@ -412,9 +413,6 @@ class Production extends AbstractProduction
 	    disruptShipments( state);
 
 	    double now = state.schedule.getTime();
-
-	    Disruptions.Type type = Disruptions.Type.ShipmentLoss;
-
 	    
 	    for(Disruption d:  ((Demo)state).hasDisruptionToday(Disruptions.Type.Adulteration, getName())) {
 		
@@ -425,8 +423,7 @@ class Production extends AbstractProduction
 		prodDelay.setFaultRateIncrease(r, now+1);
 	    }
 
-
-	    type = Disruptions.Type.Halt;
+	    Disruptions.Type type = Disruptions.Type.Halt;
 	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) { 
 		haltedUntil.enableUntil( now+d.magnitude );
 		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" started disruption '"+type+"' until " + (now+d.magnitude));

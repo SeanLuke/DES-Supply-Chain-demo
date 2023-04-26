@@ -133,14 +133,15 @@ The <tt>-until 365</tt> is a standard MASON option, which will cause the applica
 
     <h2>Run - in an optimization program</h2>
    
-<p>Suppose you want to run the SC2 application many times, with different disruption scenarios, collecting some important statistics (your objective function(s)) each time. For a simple (trivial) example of such a program, see the class <tt>edu.rutgers.test.TestSc2</tt>. In this class, the <tt>main()</tt> method runs a loop in which a model (<tt>Demo</tt> object) is created several times, and each time it's run with a different disruption scenario; the objective function is then retrieved from it and printed.
+<p>Suppose you want to run the SC-2 application many times, with different disruption scenarios, collecting some important statistics (your objective function(s)) each time. For a simple (trivial) example of such a program, see the class <tt>edu.rutgers.test.TestSc2</tt>. In this class, the <tt>main()</tt> method runs a loop in which a model (<tt>Demo</tt> object) is created several times, and each time it's run with a different disruption scenario; the objective function is then retrieved from it and printed.
 
-<p>This can be run with the script <tt>scripts/sc-2-optimization-test.sh</tt>. (Despite the name, there is no optimization going on there, of course). But your optimization code can use the Demo class the same way as shown in that trivial example.
+<p>This can be run with the script <tt>scripts/sc-2-optimization-test.sh</tt>. (Despite the name, there is no optimization going on there, of course. But your optimization code can use the Demo class the same way as shown in that trivial example.)
 
-  
 	       
 	       <h2>Run - GUI</h2>
 
+<P>This is not supported in SC-2 at the moment.
+	       
 	       <strike>
 <pre>
   cd ~/mason/work
