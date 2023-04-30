@@ -24,8 +24,8 @@ set work=`(cd $sc/..; pwd)`
 set config=$work/config/sc2.csv
 
 #-- Try every sample disruption scenario file
-foreach x ($work/config/dis-sc2/sample-D26.csv)
-#foreach x ($work/config/dis-sc2/severe-D14+D20.csv)
+#foreach x ($work/config/dis-sc2/sample-D26.csv)
+foreach x ($work/config/dis-sc2/sample-baseline.csv)
 
 set y=`basename -s .csv $x`
 

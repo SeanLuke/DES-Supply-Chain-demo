@@ -528,11 +528,11 @@ class Production extends AbstractProduction
 	//System.out.println(getName()+ " W");
 	if (!hasEnoughInputs()) return false;
 		
-	//Vector<Batch> usedBatches = new Vector<>();
+	Vector<Batch> usedBatches = new Vector<>();
 
 	boolean prorate = (startPlan!=null) && (startPlan < outBatchSize) &&
 	    canProrateLots();
-	
+
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    
 	    InputStore p = inputStore[j];
@@ -543,14 +543,14 @@ class Production extends AbstractProduction
 	    
 	    Batch b = p.consumeOneBatch(need);
 	    //if (c != inBatchSizes[j]) throw new IllegalArgumentException();
-	    //if (b!=null) usedBatches.add(b);    
+	    if (b!=null) usedBatches.add(b);    
 	}
 
 	if (Demo.verbose) System.out.println("At t=" + now + ", " + getName() + " starts a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 
 	double outAmt = (prorate)? startPlan: outBatchSize;
-	Batch onTheTruck = outResource.mkNewLot(outAmt, now, null); //usedBatches);
+	Batch onTheTruck = outResource.mkNewLot(outAmt, now, usedBatches);
 	Provider provider = null;  // why do we need it?		
 	(needProd!=null? needProd: prodDelay).accept(provider, onTheTruck, 1, 1);
 

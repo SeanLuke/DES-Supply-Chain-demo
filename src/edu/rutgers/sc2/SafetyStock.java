@@ -63,7 +63,7 @@ extends Probe implements Reporting
         /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
       FIXME: it would be better to have separate vars for separate suppliers
  */
-    protected double onOrder = 0;
+    protected final OnOrder onOrder;
 
 
     double everOrdered = 0, everReceived=0;
@@ -157,10 +157,14 @@ extends Probe implements Reporting
 	if (getTypicalProvided() instanceof Batch) {
 	    refillDelay.setDropsResourcesBeforeUpdate(false);
 	}
+
+	
+	onOrder = new OnOrder( para.getDouble("orderExpiration", Double.POSITIVE_INFINITY ));
 	
 	Double q = para.getDouble("needsAnomaly", null);
 	needsAnomaly = (q==null || q<0) ? null: q;
 
+	
 	initSupply(initial);
     }
 
@@ -177,7 +181,10 @@ extends Probe implements Reporting
 	//	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
 	//	}
 
-	double has =  whose.getContentAmount() + onOrder;
+	double eo = onOrder.refresh(now);
+	if (!Demo.quiet && eo>0)  System.out.println(getName() + ", t="+now+", expired order for " + eo + " u");
+
+	double has =  whose.getContentAmount() + onOrder.sum();
 	double deficit = reorderPoint - has;
 
 	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
@@ -188,7 +195,7 @@ extends Probe implements Reporting
 
 	double need = targetLevel - has;
 	orderedToday = magicFeed(refillDelay, need);
-	onOrder += orderedToday;
+	onOrder.add(now, orderedToday);
 	everOrdered += orderedToday;
 
     }
@@ -341,13 +348,17 @@ extends Probe implements Reporting
 	
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
-
+	double now = getState().schedule.getTime();
 	//if (provider instanceof SimpleDelay) { // Received a non-immediate delivery
-	    onOrder -= a;
-	    if (onOrder < 0) { // they have over-delivered
-		onOrder=0;
-	    }
-	    //}
+	double late = onOrder.subtract(now, a);
+
+	if (late>0) {
+	    //System.out.println("DEBUG: "+getName()+", at=" + now+", just processed a late shipment of " + late);
+	}
+
+	//if (onOrder < 0) { // they have over-delivered
+	//  onOrder=0;
+	//}
 	everReceived += a;
 	receivedToday += a;
 	
@@ -374,7 +385,7 @@ extends Probe implements Reporting
 	String s = "[" + getName()+
 	    " has ordered " + (long)everOrdered + " u, " +
 	    " has received " + (long)everReceived + " u. " +
-	    "On order=" + (long)onOrder +"; in transit " + refillDelay.getDelayedPlusAvailable() + ba;
+	    "On order=" + onOrder +"; in transit " + refillDelay.getDelayedPlusAvailable() + ba;
 
 	s += "]";
        return wrap(s);
@@ -384,7 +395,7 @@ extends Probe implements Reporting
     
     public void step(sim.engine.SimState state) {
 
-	 //double now = getState().schedule.getTime();
+
 	//System.out.println("DEBUG:" + getName() + ", t="+now+", step");
 
 

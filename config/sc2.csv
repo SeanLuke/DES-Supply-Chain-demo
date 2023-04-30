@@ -35,6 +35,7 @@ eeCmoProd.safety.RMEE,reorderPoint,6908
 eeCmoProd.safety.RMEE,delay,Uniform,30,60
 # eeCmoProd.safety.RMEE,delay,Uniform,3,4
 eeCmoProd.safety.RMEE,needsAnomaly,-1
+eeCmoProd.safety.RMEE,orderExpiration,61
 
 #------ EE manufacturing --------
 eeCmoProd,inBatch,10
@@ -56,6 +57,7 @@ eePackaging.safety.PMEE,targetLevel,1500
 eePackaging.safety.PMEE,reorderPoint,1000
 eePackaging.safety.PMEE,delay,Triangular,54,60,66
 eePackaging.safety.PMEE,needsAnomaly,-1
+eePackaging.safety.PMEE,orderExpiration,67
 
 #--- The normal route:
 #EE Packaging Material Incoming Order Transportation Delay from EE Packaging Material
@@ -81,11 +83,14 @@ eeDC,from1,eeMedTech,1.00
 
 eeDC,mode,Mode1
 
-eeDC,initial,1500
+eeDC,initial,10362
 eeDC,batch,10
 eeDC,reorderPoint,6908
 eeDC,targetLevel,10362
 
+#-- based on the sum of major delays in the production chain
+#eeDC,orderExpiration,70
+eeDC,orderExpiration,140
 
 # EE Order Incoming Transportation Delay from EE Packaging and Inspection: see Section 5
 #The percentages below must sum to exactly 100%
@@ -112,6 +117,7 @@ eeDP,initial,692
 eeDP,batch,10
 eeDP,reorderPoint,692
 eeDP,targetLevel,1036
+eeDP,orderExpiration,8
 
 #--------- EE Hospital/Equipment Pool (HEP)
 eeHEP,mode,Mode1
@@ -120,7 +126,7 @@ eeHEP,delay1,Triangular,1,3,5
 eeHEP,from2,eeDP,0.05
 eeHEP,delay2,Triangular,1,3,5
 eeHEP,parallelOrder,eeMedTech,1.0
-
+eeHEP,orderExpiration,6
 
 # EE Initial Inventory: Unif(2590, 6907)
 # DS Initial Inventory: Unif(24176, 72528)
@@ -153,6 +159,7 @@ dsProd.safety.DS,reorderPoint,43512
 dsProd.safety.DS,delay,Uniform,30,60
 # dsProd.safety.DS,delay,Uniform,3,4
 #dsProd.safety.DS,needsAnomaly,-1
+dsProd.safety.DS,orderExpiration,61
 
 #------ EE manufacturing --------
 dsProd,inputDelay.0,Uniform,0.5,1
@@ -181,6 +188,7 @@ dsPackaging.safety.PMDS,initial,65268
 dsPackaging.safety.PMDS,targetLevel,65268
 dsPackaging.safety.PMDS,reorderPoint,43512
 dsPackaging.safety.PMDS,delay,Triangular,54,60,66
+dsPackaging.safety.PMDS,orderExpiration,67
 
 dsPackaging,batch,250
 dsPackaging,inBatch,250,250
@@ -195,6 +203,9 @@ dsDC,initial,65268
 dsDC,batch,250
 dsDC,reorderPoint,48951
 dsDC,targetLevel,70707
+#-- based on sum of trans delay in the prod chain
+dsDC,orderExpiration,80
+
 
 
 #--------- DS DP
@@ -205,6 +216,8 @@ dsDP,batch,250
 dsDP,reorderPoint,4895
 dsDP,targetLevel,7071
 dsDP,delay1,Uniform,5,7
+
+dsDP,orderExpiration,8
 
 ##-- ZZZ: Unif(24176, 72528)
 
@@ -224,3 +237,6 @@ dsHEP,from2,dsDP,0.10
 # dsHEP,delay2,Triangular,1,3,5
 dsHEP,delay2,Uniform,5,7
 dsHEP,parallelOrder,dsMedTech,1.0
+
+# dsHEP,orderExpiration,8
+dsHEP,orderExpiration,30

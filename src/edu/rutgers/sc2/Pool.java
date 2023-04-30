@@ -114,6 +114,7 @@ public class Pool extends sim.des.Queue
 	targetLevel = para.getDouble("targetLevel", initial);
 	batchSize = para.getDouble("batch");
 	boolean aged = para.getBoolean("initial.aged", false);
+	
 	initialReceived = initSupply(initial, aged);
 	everReceived = 0; // not counting the initial supply
 
@@ -139,6 +140,9 @@ public class Pool extends sim.des.Queue
 		    reorderQty = r;
 		}
 	    }
+
+	    onOrder = new OnOrder( para.getDouble("orderExpiration", Double.POSITIVE_INFINITY ));
+
 	}
 	charter=new Charter(state.schedule, this);
 	doChartHeader(moreHeaders);
@@ -171,6 +175,7 @@ public class Pool extends sim.des.Queue
 	    } else {
 		int n = (int)Math.round( initial / batchSize);
 		Provider provider = new Source(state, prototype);  // why do we need it?
+		addVolunteerSender(provider);
 		provider.setName("initial");
 		for(int j=0; j<n; j++) {
 		    Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
@@ -558,8 +563,18 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
     /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
       FIXME: it would be better to have separate vars for separate suppliers
  */
-    protected double onOrder = 0;
+    protected OnOrder onOrder=null;
 
+    /** The set of Providers who are known to send stuff to this Pool
+	on their volition, without orders from this Pool. We keep track
+	of them so that they can be excluded from the OnOrder calculations.
+     */
+    private Set<Provider> volunteerSenders = new HashSet<>();
+
+    void addVolunteerSender(Provider x) {
+	volunteerSenders.add(x);
+    }
+    
     /** This is called from a supplier (or the associated Delay) when
 	a batched shipped to this pool arrives.
 
@@ -568,6 +583,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	@param amount a Batch object
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
+	double now = state.schedule.getTime();
 
 	double a = Batch.getContentAmount(amount);
 
@@ -578,12 +594,12 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
 
-	if (provider instanceof SimpleDelay) { // Received a non-immediate delivery. This way we exclude deliveries from the repair pool to HEP, which should not be counted in onOrder
-	    // FIXME: need to finesse this, in case we have immediate orders (no delay) betweeen pools
-	    onOrder -= a;
-	    if (onOrder < a) { // they have over-delivered
-		onOrder=0;
+	if (provider!=null && !volunteerSenders.contains(provider)) { // Make sure not to count shipments from ignorable sources
+	    double late = onOrder.subtract(now, a);
+	    if (late>0) {
+		//System.out.println("DEBUG: "+getName()+", at=" + now+", just processed a late shipment of " + late);
 	    }
+			    
 	}
 
 
@@ -603,7 +619,6 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	currentStock += a;
 
 	if (amount instanceof Batch) {
-	    double now = state.schedule.getTime();
 	    batchesReceivedToday ++;
 	    sumOfAgesReceivedToday += (now - ((Batch)amount).getLot().getEarliestAncestorManufacturingDate());
 	}
@@ -650,7 +665,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    throw new AssertionError();
 	}
 
-	double has =  getContentAmount() + onOrder;
+	double eo = onOrder.refresh(now);
+	if (!Demo.quiet && eo>0)  System.out.println(getName() + ",  t="+now+", expired order for " + eo + " u");
+	double has =  getContentAmount() + onOrder.sum();
 
 	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
 	//				     "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
@@ -689,7 +706,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    unfilled -= sent;
 	    orderedToday += sent + backOrderAmt;
 	}
-	onOrder += orderedToday;
+	onOrder.add(now, orderedToday);
 	everOrdered += orderedToday;
 
 	// Some pools, beside making pull orders to upstream pool, also
@@ -759,7 +776,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    s +=  ". Stolen=" + stolenProductSink.getEverConsumedBatches() +  " ba";
 	}
 	s += ". Available=" + (long)currentStock + " u";
-	s += ". Ever ordered "+(long)everOrdered+", expecting receipt of " + (long)onOrder + " u";
+	s += ". Ever ordered "+(long)everOrdered+", expecting receipt of " + onOrder;
 	s += ". Still need to send=" + (long)sumNeedToSend() + " u";
 
 	double deficit = everReceived + initialReceived - everSent - currentStock;
@@ -824,7 +841,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
      */
     void doChart(double... moreValues) {
 	double stock =  getContentAmount();
-	double stillOnOrder = onOrder; //everOrdered - everReceived;
+	double stillOnOrder = onOrder.sum(); //everOrdered - everReceived;
 	double[] a = {stock,orderedToday,receivedToday,stillOnOrder,demandedToday,sentToday};
 	double[] b = Arrays.copyOf(a, a.length + moreValues.length);
 	int j=a.length;
@@ -861,6 +878,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	}
 	currentStock -= 1;
 	everSent+=1;
+	sentToday += 1;
 	double now = state.schedule.getTime();
 	// if (deficit()!=0) System.out.println("extract() done: t="+now+". "+report());
 
@@ -888,7 +906,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    }
 	}
 	currentStock -= z;
-	everSent+=z;
+	everSent += z;
+	sentToday += z;
 	//double now = state.schedule.getTime();
 	// if (deficit()!=0) System.out.println("extract() done: t="+now+". "+report());
 

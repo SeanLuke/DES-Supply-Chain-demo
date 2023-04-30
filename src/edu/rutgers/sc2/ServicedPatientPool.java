@@ -23,10 +23,13 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
     WaitingPatientQueue wpq;
     Pool eeHEP, dsHEP;
 
+    final private Source eeReturner;
+    
     /** The 2 receivers accept patients in 3 different situations:
 	finished treatment; EE device broke (but repairable); EE device
 	dead. */
 
+    
     
     /** Only accepts patients if the treatment has come to a successful end */
     class CuredPatientSink extends MSink {
@@ -41,7 +44,7 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	    everCured++;
 	    // return the device to the pool
 	    ee.finishUse(p);
-	    if (!eeHEP.accept( null, ee, 1, 1)) throw new AssertionError();
+	    if (!eeHEP.accept(eeReturner, ee, 1, 1)) throw new AssertionError();
 	    return true;
 	}
     }
@@ -117,8 +120,13 @@ public class ServicedPatientPool extends Delay implements Named, Reporting {
 	//wpq.addReceiver(this);
 	charter=new Charter(state.schedule, this);
         String moreHeaders[] = {"servicedPatients"};
-        charter.printHeader(moreHeaders);       
-  
+        charter.printHeader(moreHeaders);
+
+	eeReturner = new Source(state, eeHEP.getPrototype());
+
+	eeHEP.addVolunteerSender(eeReturner);
+	eeHEP.addVolunteerSender(repairPool);
+	
 	initialFill( state, config);
     }
 
