@@ -369,34 +369,39 @@ class Production extends AbstractProduction
 
     /** Destroys some shipments in the transportation delay (between production and QA) */
     private void disruptShipments(SimState state) {
-	    Disruptions.Type type = Disruptions.Type.ShipmentLoss;
-	    double now = state.schedule.getTime();
-	    
-	    for(Disruption d:  ((Demo)state).hasDisruptionToday(type, getName())) {
-		int m = (int)d.magnitude;
+	everStolen += 	disruptShipments( state,  getName(), transDelay);
+    }
+    
+    static double disruptShipments(SimState state, String name, SimpleDelay transDelay) {
+	Disruptions.Type type = Disruptions.Type.ShipmentLoss;
+	double now = state.schedule.getTime();
 
-		//for(int j=0; j<m && transDelay.getAvailable()>0; j++) {
-		//  boolean z = transDelay.provide(stolenShipmentSink);
-		//  if (!z) throw new AssertionError("Sink failed to accept");
-		//}
-		DelayNode[] nodes = transDelay.getDelayedResources();
-		//int allCnt=0;
-		int loseCnt=0, nowStolen=0;
-		for(DelayNode node: nodes) {
-		    if (node.isDead()) continue;
-		    //allCnt++;
-		    //System.out.println("DEBUG: Deleting shipment, size=" + Batch.getContentAmount(node.getResource()));
-		    loseCnt++;
-		    nowStolen += Batch.getContentAmount(node.getResource());
-		    node.setDead(true);
-		    if (loseCnt >= m) break;
-		}
-		everStolen += nowStolen;
-		
-		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +", disruption '"+type+"' could affect up to " + m + " shipments; actually deleted " + loseCnt +" ("+nowStolen+" u)");
-		
-	    }
+	double sumStolen = 0;
+	for(Disruption d:  ((Demo)state).hasDisruptionToday(type, name)) {
+	    int m = (int)d.magnitude;
 	    
+	    //for(int j=0; j<m && transDelay.getAvailable()>0; j++) {
+	    //  boolean z = transDelay.provide(stolenShipmentSink);
+	    //  if (!z) throw new AssertionError("Sink failed to accept");
+	    //}
+	    DelayNode[] nodes = transDelay.getDelayedResources();
+	    //int allCnt=0;
+	    int loseCnt=0, nowStolen=0;
+	    for(DelayNode node: nodes) {
+		if (node.isDead()) continue;
+		//allCnt++;
+		//System.out.println("DEBUG: Deleting shipment, size=" + Batch.getContentAmount(node.getResource()));
+		loseCnt++;
+		nowStolen += Batch.getContentAmount(node.getResource());
+		node.setDead(true);
+		if (loseCnt >= m) break;
+	    }
+	    sumStolen += nowStolen;
+		
+	    if (!Demo.quiet)  System.out.println("At t=" + now + ", Transport link  "+ transDelay.getName() +", disruption '"+type+"' could affect up to " + m + " shipments; actually deleted " + loseCnt +" ("+nowStolen+" u)");
+	    
+	}
+	return sumStolen;
 	
     }
     

@@ -195,6 +195,10 @@ dsPackaging,inBatch,250,250
 dsPackaging,prodDelayUnit,Uniform,0.0005,0.0015
 dsPackaging,qaThrottled,true
 dsPackaging,qaDelayUnit,Uniform,0.0005,0.0015
+dsPackaging,faulty,0.01
+dsPackaging,rework,0.02
+#-- FIXME: DS Packaged and Tested Percentage Re-package:2% use one unit of new packaging material
+
 
 #------- DS DC. It just sends orders to MedTech, and hopes that DS will flow in ----------
 dsDC,from1,dsMedTech,1.00
@@ -217,7 +221,8 @@ dsDP,reorderPoint,4895
 dsDP,targetLevel,7071
 dsDP,delay1,Uniform,5,7
 
-dsDP,orderExpiration,8
+#-- set to the same value (30) as for HEP, in order to avoid the "squeaky wheel" syndrome on upstreadm disruptions
+dsDP,orderExpiration,30
 
 ##-- ZZZ: Unif(24176, 72528)
 
@@ -226,17 +231,15 @@ dsHEP,initial,72528
 dsHEP,reorderPoint,48352
 dsHEP,targetLevel,72528
 
-
 dsHEP,mode,Mode1
 
 dsHEP,from1,dsDC,0.90
-# dsHEP,delay1,Triangular,1,3,5
 dsHEP,delay1,Uniform,5,7
 
 dsHEP,from2,dsDP,0.10
-# dsHEP,delay2,Triangular,1,3,5
 dsHEP,delay2,Uniform,5,7
+
 dsHEP,parallelOrder,dsMedTech,1.0
 
-# dsHEP,orderExpiration,8
+#--- set to 30 because if HEP orders from DP, it will need multiple shipments (since DP is small)
 dsHEP,orderExpiration,30

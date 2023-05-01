@@ -12,8 +12,9 @@ set grid mxtics mytics
 set term aqua 0
 set title 'Patients'
 plot  'WaitingPatientQueue.csv' using ($1):($2) w l t 'Waiting patients', \
- 'ServicedPatientPool.csv' using ($1):($2) w l t 'Patients being treated', \
- 'eeHEP.csv'  using ($1):($2) w l t 'EE stock on hand'
+ 'ServicedPatientPool.csv' using ($1):($2) w l lc 'red' t 'Patients being treated', \
+ 'eeHEP.csv'  using ($1):($2) w l t 'EE stock on hand', \
+ 'dsHEP.csv'  using ($1):($2) w l t 'DS stock on hand'
 
 set term aqua 1
 set title 'EE Production'
@@ -39,5 +40,6 @@ plot 'dsDP.csv'  using ($1):($2) w l t 'in stock', \
 set term aqua 5
 set title 'DS Production'
 plot 'dsCmoProd.csv' using ($1):($2) w l t 'at DS CMO Prod',\
- 'dsProd.csv' using ($1):($2) w l t 'at DS Prod (in-house)
+ 'dsProd.csv' using ($1):($2) w l t 'at DS Prod (in-house)', \
+ 'dsPackaging.csv' using ($1):($2) with lines lc 'red' t 'DS Packaging'
  
