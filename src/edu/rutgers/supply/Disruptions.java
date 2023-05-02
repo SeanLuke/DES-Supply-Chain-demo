@@ -60,8 +60,11 @@ public class Disruptions {
 	    for the number of days specified by magnitude. */
 	Halt,
 	/** The safety stock stops sending replenishment requests for
-	    a specified number of days */
+	    a specified number of days. (SC-2) */
 	DisableTrackingSafetyStock,
+	/** Orders get lost during 
+	    a specified number of days. (SC-2) */
+	StopInfoFlow,
     };
 
     /** A single disruption event. A disruption may take place of a momentary

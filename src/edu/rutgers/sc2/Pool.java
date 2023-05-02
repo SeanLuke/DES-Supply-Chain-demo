@@ -225,7 +225,7 @@ public class Pool extends sim.des.Queue
 	    Receiver rcv = Pool.this;
 	    if (delayDistr!=null) {
 		Delay delay = new Delay(state,prototype);
-		delay.setName(rcv.getName() + ".inputDelay");
+		delay.setName(rcv.getName() +  INPUT_DELAY_SUFFIX);
 		delay.setDelayDistribution(delayDistr);
 		delay.addReceiver(rcv);
 		rcv = delay;
@@ -235,6 +235,9 @@ public class Pool extends sim.des.Queue
 	}
     }
 
+    /** Used to form delay names */
+    static final private String INPUT_DELAY_SUFFIX = ".inputDelay";
+    
     /** Where the normal supply comes from. Each entry comes with a real number,
 	which, depending on the mode, may be interepreted as a fraction or
 	a probability.
@@ -365,6 +368,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	shortage of product).
      */
     public double feedTo(Receiver r, double amt) {
+	registerChannel(r);
 	return feedTo(r, amt, true);
     }
 
@@ -458,8 +462,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    }
 	    currentStock -= (sent + expired);
 
-	    if (Demo.verbose && getName().equals("dsDC") && r.getName().startsWith("dsDP")) {
-		System.out.println("DEBUG: at t="+ now()+", "  + getName()+".feedTo("+r.getName()+") sent=" + sent);				   
+	    //if (Demo.verbose && getName().equals("dsDC") && r.getName().startsWith("dsDP")) {
+	    if (getName().equals("eeDC")) {
+		//	System.out.println("DEBUG: at t="+ now()+", "  + getName()+".feedTo("+r.getName()+") sent=" + sent + " in " + n + " ba");				   
 	    }
 
 	} else if (prototype instanceof CountableResource) {
@@ -518,6 +523,30 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    needToSend.put(rcv,amt);
 	}
     }
+
+    /** The set of delays into which this pool has ever fed stuff. We keep track of them so that we could
+	apply disruptions to them. The keys are typically of the form "ThisPoolName.OtherPoolName" */
+    private HashMap<String, SimpleDelay> outChannels = new HashMap<>();
+
+    void registerChannel(Receiver r) {
+	if (!(r instanceof SimpleDelay)) return;
+	SimpleDelay d = (SimpleDelay) r;
+	if (outChannels.containsValue(d)) return;
+	String key = getName() + "." + d.getName().replaceAll( INPUT_DELAY_SUFFIX + "$", "");
+	outChannels.put(key, d);
+    }
+    
+    private double everStolenShipped=0;
+
+    /** Destroys some shipments in the transportation delays between this pool and its customers */
+    private void disruptShipments(SimState state) {
+
+	for(String key: outChannels.keySet()) {
+	    SimpleDelay dest= outChannels.get(key);
+	    everStolenShipped +=  ShipmentLoss.disruptShipments( state, key, dest);
+	}
+    }
+ 
     
     /** How much stuff is stored by this pool? 
 	@return the total content of the pool, i.e. the sum of sizes
@@ -545,7 +574,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	double now = getState().schedule.getTime();
 	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", step");
-	
+	disruptShipments(state);
+		
 	reorderCheck();
 	fillBackOrders();
 	doChart(new double[0]);
@@ -775,6 +805,10 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (stolenProductSink.getEverConsumed() >0) {
 	    s +=  ". Stolen=" + stolenProductSink.getEverConsumedBatches() +  " ba";
 	}
+	if (everStolenShipped>0) {
+	    s += ". Lost in shipment from this pool=" + everStolenShipped + " u";
+	}
+	
 	s += ". Available=" + (long)currentStock + " u";
 	s += ". Ever ordered "+(long)everOrdered+", expecting receipt of " + onOrder;
 	s += ". Still need to send=" + (long)sumNeedToSend() + " u";
@@ -913,6 +947,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	return z;
     }
+
     
 }
 
