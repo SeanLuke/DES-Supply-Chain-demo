@@ -554,6 +554,14 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
     /** Removes the specified order (or what's left of it) if it's still sitting in the back-order queue */
     public void cancel(Order order) {
+
+
+	if (order.channel.isInfoHalted(now())) {
+	    if (!Demo.quiet) System.out.println("At " + now()+", " + getName() + " ignored cancelation(" + order
+						+") because of info disruption");
+	    return;
+	}
+
 	for(int j=0; j<needToSend.size(); j++) {
 	    if (needToSend.get(j).id == order.id) {
 		needToSend.remove(j);
