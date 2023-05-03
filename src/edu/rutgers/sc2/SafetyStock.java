@@ -164,10 +164,16 @@ extends Probe implements Reporting
 	Double q = para.getDouble("needsAnomaly", null);
 	needsAnomaly = (q==null || q<0) ? null: q;
 
-	
+	magicSource = new MagicSource(state);
+	magicChannel = new Channel(magicSource, refillDelay, getName());
 	initSupply(initial);
     }
 
+    private final MagicSource magicSource;
+    
+    /** This is just a dummy variable for use in the Order constructor */
+    private final Channel magicChannel;
+    
     /** This methos is called daily, from step(), to check the
 	current stock level and make a replenishment order,
 	if needed. */
@@ -181,8 +187,8 @@ extends Probe implements Reporting
 	//	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
 	//	}
 
-	double eo = onOrder.refresh(now);
-	if (!Demo.quiet && eo>0)  System.out.println(getName() + ", t="+now+", expired order for " + eo + " u");
+	Vector<Order> eo = onOrder.refresh(now);
+	if (!Demo.quiet && eo.size()>0)  System.out.println(getName() + ", t="+now+", expired orders: " + Util.joinNonBlank(", ", eo));
 
 	double has =  whose.getContentAmount() + onOrder.sum();
 	double deficit = reorderPoint - has;
@@ -194,54 +200,69 @@ extends Probe implements Reporting
 	if (deficit <= 0) return;
 
 	double need = targetLevel - has;
-	orderedToday = magicFeed(refillDelay, need);
-	onOrder.add(now, orderedToday);
+	Order order = new Order(now, magicChannel, orderedToday);
+
+	magicSource.request(order);
+	orderedToday = need; 
+	
+	onOrder.add(order);
 	everOrdered += orderedToday;
+
 
     }
 
+    class MagicSource extends Source implements BatchProvider2 {
+
+	MagicSource(SimState state) {
+	    super(state, prototype);
+	    setName( SafetyStock.this.getName() + ".magicSource");
+	}
     
-    /** Has the builtin magic source feed some stuff to the specified
-	receiver. 
-	@param rcv Where to put stuff. It can be the SafetyStock
-	itself (for initialization) or its refillDelay (for a later
-	replenishment). In the latter case, ensure that all batches
-	travel together.
-	@param amt The desired amount of stuff (units) to be sent.
-	@return How much stuff (units) has actually be sent. It can exceed amt, due to the last-batch rounding.
-    */
-    private double magicFeed(Receiver rcv, double amt) {
+	/** Has the built-in magic source feed some stuff to the specified
+	    receiver. 
+	    @param rcv Where to put stuff. It can be the SafetyStock
+	    itself (for initialization) or its refillDelay (for a later
+	    replenishment). In the latter case, ensure that all batches
+	    travel together.
+	    @param amt The desired amount of stuff (units) to be sent.
+	    @return How much stuff (units) has actually be sent. It can exceed amt, due to the last-batch rounding.
+	*/
+	public void request(Order order) {
+	    Receiver rcv = order.channel.receiver;
+	    double amt = order.amount;
 
-
-	double sent = 0;
-	Provider provider = null;  // why do we need it?	    
-	if (prototype instanceof Batch) {
-	    double now = getState().schedule.getTime();
-	    Delay delay = (rcv instanceof Delay)? (Delay)rcv: null;
-	    	    
-	    for(int n=0; sent < amt; n++) {
-		//Batch b = ((Batch)prototype).mkNewLot(batchSize, now);
-		Batch b = ((Batch)prototype).mkNewLot(amt, now);
-		if (!rcv.accept(provider, b, 1, 1)) throw new AssertionError("Queue did not accept");
+	    double sent = 0;
+	    if (prototype instanceof Batch) {
+		double now = getState().schedule.getTime();
+		Delay delay = (rcv instanceof Delay)? (Delay)rcv: null;
+		
+		for(int n=0; sent < amt; n++) {
+		    //Batch b = ((Batch)prototype).mkNewLot(batchSize, now);
+		    Batch b = ((Batch)prototype).mkNewLot(amt, now);
+		    if (!rcv.accept(this, b, 1, 1)) throw new AssertionError("Queue did not accept");
 		if (n==1 && delay!=null) delay.setUsesLastDelay(true);
 		sent += b.getContentAmount();
+		}
+		if (delay!=null) delay.setUsesLastDelay(false);
+	    } else {
+		amt = Math.ceil(amt); // ensure that the value is integer, as needed for CR
+		
+		CountableResource b = new CountableResource((CountableResource)prototype, amt);
+		
+		//System.out.println("DEBUG:" + getName() + ", magicFeed(" +amt+") to " +rcv + "; sending " + b.getAmount());
+		
+	    
+		if (!rcv.accept(this, b, amt, amt)) throw new AssertionError("Queue did not accept");
+		sent += amt;
+		
 	    }
-	    if (delay!=null) delay.setUsesLastDelay(false);
-	} else {
-	    amt = Math.ceil(amt); // ensure that the value is integer, as needed for CR
-	    
-	    CountableResource b = new CountableResource((CountableResource)prototype, amt);
-
-	    //System.out.println("DEBUG:" + getName() + ", magicFeed(" +amt+") to " +rcv + "; sending " + b.getAmount());
-
-	    
-	    if (!rcv.accept(provider, b, amt, amt)) throw new AssertionError("Queue did not accept");
-	    sent += amt;
-
+	    //if (Demo.verbose)
+	    //	System.out.println("DEBUG:" + getName() + " magicFeed gives " + sent);
+	    //return sent;
 	}
-	//if (Demo.verbose)
-	//	System.out.println("DEBUG:" + getName() + " magicFeed gives " + sent);
-	return sent;
+
+	/** Not used */
+	public void registerChannel(Channel channel) {}
     }
 
     /** Checks if the safety stock has the desired amount of product */

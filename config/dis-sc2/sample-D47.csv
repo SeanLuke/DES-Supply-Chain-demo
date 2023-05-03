@@ -1,0 +1,3 @@
+#time,unit,type,amount
+60,eeMedTech.eeDC,StopInfoFlow,500
+60,dsMedTech.dsDC,StopInfoFlow,500

@@ -9,7 +9,7 @@ import edu.rutgers.util.IllegalInputException;
 import edu.rutgers.util.Config;
 import edu.rutgers.util.ParaSet;
 
-/** An auxiliary class used in various Pools to keep track of orders that have been placed but not yet filled.
+/** An auxiliary class used in various Pools to keep track of orders that have been placed by them but not yet filled.
  */
 public class OnOrder {
     /** After how many days unfilled orders expire (i.e. are treated
@@ -22,23 +22,11 @@ public class OnOrder {
 	expiration = _expiration;
     }
     
-    /** Info about a single order */
-    static class Entry {
-	/** When order was placed */
-	double date;
-	/** Order size */
-	double amount;
-	Entry(double _date, double _amount) {
-	    date = _date;
-	    amount = _amount;
-	}
-    }
-
 
     /** Assumed to be ordered chronologically (by construction) */
-    Vector<Entry> data = new Vector<>();
+    Vector<Order> data = new Vector<>();
     /** Expired ordered that weren't fulfilled even with a delay. */
-    Vector<Entry> expired = new Vector<>();
+    Vector<Order> expired = new Vector<>();
 
     /** Sum of orders that were removed as "expired" */
     double totalRemoved = 0;
@@ -51,8 +39,8 @@ public class OnOrder {
     double totalOrphanArrivals = 0;
     
     
-    public void add(double now, double amt) {
-	data.add(new Entry(now, amt));
+    public void add(Order e) {
+	data.add(e);
     }
 
     /** @param amt the size of the newly arrived shipment, to be subtracted from the oldest outstanding (unexpired) orders.
@@ -73,7 +61,7 @@ public class OnOrder {
 	double amtLate = amt;
 
 	while( amt>0 && expired.size()>0) {
-	    Entry e = expired.get(0);
+	    Order e = expired.get(0);
 	    double x = e.amount;
 	    double r =0;
 	    if (x <= amt) {
@@ -101,21 +89,24 @@ public class OnOrder {
     /** Removes any expired orders
 	@return the total size of the removed orders
      */
-    public double refresh(double now) {
+    public Vector<Order> refresh(double now) {
 	double removed = 0;
+	Vector<Order> eo = new Vector<>();
 	while( data.size()>0  && data.get(0).date + expiration <now) {
-	    Entry e = data.get(0);
+	    Order e = data.get(0);
 	    data.removeElementAt(0);
 	    removed += e.amount;
 	    expired.add(e);
+	    eo.add(e);
+	    e.channel.sender.cancel(e);
 	}
 	totalRemoved += removed;
-	return removed;
+	return eo; // removed;
     }
 
     public double sum() {
 	double s = 0;
-	for(Entry e: data) s += e.amount;
+	for(Order e: data) s += e.amount;
 	return s;
     }
 

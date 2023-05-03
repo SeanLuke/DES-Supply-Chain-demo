@@ -43,7 +43,7 @@ demo.wpq.sumWaiting gives you the integral of the above over all 2000 days of si
  */
 public class Demo extends SimState {
 
-    public String version = "1.006";
+    public String version = "1.007";
 
     
     /** Set this to true to print a lot of stuff */
@@ -187,7 +187,7 @@ public class Demo extends SimState {
 	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
 	    eePMSupplier.setQaReceiver(eePackaging.getEntrance(1), 1.0);	
 
-	    eeMedTech = new MedTech("eeMedTech",
+	    eeMedTech = new MedTech(this, "eeMedTech",
 				    new Production[] {
 					eeCmoProd,eeRMSupplier,eePMSupplier},
 				    null);
@@ -266,7 +266,7 @@ public class Demo extends SimState {
 	    dsProd.setQaReceiver(dsPackaging.getEntrance(0), 1.0);	
 	    dsPMSupplier.setQaReceiver(dsPackaging.getEntrance(1), 1.0);	
 
-	    dsMedTech = new MedTech("dsMedTech",
+	    dsMedTech = new MedTech(this, "dsMedTech",
 				    new Production[] {
 					//dsCmoProd,
 					dsProd,

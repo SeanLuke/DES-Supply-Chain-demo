@@ -17,8 +17,9 @@ plot  'WaitingPatientQueue.csv' using ($1):($2) w l t 'Waiting patients', \
  'dsHEP.csv'  using ($1):($2) w l t 'DS stock on hand'
 
 set term aqua 1
-set title 'EE Production'
-plot 'eePackaging.csv' using ($1):($2) w l t 'EE units packages'
+set title 'EE Production and packaging'
+plot 'eeCmoProd.csv' using ($1):($2) w l t 'EE CMO production', \
+ 'eePackaging.csv' using ($1):($2) w l t 'EE  packaging'
 
 
 set term aqua 2

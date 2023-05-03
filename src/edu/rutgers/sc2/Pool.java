@@ -12,6 +12,7 @@ import sim.util.distribution.*;
 import sim.des.*;
 
 import edu.rutgers.util.*;
+import edu.rutgers.supply.Disruptions.Disruption;
 
 /** A Pool models a place where a product is stored, and from which it
     can be "pulled" by other elements of a supply chain. A Pool is
@@ -33,7 +34,7 @@ import edu.rutgers.util.*;
     Pool (for post-production pools) and SafetyStock
  */
 public class Pool extends sim.des.Queue
-    implements Reporting, Named, BatchProvider {
+    implements Reporting, Named, BatchProvider2 {
 
 
     double now() {
@@ -200,16 +201,16 @@ public class Pool extends sim.des.Queue
 	descriptions in the config file.
     */
     private class Supplier {
-	final //Pool
-	    BatchProvider
-	    src;
+	/** The source of the supply */
+	final     BatchProvider2	    src;
 	final double fraction;
-	/** Where does this supplier send stuff to? This can be either
-	    this Pool itself (if shipping is immediate shipping), 
-	    or a Delay feeding into this Pool.
+	/** The channel from this supplier to the receiver to which it
+	    sends stuff. The receiver can be either this Pool itself
+	    (if shipping is immediate shipping), or a Delay feeding
+	    into this Pool.
 	*/
-	final Receiver entryPoint;
-
+	final Channel channel;
+	
 	public String toString() {
 
 	    return "("+((Named)src).getName()+", f="+fraction+")";
@@ -218,20 +219,23 @@ public class Pool extends sim.des.Queue
 	/**
 	    @param delayDistr The delay distribution, or null for immediate delivery
 	*/
-	Supplier(BatchProvider _src, double _fraction,	AbstractDistribution delayDistr) {
+	Supplier(BatchProvider2 _src, double _fraction,	AbstractDistribution delayDistr) {
 	    src = _src;
 	    fraction = _fraction;
 
 	    Receiver rcv = Pool.this;
+	    String name2 = rcv.getName();
 	    if (delayDistr!=null) {
 		Delay delay = new Delay(state,prototype);
-		delay.setName(rcv.getName() +  INPUT_DELAY_SUFFIX);
+		delay.setName(name2 +  INPUT_DELAY_SUFFIX);
 		delay.setDelayDistribution(delayDistr);
 		delay.addReceiver(rcv);
 		rcv = delay;
 	    }
-
-	    entryPoint = rcv;
+	    channel = new Channel(src, rcv, src.getName() + "." + name2);
+	    // make sure the channel is registered, so that any
+	    // relevant disruptions can be applied even before it's used
+	    src.registerChannel(channel);
 	}
     }
 
@@ -302,9 +306,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	String supName = v.get(0);
 	Steppable q =  knownPools.get(supName);
 	if (q==null) throw new IllegalInputException("Unknown supply pool name ("+supName+") for " + getName() +"," + key);
-	if (!(q instanceof BatchProvider)) throw new IllegalInputException("Supplier ("+supName+") is not a BatchProvider, for " + getName() +"," + key);
+	if (!(q instanceof BatchProvider2)) throw new IllegalInputException("Supplier ("+supName+") is not a BatchProvider2, for " + getName() +"," + key);
 	if (bePool && !(q instanceof Pool)) throw new IllegalInputException("Supplier ("+supName+") is not a Pool, for " + getName() +"," + key);
-	BatchProvider p = (BatchProvider)q;
+	BatchProvider2 p = (BatchProvider2)q;
 	double frac =    para.parseDoubleEx(key,  v.get(1));
 	//Receiver rcv = this;
 	AbstractDistribution dis = para.getDistribution(key2,state.random);
@@ -367,11 +371,36 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	than amt due to batch size rounding, or it  can be less due to the
 	shortage of product).
      */
-    public double feedTo(Receiver r, double amt) {
-	registerChannel(r);
-	return feedTo(r, amt, true);
+    public void request(Order _order) {
+	Order order = _order.copy(); // make a local copy, so that we can modify amount as the order is being filled
+	Channel channel = order.channel;
+	//Receiver r = channel.receiver;
+	//double amt = order.amount;
+
+	registerChannel(channel);
+
+	if (channel.isInfoHalted(now())) {
+	    if (!Demo.quiet) System.out.println("At " + now()+", " + getName() + " ignored request(" + order
+						+") because of info disruption");
+	    return;
+	}
+	
+	double sent = feedTo(order, true);
+	if (order.amount>0) backOrder(order);
+	
     }
 
+    /** This can be called when the channel is first created, so that we'll be ready to
+	impose a "StopInfoFlow" disruption on it even before it's first use */
+    public void registerChannel(Channel channel) {
+	outChannels.add(channel);
+    }
+
+    
+    
+    /** Whither, and how, this Pool may send stuff. The list is compiled based on calls to feedTo() */
+    Set<Channel> outChannels = new HashSet<>();
+    
     /* // This was used to helpt to figure how Delay really works in some sticky
        // situations. Not needed in production runs.
     private String reportDelayState(Delay delay) {
@@ -405,7 +434,11 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	pallets on the same truck or ship. (This is also good for 
 	computational efficiency).
 
-	@param r Where to put the stuff. This can be a Pool or a
+	Modifies order.amount, subtracting the sent amount.
+	
+	@param order
+
+	@r Where to put the stuff. This can be a Pool or a
 	SimpleDelay, or something else.
 
 	@param amt How much stuff has requested by the consumer. The entire
@@ -423,7 +456,9 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	i.e. either back-order from the same pool, or try to send
 	an order somewhere else.
     */
-    public double feedTo(Receiver r, double amt, boolean doRecordDemand) {
+    private double feedTo(Order order, boolean doRecordDemand) {
+	Receiver r = order.channel.receiver;
+	double amt = order.amount;
 	final boolean consolidate = true;
 
 	if (amt<=0) return 0;
@@ -438,7 +473,6 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    
 	    if (delay!=null) {
 		delay.setDropsResourcesBeforeUpdate(false);
-		//double now = state.schedule.getTime();
 	    }
 
 	    double expired0 = expiredProductSink.getEverConsumed();
@@ -480,16 +514,25 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	// amount will be recorded at that point
 	if (doRecordDemand) recordDemand(sent);
 	    
-
+	order.amount -= sent;
 	return sent;
     }
 
 
-    /** Not-yet-fulfilled back orders. For each Receiver this map
-	shows how much (0 or more) we still need to send to it.
+    /** Back orders that this Pool is yet to fill. 
      */
-    private HashMap<Receiver,Double> needToSend = new HashMap<>();
+    Vector<Order> needToSend = new Vector<>();
 
+    //private HashMap<Receiver,Double> needToSend = new HashMap<>();
+
+    double sumNeedToSend() {
+	double sum = 0;
+	for(Order e: needToSend) sum += e.amount;
+	return sum;
+    }
+ 
+
+    /*
     double sumNeedToSend() {
 	double s=0;
 	for(Double x: needToSend.values()) {
@@ -497,53 +540,49 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	}
 	return s;
     }
-	
+    */	
     
     /** The Pool receives an order for something that it does not
 	have, and files it for later filling. This method can be
 	used once the caller knows that the Pool cannot ship anything
 	today anymore.
     */
-    void backOrder(Receiver r, double amt) {
-	Double x = needToSend.get(r);
-	needToSend.put(r,  x==null? amt: x+amt);
-	recordDemand(amt);
+    void backOrder(Order order) {
+	needToSend.add(order);
+	recordDemand(order.amount);
+    }
+
+    /** Removes the specified order (or what's left of it) if it's still sitting in the back-order queue */
+    public void cancel(Order order) {
+	for(int j=0; j<needToSend.size(); j++) {
+	    if (needToSend.get(j).id == order.id) {
+		needToSend.remove(j);
+	    }
+	}
     }
     
     /** Checks all outstanding back-order requests, and fulfills them
 	to the extent possible.
      */
-    protected void fillBackOrders() {
-	for(Receiver rcv:  needToSend.keySet()) {
-	    double amt = needToSend.get(rcv);
-	    if (amt<=0) continue;
-	    double sent = feedTo(rcv,  amt, false);
-	    amt -= sent;
-	    if (amt<0) amt=0;
-	    needToSend.put(rcv,amt);
+    private void fillBackOrders() {
+	while(!needToSend.isEmpty()) {
+	    Order order = needToSend.get(0);
+	    double sent = feedTo(order, false);
+	    if (order.amount>0) break;
+	    needToSend.remove(0);
 	}
     }
 
-    /** The set of delays into which this pool has ever fed stuff. We keep track of them so that we could
-	apply disruptions to them. The keys are typically of the form "ThisPoolName.OtherPoolName" */
-    private HashMap<String, SimpleDelay> outChannels = new HashMap<>();
-
-    void registerChannel(Receiver r) {
-	if (!(r instanceof SimpleDelay)) return;
-	SimpleDelay d = (SimpleDelay) r;
-	if (outChannels.containsValue(d)) return;
-	String key = getName() + "." + d.getName().replaceAll( INPUT_DELAY_SUFFIX + "$", "");
-	outChannels.put(key, d);
-    }
     
     private double everStolenShipped=0;
 
     /** Destroys some shipments in the transportation delays between this pool and its customers */
     private void disruptShipments(SimState state) {
 
-	for(String key: outChannels.keySet()) {
-	    SimpleDelay dest= outChannels.get(key);
-	    everStolenShipped +=  ShipmentLoss.disruptShipments( state, key, dest);
+	for(Channel channel: outChannels) {
+	    if (!(channel.receiver instanceof SimpleDelay)) continue;
+	    SimpleDelay dest= (SimpleDelay)channel.receiver;
+	    everStolenShipped +=  ShipmentLoss.disruptShipments( state, channel.name, dest);
 	}
     }
  
@@ -575,7 +614,18 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	double now = getState().schedule.getTime();
 	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", step");
 	disruptShipments(state);
-		
+
+
+	Disruptions.Type type = Disruptions.Type.StopInfoFlow;
+	for(Channel channel: outChannels) {
+	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, channel.name)) { 
+		channel.infoHaltedUntil.enableUntil( now+d.magnitude );
+		if (!Demo.quiet)  System.out.println("At t=" + now + ", Channel "+ channel.name +" started disruption '"+type+"' until " + (now+d.magnitude));
+	    }
+	}
+
+
+	
 	reorderCheck();
 	fillBackOrders();
 	doChart(new double[0]);
@@ -695,8 +745,8 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	    throw new AssertionError();
 	}
 
-	double eo = onOrder.refresh(now);
-	if (!Demo.quiet && eo>0)  System.out.println(getName() + ",  t="+now+", expired order for " + eo + " u");
+	Vector<Order> eo = onOrder.refresh(now);
+	if (!Demo.quiet && eo.size()>0)  System.out.println(getName() + ",  t="+now+", expired orders: " + Util.joinNonBlank(", ", eo) + " u");
 	double has =  getContentAmount() + onOrder.sum();
 
 	//	if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", reorderCheck: "+
@@ -706,7 +756,6 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	if (has > reorderPoint) return;
 
 	final double needed = targetLevel - has;
-	double unfilled=needed;
 
 	boolean randomChoice = true; // as opposed to a fraction
 
@@ -718,31 +767,26 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	    double w = (randomChoice? 1: sup.fraction);
 	    double amt = Math.round(w * needed);
-	    double sent = sup.src.feedTo(sup.entryPoint, amt);
+	    Order order = new Order(now, sup.channel, amt); 
+	    //double sent =	    
+	    sup.src.request(order);
 
 
 	    //	    if (Demo.verbose) System.out.println("DEBUG:" + getName() + ", t="+now+", "+
 	    //					 "RO:"+reorderPoint + " - ( STOCK:"+currentStock+
-	    //					 " + OO:" + onOrder + "). Requested " + amt + " from " + sup.src +", got " + sent);
+	    //					 " + OO:" + onOrder + "). Requested " + order +", got " + sent);
 
-
-	    
-	    double backOrderAmt = Math.max(0, amt-sent);
-	    if (backOrderAmt>0) {
-		if (!(sup.src instanceof Pool)) throw new AssertionError("Non-pools are supposed to 'fill' entire orders");
-		((Pool)sup.src).backOrder(sup.entryPoint, backOrderAmt);
-	    }
-	    
-	    unfilled -= sent;
-	    orderedToday += sent + backOrderAmt;
+	    orderedToday += amt;
+	    onOrder.add(order);
 	}
-	onOrder.add(now, orderedToday);
 	everOrdered += orderedToday;
 
 	// Some pools, beside making pull orders to upstream pool, also
 	// send a "parallel order" to the production unit
 	if (parallelSupplier !=null) {
-	    double sent = parallelSupplier.src.feedTo(parallelSupplier.entryPoint, needed);	    
+	    Order order = new Order(now, parallelSupplier.channel, needed);	    
+	    //double sent =
+	    parallelSupplier.src.request(order);
 	}
     }
 
@@ -771,7 +815,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 
 	for(Supplier sup: normalSuppliers) {
 	    double amt = sup.fraction * needed;
-	    double sent = sup.src.feedTo(sup.entryPoint, amt);
+	    double sent = sup.src.feedTo(sup.channel, amt);
 	    unfilled -= sent;
 	    onOrder += sent;
 	}
@@ -779,14 +823,14 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	// if some suppliers were short, try to compensate through others
 	for(Supplier sup: normalSuppliers) {
 	    if (unfilled <= 0) break;
-	    double sent = sup.src.feedTo(sup.entryPoint, unfilled);
+	    double sent = sup.src.feedTo(sup.channel, unfilled);
 	    unfilled -= sent;
 	    onOrder += sent;
 	}
 
 	// if still unfilled, back-order
 	if (unfilled > 0 && backOrderSupplier!=null) {
-	    ((Pool)backOrderSupplier.src).backOrder(backOrderSupplier.entryPoint, unfilled);
+	    ((Pool)backOrderSupplier.src).backOrder(backOrderSupplier.channel, unfilled);
 	    onOrder += unfilled;	    
 	}
 
