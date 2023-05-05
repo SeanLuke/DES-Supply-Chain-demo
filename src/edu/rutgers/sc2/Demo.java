@@ -43,7 +43,7 @@ demo.wpq.sumWaiting gives you the integral of the above over all 2000 days of si
  */
 public class Demo extends SimState {
 
-    public String version = "1.007";
+    public String version = "1.008";
 
     
     /** Set this to true to print a lot of stuff */

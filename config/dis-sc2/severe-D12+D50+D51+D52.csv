@@ -1,0 +1,5 @@
+#time,unit,type,amount
+60,eePackaging,Halt,500
+60,eeDC,Depletion,10000
+60,eeDP,Depletion,10000
+60,eeHEP,Depletion,10000

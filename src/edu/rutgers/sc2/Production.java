@@ -21,6 +21,10 @@ class Production extends AbstractProduction
     implements Reporting, Named 
 {
 
+    double now() {
+	return  state.schedule.getTime();
+    }
+
     /** The buffers for inputs (raw materials) that go into production */
     private InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
@@ -347,22 +351,80 @@ class Production extends AbstractProduction
 	return haltedUntil.isOn( now );
     }
 
+
+    /** Orders that this Production unit is yet to fill. 
+     */
+    Vector<Order> needToSend = new Vector<>();
+
+    double sumNeedToSend() {
+	double sum = 0;
+	for(Order e: needToSend) sum += e.amount;
+	return sum;
+    }
+ 
+    private boolean noPlan = false;
+    
     /** If this is not null, it indicates how many units of the product we
 	are still to produce (or, more precisely, to start). If null,
 	then the control is entirely by the supply side. */
-    Double startPlan = 0.0;
+    //Double startPlan = 0.0;
 
     /** Configure this unit to be controlled by the rationing of inputs */
 
     double everPlanned = 0;
     
-    void setNoPlan() { startPlan = null; }
+    public void setNoPlan() {
+	noPlan = true;
+	//startPlan = null;
+    }
     //void setPlan(double x) { startPlan = x; }
-    void addToPlan(double x) {
-	if (x<0) throw new IllegalArgumentException(getName() +".addToPlan(" + x+")");
-	everPlanned += x;
-	if (startPlan != null) x += startPlan;
-	startPlan = x;
+
+    //void addToPlan(double x) {
+    //	if (x<0) throw new IllegalArgumentException(getName() +".addToPlan(" + x+")");
+    //	everPlanned += x;
+    //	if (startPlan != null) x += startPlan;
+    //	startPlan = x;
+    //}
+    public void addToPlan(Order order) {
+	if (order==null || order.amount<0) throw new IllegalArgumentException(getName() +".addToPlan(" + order+")");
+	if (order.amount==0) return;
+	everPlanned += order.amount;
+	//	if (startPlan != null) x += startPlan;
+	//startPlan = x;
+	needToSend.add(order.copy()); // use a copy, to enable later subtractions
+    }
+
+
+    /** Removes the specified order (or what's left of it) if it's still sitting in the back-order queue */
+    public void cancel(Order order) {
+
+
+	//if (order.channel.isInfoHalted(now())) {
+	//    if (!Demo.quiet) System.out.println("At " + now()+", " + getName() + " ignored cancelation(" + order
+	//						+") because of info disruption");
+    //    return;
+    //	}
+
+	for(int j=0; j<needToSend.size(); j++) {
+	    if (needToSend.get(j).id == order.id) {
+		if (!Demo.quiet) System.out.println("At " + now()+", " + getName() + " canceling order: " + needToSend.get(j));
+		needToSend.remove(j);
+		return;
+	    }
+	}
+	if (!Demo.quiet) System.out.println("At " + now()+", " + getName() + " cannot cancel already executed order: " + order);
+    }
+    
+    /** After a batch has been made, subtracts it from the plan */
+    private void recordProduction(double amt) {
+	if (noPlan) return;
+       	while(!needToSend.isEmpty() && amt>0) {
+	    Order order = needToSend.get(0);
+	    double r = Math.min(order.amount, amt);
+	    amt -= r;
+	    order.amount -= r;
+	    if (order.amount==0) needToSend.remove(0);
+	}
     }
 
     private double everStolen=0;
@@ -454,7 +516,7 @@ class Production extends AbstractProduction
 	double[] data = new double[2 + inputStore.length];
 	int k=0;
 	data[k++] = releasedToday;
-	data[k++] = (startPlan==null)? 0 : startPlan;
+	data[k++] = sumNeedToSend(); // (startPlan==null)? 0 : startPlan;
 	for(int j=0; j<inputStore.length; j++) {
 	    data[k++] = inputStore[j].getContentAmount();
 	}	
@@ -488,7 +550,9 @@ class Production extends AbstractProduction
     */
     public boolean mkBatch() {
 
-	if (startPlan != null && startPlan <= 0) return false;
+	double need=sumNeedToSend();
+	// (startPlan == null)? 0: startPlan;
+	if (!noPlan && need <= 0) return false;
 
 	double now = state.schedule.getTime();
 
@@ -502,18 +566,17 @@ class Production extends AbstractProduction
 		
 	Vector<Batch> usedBatches = new Vector<>();
 
-	boolean prorate = (startPlan!=null) && (startPlan < outBatchSize) &&
-	    canProrateLots();
+	boolean prorate = !noPlan && (need < outBatchSize) &&   canProrateLots();
 
 	for(int j=0; j<inBatchSizes.length; j++) {
 	    
 	    InputStore p = inputStore[j];
 	    //System.out.println("mkBatch: Available ("+p.getTypicalProvided()+")=" + p.reportAvailable());
 
-	    double need = inBatchSizes[j];
-	    if (prorate) need = (need * startPlan) / outBatchSize;
+	    double ne = inBatchSizes[j];
+	    if (prorate) ne = (ne * need) / outBatchSize;
 	    
-	    Batch b = p.consumeOneBatch(need);
+	    Batch b = p.consumeOneBatch(ne);
 	    //if (c != inBatchSizes[j]) throw new IllegalArgumentException();
 	    if (b!=null) usedBatches.add(b);    
 	}
@@ -521,15 +584,16 @@ class Production extends AbstractProduction
 	if (Demo.verbose) System.out.println("At t=" + now + ", " + getName() + " starts a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 
-	double outAmt = (prorate)? startPlan: outBatchSize;
+	double outAmt = (prorate)? need: outBatchSize;
 	Batch onTheTruck = outResource.mkNewLot(outAmt, now, usedBatches);
 	Provider provider = null;  // why do we need it?		
 	(needProd!=null? needProd: prodDelay).accept(provider, onTheTruck, 1, 1);
 
 	batchesStarted++;
 	everStarted += outAmt;
-	if (startPlan != null) startPlan -= outAmt;
-
+	//	if (startPlan != null) startPlan -= outAmt;
+	recordProduction(outAmt);
+	
 	return true;
 
     }
@@ -570,9 +634,9 @@ class Production extends AbstractProduction
 	if (inputStore.length>0) {
 	    s += "; stored inputs=("+ reportInputs() +")";
 	}
-	s += (startPlan==null) ?
+	s += noPlan?
 	    ". No planning (driven by input)" :
-	    ". Ever planned: "+(long)everPlanned + "; still to do "+startPlan;
+	    ". Ever planned: "+(long)everPlanned + "; still to do "+sumNeedToSend();
 	s +=
 	    ". Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 

@@ -523,24 +523,12 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
      */
     Vector<Order> needToSend = new Vector<>();
 
-    //private HashMap<Receiver,Double> needToSend = new HashMap<>();
-
     double sumNeedToSend() {
 	double sum = 0;
 	for(Order e: needToSend) sum += e.amount;
 	return sum;
     }
  
-
-    /*
-    double sumNeedToSend() {
-	double s=0;
-	for(Double x: needToSend.values()) {
-	    if (x!=null) s+=x;
-	}
-	return s;
-    }
-    */	
     
     /** The Pool receives an order for something that it does not
 	have, and files it for later filling. This method can be
@@ -565,6 +553,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	for(int j=0; j<needToSend.size(); j++) {
 	    if (needToSend.get(j).id == order.id) {
 		needToSend.remove(j);
+		break;
 	    }
 	}
     }
@@ -624,7 +613,21 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	disruptShipments(state);
 
 
-	Disruptions.Type type = Disruptions.Type.StopInfoFlow;
+	//--- Deplete
+	Disruptions.Type type = Disruptions.Type.Depletion;
+
+	String dname = getName();
+
+	for(Disruption d: ((Demo)state).hasDisruptionToday(type, dname)) {
+	    // deplete inventory
+	    double amt = Math.round(d.magnitude);
+	    double x = deplete(amt);
+	    if (!Demo.quiet) System.out.println("At " + now() +", " +dname + ": disruption could destroy up to " + amt + " units, actually destroys " + x);
+	}
+
+	//---- StopInfoFlow
+	
+	type = Disruptions.Type.StopInfoFlow;
 	for(Channel channel: outChannels) {
 	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, channel.name)) { 
 		channel.infoHaltedUntil.enableUntil( now+d.magnitude );
@@ -897,7 +900,7 @@ HospitalPool,delayBackOrder,Triangular,7,10,15
 	} else {
 	    if (getAvailable()>0) {
 		double ga0 = getAvailable();
-		offerReceiver(stolenProductSink, amt);
+		if (!offerReceiver(stolenProductSink, amt)) throw new AssertionError("Sinks ought not refuse stuff!");
 		double a  = (ga0 - getAvailable());
 		destroyed += a;
 		currentStock -= a;

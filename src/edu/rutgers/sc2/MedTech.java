@@ -46,14 +46,14 @@ class MedTech implements Named, BatchProvider2, Reporting, Steppable {
     double everReceivedOrders = 0;
     
     
-    /** Consumers can call this method
-	to request the producer to produce some products which will eventually
-	propagate to the receiver
+    /** Consumers can call this method to request the producer to
+	produce some products which will eventually propagate to the
+	reeceiver. It creates production orders and sends them to
+	factories etc.
 
 	@param r Actually ignored
     */       
-    //public double feedTo(Receiver r, double amt) {
-    public void request(Order order) { //Channel channel, double amt) {
+    public void request(Order order) { 
 	Channel channel = order.channel;
 	Receiver r = channel.receiver;
 	double amt = order.amount;
@@ -67,12 +67,23 @@ class MedTech implements Named, BatchProvider2, Reporting, Steppable {
 	
 	int j=0;
 	for(Production p: prod) {
-	    p.addToPlan( Math.round(amt * factors[j++]));
+	    Order o = order.copy();
+	    o.amount = Math.round(amt * factors[j++]);
+	    p.addToPlan(o);
 	}
 	// FIXME: should also order some raw materials for the production node,
 	// so that it won't have to rely on safety stocks
 	everReceivedOrders += amt;
 	
+    }
+
+    /** Broadcast the cancelation message to all production units to
+	which the original order was sent. The order does not need to
+	be modified, since it's only the order ID that matters. */
+    public void cancel(Order order) {
+	for(Production p: prod) {
+	    p.cancel(order);
+	}
     }
 
     /** Nothing is done here. This class implements Steppable

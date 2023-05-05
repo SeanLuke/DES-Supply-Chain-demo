@@ -1,0 +1,5 @@
+#time,unit,type,amount
+60,dsPackaging,Halt,100
+60,dsDC,Depletion,10000
+60,dsDP,Depletion,10000
+60,dsHEP,Depletion,10000
