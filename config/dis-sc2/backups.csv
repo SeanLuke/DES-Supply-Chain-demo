@@ -1,0 +1,9 @@
+#time,unit,type,amount
+60,dsProd,Halt,500
+60,dsCmoProd,Halt,500
+80,dsCmoBackupProd,On,500
+1000,eeCmoProd,Halt,500
+1020,eeCmoBackupProd,On,500
+
+
+
