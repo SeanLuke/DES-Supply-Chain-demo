@@ -1,16 +1,15 @@
 package  edu.rutgers.supply;
 
 import java.util.*;
-//import java.text.*;
-
-//import sim.engine.*;
-
-//import edu.rutgers.util.IllegalInputException;
-//import edu.rutgers.util.Config;
-//import edu.rutgers.util.ParaSet;
 
 
-/** Info about a single order, typically one sent from one pool to another */
+/** Info about a single order, typically one sent from one pool to another.
+    In SC2, lists of Order objects are kept by senders and receivers, so
+    that the former can keep track of what they need to do, and the latter
+    can keep track of what they expect to receive. This is essential
+    for managing order expiration on the receiver end (when an ordered
+    shipment never arrives, e.g. due to some disruption).
+ */
 public class Order implements Cloneable {
 
     static long lastId = 0;

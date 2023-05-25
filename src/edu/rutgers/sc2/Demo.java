@@ -43,7 +43,7 @@ demo.wpq.sumWaiting gives you the integral of the above over all 2000 days of si
  */
 public class Demo extends SimState {
 
-    public String version = "1.008";
+    public String version = "2.000";
 
     
     /** Set this to true to print a lot of stuff */
@@ -114,6 +114,7 @@ public class Demo extends SimState {
     Production 	dsRMSupplier, dsPMSupplier;
 
     Production eeCmoProd, eePackaging;
+    Production eeCmoBackupProd;
     Pool eeDC, eeDP, eeHEP;
     Pool dsDC, dsDP, dsHEP;
     MedTech eeMedTech, dsMedTech;
@@ -125,6 +126,7 @@ public class Demo extends SimState {
 
     Splitter dsRMSplitter;
     Production dsCmoProd, dsProd, dsPackaging;
+    Production dsCmoBackupProd;
     
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
@@ -164,6 +166,15 @@ public class Demo extends SimState {
 	    
 	    eeRMSupplier.setQaReceiver(eeCmoProd.getEntrance(0), 1.0);	
 	    add(eeCmoProd);
+
+	    eeCmoBackupProd = new Production(this, "eeCmoBackupProd", config,
+				       new Resource[] {rmEEBatch},
+				       eeBatch);
+	    
+	    eeCmoBackupProd.shareInputStore(eeCmoProd);
+	    eeCmoBackupProd.sharePlan(eeCmoProd);
+	    add(eeCmoBackupProd);
+
 	    
 	    
 	    CountableResource pmEE = new CountableResource("PMEE", 1);
@@ -184,7 +195,8 @@ public class Demo extends SimState {
 	    eePackaging.setNoPlan(); // driven by inputs
 	    add(eePackaging);
 
-	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
+	    eeCmoProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);
+	    eeCmoBackupProd.setQaReceiver(eePackaging.getEntrance(0), 1.0);	
 	    eePMSupplier.setQaReceiver(eePackaging.getEntrance(1), 1.0);	
 
 	    eeMedTech = new MedTech(this, "eeMedTech",
@@ -235,6 +247,17 @@ public class Demo extends SimState {
 	    dsCmoProd.setNoPlan(); // driven by inputs (has no safety stock)
 
 	    add(dsCmoProd);
+
+
+	    dsCmoBackupProd = new Production(this, "dsCmoBackupProd", config,
+					     new Resource[] {rmDSBatch},
+					     dsBatch);
+	    dsCmoBackupProd.shareInputStore(dsCmoProd);
+	    dsCmoBackupProd.setNoPlan(); // driven by inputs (has no safety stock)
+	    //dsCmoBackupProd.sharePlan(dsCmoProd);
+
+	    add(dsCmoBackupProd);
+	    
 	    dsRMSplitter.addReceiver(dsCmoProd.mkInputDelay(0), 0.08);
 
 	    dsProd = new Production(this, "dsProd", config,

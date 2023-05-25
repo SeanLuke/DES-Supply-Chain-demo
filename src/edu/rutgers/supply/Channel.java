@@ -7,7 +7,9 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** Describes the communication between 2 Pools */
+/** Describes the communication between 2 Pools. In SC2, a link to a Channel
+    is put into each Order object; this is used for internal
+    accounting of various kinds. */
 public class Channel {
     /** A Pool or MedTech */
     final public BatchProvider2 sender;

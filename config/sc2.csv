@@ -46,6 +46,13 @@ eeCmoProd,prodDelayUnit,Triangular,0.01,0.02,0.03
 eeCmoProd,faulty,0.02
 eeCmoProd,rework,0.08
 
+#------ EE manufacturing: backup unit --------
+eeCmoBackupProd,manual,true
+eeCmoBackupProd,inBatch,10
+eeCmoBackupProd,batch,10
+eeCmoBackupProd,prodDelayUnit,Triangular,0.02,0.03,0.04
+eeCmoBackupProd,transDelay,Uniform,2,5
+
 #------ The EE Pack mat supply pool ------
 eePMSupplier,batch,100
 eePMSupplier,transDelay,Triangular,54,60,66
@@ -177,6 +184,13 @@ dsCmoProd,inBatch,250
 dsCmoProd,batch,250
 dsCmoProd,prodDelayUnit,Uniform,0.002,0.006
 dsCmoProd,transDelay,Uniform,3,7
+
+dsCmoBackupProd,manual,true
+dsCmoBackupProd,inBatch,250
+dsCmoBackupProd,batch,250
+dsCmoBackupProd,prodDelayUnit,Uniform,0.003,0.009
+dsCmoBackuoProd,transDelay,Uniform,1,3
+
 
 #------ The DS pack mat supply pool ------
 dsPMSupplier,batch,250

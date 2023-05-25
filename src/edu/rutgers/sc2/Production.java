@@ -25,6 +25,9 @@ class Production extends AbstractProduction
 	return  state.schedule.getTime();
     }
 
+    /** Is this a manually controlled node? */
+    private final boolean manual;
+    
     /** The buffers for inputs (raw materials) that go into production */
     private InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
@@ -81,7 +84,7 @@ class Production extends AbstractProduction
 	    transDelay!=null? transDelay: prodDelay;
     }
 
-   	
+    
     /** How many units of each input need to be taken to start cooking a batch? */
     final double[] inBatchSizes;
     /** How big is the output batch? */
@@ -139,6 +142,8 @@ class Production extends AbstractProduction
 	para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 
+	manual = para.getBoolean("manual", false);
+	
 	inBatchSizes = (inResources.length==0)? new double[0]: para.getDoubles("inBatch");
 	if (inBatchSizes.length!=inResources.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inResources.length + " resources ("+Util.joinNonBlank(";",inResources)+"), but " + inBatchSizes.length + " input batch sizes");
 
@@ -251,12 +256,15 @@ class Production extends AbstractProduction
 
 	charter=new Charter(state.schedule, this);
 	//	String moreHeaders[] = new String[2 + 2*inResources.length];
-	String moreHeaders[] = new String[2 + inResources.length];
+	String moreHeaders[] = new String[2 + 3*inResources.length];
 	int k = 0;
 	moreHeaders[k++] = "releasedToday";
 	moreHeaders[k++] = "outstandingPlan";
 	for(int j=0; j<inputStore.length; j++) {
-	    moreHeaders[k++] = "Stock." + inputStore[j].getUnderlyingName();
+	    String rn = inputStore[j].getUnderlyingName();
+	    moreHeaders[k++] = "Stock." + rn;
+	    moreHeaders[k++] = "ReceivedTodayFromNormal." + rn;
+	    moreHeaders[k++] = "ReceivedTodayFromMagic." + rn;
 	}
 	//for(int j=0; j<inputStore.length; j++) {
 	//    moreHeaders[k++] = "Anomaly." + inputStore[j].getUnderlyingName();
@@ -265,6 +273,20 @@ class Production extends AbstractProduction
 
     }
 
+    /** Have this Production unit make use of another unit's
+	input buffers, instead of its own. This is used in SC2 2.000
+	for backup CMO prods.
+    */
+    void shareInputStore(Production other) {
+	inputStore = other.inputStore;
+	if (inputStore.length != inResources.length) throw new IllegalArgumentException();
+	// FIXME...
+	//for(int j=0; j<inputStore.length; j++) {
+	//    if (this instanceof Macro) addReceiver(inputStore[j], false); 
+	//}
+    }
+	
+    
   /** Do we have enough input materials of each kind to make a batch? 
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
      */
@@ -343,19 +365,35 @@ class Production extends AbstractProduction
 	
     }
 
-    Timed haltedUntil = new Timed();    
+    /** Indicates whether the node has been halted by a disruption */
+    private Timed haltedUntil = new Timed();
+    /** For manually controlled nodes, this timer is used to
+	indicate that the node has been turned on */
+    private Timed manualOnUntil = new Timed();
 
-
-    /** Checks if there is a "Halt" disruption in effect for this unit. */
-    boolean isHalted(double now) {
-	return haltedUntil.isOn( now );
+    /** Checks if this production unit is operational. For manually
+	controlled units, we check if it has been turned on; for all
+	units, we check that there isn't a "Halt" disruption in effect.
+    */
+    boolean isOpenForBusiness(double now) {
+	return (!manual || manualOnUntil.isOn(now)) &&
+	    !haltedUntil.isOn( now );
     }
 
 
     /** Orders that this Production unit is yet to fill. 
      */
-    Vector<Order> needToSend = new Vector<>();
+    private Vector<Order> needToSend = new Vector<>();
 
+    /** Tell this production unit to fill orders that some other
+	unit has on file. This is used in SC2 ver. 2.* when this
+	is a backup unit meant to substitute for another unit.
+    */       
+    void sharePlan(Production other) {
+	needToSend = other.needToSend;
+    }
+	
+    
     double sumNeedToSend() {
 	double sum = 0;
 	for(Order e: needToSend) sum += e.amount;
@@ -371,7 +409,7 @@ class Production extends AbstractProduction
 
     /** Configure this unit to be controlled by the rationing of inputs */
 
-    double everPlanned = 0;
+    private double everPlanned = 0;
     
     public void setNoPlan() {
 	noPlan = true;
@@ -438,7 +476,9 @@ class Production extends AbstractProduction
 	production of more batches, and if so, ensure that the prodDelay
 	is 'primed' by needProd.
 
-	A disruption may reduce the production capacity temporarily.
+	This method also checks for disruptions, and (for manually
+	controlled units) for the "On" command. A disruption may halt
+	the unit, or reduce the production capacity temporarily.
     */
     public void step(SimState state) {
 
@@ -457,10 +497,17 @@ class Production extends AbstractProduction
 		prodDelay.setFaultRateIncrease(r, now+1);
 	    }
 
+
 	    Disruptions.Type type = Disruptions.Type.Halt;
 	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) { 
 		haltedUntil.enableUntil( now+d.magnitude );
 		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" started disruption '"+type+"' until " + (now+d.magnitude));
+	    }
+
+	    type = Disruptions.Type.On;
+	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) { 
+		manualOnUntil.enableUntil( now+d.magnitude );
+		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" received command '"+type+"' until " + (now+d.magnitude));
 	    }
    
 	    
@@ -513,12 +560,15 @@ class Production extends AbstractProduction
 	releasedAsOfYesterday = releasedAsOfToday;
 	
 	//double[] data = new double[2 + 2*inputStore.length];
-	double[] data = new double[2 + inputStore.length];
+	double[] data = new double[2 + 3*inputStore.length];
 	int k=0;
 	data[k++] = releasedToday;
 	data[k++] = sumNeedToSend(); // (startPlan==null)? 0 : startPlan;
 	for(int j=0; j<inputStore.length; j++) {
 	    data[k++] = inputStore[j].getContentAmount();
+	    data[k++] = inputStore[j].receivedTodayFromNormal;
+	    data[k++] = inputStore[j].receivedTodayFromMagic;
+	    inputStore[j].clearDailyStats();
 	}	
 	
 	//for(int j=0; j<inputStore.length; j++) {
@@ -530,7 +580,9 @@ class Production extends AbstractProduction
 	//for(InputStore p: inputStore) {
 	//    if (p.safety!=null) p.safety.doChart(new double[0]);
 	//}
-    	
+
+
+ 
     }
     
 
@@ -557,11 +609,12 @@ class Production extends AbstractProduction
 	double now = state.schedule.getTime();
 
 	
-	if (isHalted(now)) {
+	if (!isOpenForBusiness(now)) {
 	    //System.out.println(getName()+ " H");
 	    return false;
 	}
-	//System.out.println(getName()+ " W");
+	//boolean debug = getName().equals("dsCmoBackupProd");
+	//if (debug) System.out.println(getName()+ ", t="+t+", has inputs=" + hasEnoughInputs());
 	if (!hasEnoughInputs()) return false;
 		
 	Vector<Batch> usedBatches = new Vector<>();

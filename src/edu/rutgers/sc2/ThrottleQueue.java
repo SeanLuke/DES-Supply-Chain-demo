@@ -139,7 +139,7 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 
 	double now = getState().schedule.getTime();
 
-	if (whose.isHalted(now)) return false; // Halt disruption in effect
+	if (!whose.isOpenForBusiness(now)) return false; // Halt disruption in effect
 
 	long n = unit? (long)Math.round(((Batch)entities.getFirst()).getContentAmount()): 1;
 	double delayTime = computeDelayTime( n );

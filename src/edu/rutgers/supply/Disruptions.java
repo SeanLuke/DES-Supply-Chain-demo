@@ -65,6 +65,12 @@ public class Disruptions {
 	/** Orders get lost during 
 	    a specified number of days. (SC-2) */
 	StopInfoFlow,
+	/** This is not a disruption at all, but a command to turn
+	    on a manually controlled production node for a specified
+	    number of days.
+	*/
+	On,
+	   
     };
 
     /** A single disruption event. A disruption may take place of a momentary

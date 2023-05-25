@@ -113,6 +113,14 @@ extends Probe implements Reporting
      */
     private Delay refillDelay = null;
 
+    /** The destination of "magic source shipments" (i.e. the InputStore)
+	can use this method to find out if this is one of the magic shipments.
+     */
+    boolean comesFromMagicSource(Provider p) {
+	//return p==refillDelay;
+	return p==this;
+    }
+    
     /** Are we allowed to access this safety stock only when a
 	supply-flow anomaly has been detected? If non-null, this
 	safety stock can only be used if the associated InputStore has
@@ -413,7 +421,7 @@ extends Probe implements Reporting
    }
 
 
-    
+    /** This is scheduled for daily execution. */
     public void step(sim.engine.SimState state) {
 
 

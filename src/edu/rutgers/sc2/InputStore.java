@@ -44,9 +44,20 @@ class InputStore extends sim.des.Queue {
     /** How much stuff is stored here. The value should be the same as given by
 	getContentAmount(), but without scanning the entire buffer */
     private double currentStock=0;
-    double everReceived=0;
+    double everReceived=0, everReceivedFromMagic=0;
 
-    /** The safety stock for this input store. May be zero if not provided
+    /** Used to collect daily statistic */
+    double receivedTodayFromMagic = 0, receivedTodayFromNormal = 0;
+
+    /** This is to be called after the day's row in the time series chart file
+	has been written out. */
+    void clearDailyStats() {
+	receivedTodayFromMagic = 0;
+	receivedTodayFromNormal = 0;
+    }
+	
+    
+    /** The safety stock for this input store. May be null if not provided
 	for in the config file */
     SafetyStock safety = null;
 
@@ -267,6 +278,14 @@ class InputStore extends sim.des.Queue {
 	if (isInit) return z; // it's no time to do anything else as the system is not ready yet
 	
 	everReceived  += a;
+
+	boolean fromMagic = (safety!=null) && safety.comesFromMagicSource(provider);
+	if (fromMagic) everReceivedFromMagic += a;
+	
+	if (fromMagic) receivedTodayFromMagic += a;
+	else receivedTodayFromNormal += a;
+
+	
 	
 	// See if the production system is empty, and needs to be "primed"
 	// to start.
@@ -326,6 +345,7 @@ class InputStore extends sim.des.Queue {
 	if (stolen>0) v.add("(Stolen=" + stolen+ " u = " + stolenBatches + " ba)");
 	String s = Util.joinNonBlank(". ", v);
 	s += ". Received (from all sources) " + everReceived + " u";
+	if (everReceivedFromMagic!=0) s += " (incl. "+everReceivedFromMagic+" from SS)";
 	if (safety!=null) s += ". " + safety.report();			      
 	return s;
     }
