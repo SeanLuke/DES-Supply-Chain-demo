@@ -12,10 +12,12 @@ import java.util.*;
  */
 public class Order implements Cloneable {
 
-    static long lastId = 0;
-    
+    /** Used to generate globally unique order ID numbers */
+    private static long lastId = 0;
+
+    /** A globally unique ID number of this order */
     final public long id;
-    /** When order was placed */
+    /** When this order was placed */
     final public double date;
     /** Order size. This can be changed in the sender's copy of the order as the order is being partially filled */
     public double amount;
@@ -32,8 +34,10 @@ public class Order implements Cloneable {
 	id = (lastId++);
     }
 
-    /** Makes a shallow copy of this Order. This is all we need, as the only reason to have a copy
-	is so that we can modify the amount separately in the sender's and receiver's copies of the order.
+    /** Makes a shallow copy of this Order. This is all we need, as
+	the only reason to have a copy is so that we can modify the
+	amount separately in the sender's and receiver's copies of the
+	order.
     */
     public Order copy() {
 	try {

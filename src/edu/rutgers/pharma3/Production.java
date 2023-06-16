@@ -67,7 +67,10 @@ public class Production extends AbstractProduction
 
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent */
-    ThrottleQueue getNeedQa() { return needQa;}
+    Receiver getQaEntrance() { //return needQa!=null? needQa: qaDelay;}
+
+	//	ThrottleQueue getNeedQa() {
+	return needQa;}
     
 
     public ProdDelay getProdDelay() { return prodDelay; }

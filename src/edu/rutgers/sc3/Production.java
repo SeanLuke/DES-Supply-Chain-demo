@@ -1,4 +1,4 @@
-package  edu.rutgers.sc2;
+package  edu.rutgers.sc3;
 
 import edu.rutgers.supply.*;
 
@@ -33,8 +33,11 @@ class Production extends AbstractProduction
     public sim.des.Queue[] getInputStore() { return inputStore;}
 
     private Charter charter;
-     
-    ProdDelay prodDelay;
+
+    /** This could be a ProdDelay, a ThrottledStage, or a Pipeline, as needed */
+    private Middleman prodStage;
+    //    private ProdDelay prodDelay;
+    //    private final ThrottleQueue needProd;
 
     /** Transportation from the production to the QA stage, as may
 	exist in some tracks. It is null if transportation takes no time
@@ -42,21 +45,32 @@ class Production extends AbstractProduction
     */
     private SimpleDelay transDelay = null;
     
-    private final ThrottleQueue needProd;
     /** These only exist if the respective stages are throttled (FIFO,
 	capacity-1), rather than "parallel" (infinite capacity) */
     private final ThrottleQueue needTrans, needQa;
 
+    interface NeedsPriming {	
+	/** This is the property of certain network elements (throttled stages),
+	    who need to be given a batch first to get them started, after which
+	    they keep grabbing batches */
+	default boolean needsPriming() { return false; }
+	/** Passes the request to the ProdDelay */
+	void setFaultRateIncrease(double x, Double _untilWhen);
+	/** Is this production stage (or its first substage) unconstrained
+	    by capacity? It is true for a lone (unthrottled) ProdDelay;
+	    false for throttled system. */
+	default boolean unconstrained() { return (this instanceof ProdDelay); }
+    }
+    
     /** Returns true if the production step is empty, and one
 	should see if it needs to be reloaded */
     boolean needsPriming() {
-	return needProd!=null && 
-	    needProd.getAvailable()==0 && prodDelay.getSize()==0;
+	return ((NeedsPriming)prodStage).needsPriming();
     }
     
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent */
-    //ThrottleQueue getNeedQa() { return needQa;}
+    //    ThrottleQueue getNeedQa() { return needQa;}
     /** If an external producer sends it product for us to do QA, this
 	is where it should be sent. This is either the QA delay itself (if
 	parallel processing is allowed), or the waiting buffer (if throttled FIFO processing).
@@ -70,7 +84,7 @@ class Production extends AbstractProduction
 	
 
 
-    public ProdDelay getProdDelay() { return prodDelay; }
+    //public ProdDelay getProdDelay() { return prodDelay; }
 
     /** Returns the last existing stage of this production unit. Typically
 	this is the qaDelay, but some units (CMO Track A) don't have QA,
@@ -81,14 +95,33 @@ class Production extends AbstractProduction
     */
     public Provider getTheLastStage() {
 	return qaDelay!=null? qaDelay:
-	    transDelay!=null? transDelay: prodDelay;
+	    transDelay!=null? transDelay: prodStage;
     }
 
-    
-    /** How many units of each input need to be taken to start cooking a batch? */
-    final double[] inBatchSizes;
-    /** How big is the output batch? */
-    final double outBatchSize;
+    /** A Recipe contains information about the inputs needed to
+	produce a batch of an output product. 
+     */
+    private class Recipe {
+	/** How many units of each input need to be taken to start cooking a batch? */
+	final double[] inBatchSizes;
+	/** How big is the output batch? */
+	final double outBatchSize;
+
+	Recipe(ParaSet para) throws  IllegalInputException { //, CountableResource underlying, boolean useDefault) {
+
+	    final String suff = ""; //useDefault ? "" : "." + underlying.getName();
+
+	    outBatchSize = para.getDouble("batch" + suff);
+	    
+	    inBatchSizes = (inResources.length==0)? new double[0]: para.getDoubles("inBatch" + suff);
+	    if (inBatchSizes.length!=nin) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+ suff + ": given " + nin + " resources ("+Util.joinNonBlank(";",inResources)+"), but " + inBatchSizes.length + " input batch sizes");
+	}	
+    }
+
+    /** The number of input commodities */
+    final int nin; 
+    private final Recipe recipe; // [];
+	
    /** What is the "entry point" for input No. j? */
     Receiver getEntrance(int j) {
 	return inputStore[j];
@@ -123,11 +156,14 @@ class Production extends AbstractProduction
 
     final ParaSet para;
     ParaSet getPara() { return para; }
-
-
     
     private SimState state;
 
+    /** How many different output products can this Production node produce?
+	(Historically, it was 1, but in SC-3 multiple products can be produced)
+    */
+    //final int nout;
+    
     /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
 	@param outResource batches of output (e.g. bulk drug)
      */    
@@ -137,28 +173,34 @@ class Production extends AbstractProduction
     {
 	state = _state;
 	inResources =  _inResources;
+	nin = 	inResources.length;
 	outResource = _outResource;
 	setName(name);
 	para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 
 	manual = para.getBoolean("manual", false);
+
+	//-- what products we can produce
+	//CountableResource [] oru = outResource.listUnderlying();
+	//nout = oru.length;
+
+	recipe = new Recipe(para);
 	
-	inBatchSizes = (inResources.length==0)? new double[0]: para.getDoubles("inBatch");
-	if (inBatchSizes.length!=inResources.length) throw new  IllegalInputException("Mismatch of the number of inputs for "+getName()+": given " + inResources.length + " resources ("+Util.joinNonBlank(";",inResources)+"), but " + inBatchSizes.length + " input batch sizes");
+	//for(int j=0; j<nout; j++) {
+	//    recipe[j] = new Recipe(para, oru[j], false);
+	//}
 
-
+	
 	// Storage for input ingredients
-	inputStore = new InputStore[inResources.length];
-	for(int j=0; j<inputStore.length; j++) {
+	inputStore = new InputStore[nin];
+	for(int j=0; j<nin; j++) {
 	    inputStore[j] =
 		new InputStore(this, state, config, inResources[j]);
 
 	    if (this instanceof Macro) addReceiver(inputStore[j], false); 
 	}
 	
-	outBatchSize = para.getDouble("batch");
-
 
 	//-- Are trans and QA stages throttled (FIFO) or parallel?
 	final boolean qaIsThrottled= para.getBoolean("qaThrottled", false),
@@ -166,7 +208,7 @@ class Production extends AbstractProduction
 	
 	//batchesPerDay = para.getLong("batchesPerDay", null);
 
-	double cap = (outResource instanceof Batch) ? 1:    outBatchSize;	
+	double cap = (outResource instanceof Batch) ? 1:  recipe.outBatchSize;	
 
 	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
 	if (qaDelay != null) {
@@ -216,34 +258,35 @@ class Production extends AbstractProduction
 	    needTrans = null;
 	}
 	
-	prodDelay = new ProdDelay(state,this,outResource);
+	ProdDelay prodDelay = new ProdDelay(state,this,outResource);
 
 	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
 	if (w!=null) prodDelay.addReceiver(w);
 
 	AbstractDistribution d0 = para.getDistribution("prodDelay",state.random);
-	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)outBatchSize);
+	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)recipe.outBatchSize);
 
 	AbstractDistribution d = para.getDistribution("prodDelay",state.random);
 	boolean unit = (d==null);
 	if (unit)  d = para.getDistribution("prodDelayUnit",state.random);
-	
+
 	if (d!=null) {
-	    needProd = new ThrottleQueue(prodDelay, cap, d, unit);
+	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap, d, unit);
 
 	    needProd.setWhose(this);
 	    needProd.setAutoReloading(true);
+	    prodStage = new ThrottledStage(state, needProd, prodDelay);
 	} else {
 	    // Production delay is not specified; thus we assumed that
 	    // production is (nearly) instant, as it's the case for
 	    // RM EE supplier in SC-2. Therefore it's not throttled...
-	    needProd  = null;
 	    // A kludge for nearly-instant production
 	    prodDelay.setDelayTime(0.0001);
+	    prodStage = prodDelay;
 	}
 	
 	if (qaDelay !=null && qaDelay.reworkProb >0) {
-	    qaDelay.setRework( needProd!=null? needProd: prodDelay);
+	    qaDelay.setRework( prodStage);
 	}
 
 	stolenShipmentSink = new MSink(state, outResource);
@@ -271,6 +314,13 @@ class Production extends AbstractProduction
 	//}
 	charter.printHeader(moreHeaders);
 
+	Vector<String> outputName = para.get("output");
+	if (outputName!=null) {
+	    throw new AssertionError("Using outputName (" +outputName+") is not supported yet");
+	}
+
+
+	
     }
 
     /** Have this Production unit make use of another unit's
@@ -291,8 +341,8 @@ class Production extends AbstractProduction
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
      */
     private boolean hasEnoughInputs() {
-	for(int j=0; j<inBatchSizes.length; j++) {
-	    if (!inputStore[j].hasEnough(inBatchSizes[j])) return false;
+	for(int j=0; j<nin; j++) {
+	    if (!inputStore[j].hasEnough(recipe.inBatchSizes[j])) return false;
 	}
 	return true;
     }
@@ -323,7 +373,7 @@ class Production extends AbstractProduction
 
 	double now = state.schedule.getTime();
 	
-	for(int j=0; j<inBatchSizes.length; j++) {
+	for(int j=0; j<nin; j++) {
 
 	    InputStore p = inputStore[j];
 	    String rname = p.getUnderlyingName();
@@ -494,7 +544,7 @@ class Production extends AbstractProduction
 		//double r = 0.1 * d.magnitude;
 		double r = d.magnitude;
 		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" increasing failure rate by " + r +", until " + (now+1));
-		prodDelay.setFaultRateIncrease(r, now+1);
+		((NeedsPriming)prodStage).setFaultRateIncrease(r, now+1);
 	    }
 
 
@@ -517,27 +567,22 @@ class Production extends AbstractProduction
 		return;
 	    }
 
-	    if (needProd!=null) {
+
+	    if (((NeedsPriming)prodStage).unconstrained()) {
+		// If the production stage apparently allows
+		// uncosntrained parallel processing, put everything
+		// into it		
+		int n = 0;
+		while( mkBatch()) {
+		    n++;
+		}		
+	    } else if (((NeedsPriming)prodStage).needsPriming()) {
 		// This will "prime the system" by starting the first
 		// mkBatch(), if needed and possible. After that, the
 		// production cycle will repeat via the slackProvider
 		// mechanism
-		needProd.provide(prodDelay);
-	    } else {
-		int n = 0;
-		while( mkBatch()) {
-		    n++;
-		}
-		
-		if (getName().equals("eeCmoProd")) {
-		    System.out.println("At t=" + now + ", " + getName() +	" mkBatch done  "+n+ " batches");
-		    //System.out.println("DEBUG: prodDelay=" + prodDelay.report0());
-		    //System.out.println("DEBUG: transDelay=" + transDelay.report0());
-		}
-		
-
-	    }
-		       
+		mkBatch();
+	    }		       
 
 	} finally {
 	    dailyChart();
@@ -586,16 +631,20 @@ class Production extends AbstractProduction
     }
     
 
-    /** Can we produce odd lots? */
+    /** Can we produce odd lots? Normally we can; but, for arithmetic
+	simplicity, proration is not allowed if some of the inputs
+	have a different input:output ratio than 1:1.
+     */
     private boolean canProrateLots() {
-	for(double x: inBatchSizes) {
-	    if (x!=outBatchSize) return false;
+	for(double x: recipe.inBatchSizes) {
+	    if (x!=recipe.outBatchSize) return false;
 	}
 	return true;
     }
 
     
-    /** Tries to make a batch, if resources are available
+    /** Tries to make a batch and put it into prodDelay (or its
+	waiting queue), if resources are available
 	@return true if a batch was made; false if not enough input resources
 	was there to make one, or the current plan does not call for one
 
@@ -619,28 +668,27 @@ class Production extends AbstractProduction
 		
 	Vector<Batch> usedBatches = new Vector<>();
 
-	boolean prorate = !noPlan && (need < outBatchSize) &&   canProrateLots();
+	boolean prorate = !noPlan && (need < recipe.outBatchSize) &&   canProrateLots();
 
-	for(int j=0; j<inBatchSizes.length; j++) {
+	for(int j=0; j<nin; j++) {
 	    
 	    InputStore p = inputStore[j];
 	    //System.out.println("mkBatch: Available ("+p.getTypicalProvided()+")=" + p.reportAvailable());
 
-	    double ne = inBatchSizes[j];
-	    if (prorate) ne = (ne * need) / outBatchSize;
+	    double ne = recipe.inBatchSizes[j];
+	    if (prorate) ne = (ne * need) / recipe.outBatchSize;
 	    
 	    Batch b = p.consumeOneBatch(ne);
-	    //if (c != inBatchSizes[j]) throw new IllegalArgumentException();
 	    if (b!=null) usedBatches.add(b);    
 	}
 
-	if (Demo.verbose) System.out.println("At t=" + now + ", " + getName() + " starts a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	//	if (Demo.verbose) System.out.println("At t=" + now + ", " + getName() + " starts a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 
-	double outAmt = (prorate)? need: outBatchSize;
+	double outAmt = (prorate)? need: recipe.outBatchSize;
 	Batch onTheTruck = outResource.mkNewLot(outAmt, now, usedBatches);
 	Provider provider = null;  // why do we need it?		
-	(needProd!=null? needProd: prodDelay).accept(provider, onTheTruck, 1, 1);
+	prodStage.accept(provider, onTheTruck, 1, 1);
 
 	batchesStarted++;
 	everStarted += outAmt;
@@ -677,7 +725,7 @@ class Production extends AbstractProduction
      */
     public double getReleased() {
 	return  (qaDelay!=null) ? qaDelay.getReleasedGoodResource():
-	    prodDelay.getTotalStarted();
+	    prodDelay.getTotalStarted(); // ZZZZ
     }
 
     public String report() {
@@ -693,12 +741,7 @@ class Production extends AbstractProduction
 	s +=
 	    ". Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 
-	if (needProd!=null) {
-	    s += " = (in prod=" + needProd.hasBatches() +	    " ba;";
-	} else s +=" (in prod=" + (long)prodDelay.getDelayedPlusAvailable() + ba + ")";
-
-	if (needTrans!=null) s +=" (in trans=" +   needTrans.hasBatches() +")";
-	else if (transDelay!=null) s +=" (in trans=" +   (long)transDelay.getDelayedPlusAvailable() + ba +")";
+	s += " = (in prod=" + ((Reporting.HasBatches)prodStage).hasBatches() + ba +")";
 	if (qaDelay!=null) {
 	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
 	    s += " " + qaDelay.report();	    

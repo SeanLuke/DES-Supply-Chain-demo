@@ -198,7 +198,8 @@ private void setupCmoTracks(Demo demo, Config config)  throws IllegalInputExcept
 	    } else if (node2 instanceof Production) {
 		Production prod = (Production)node2;
 		if (toQa) {
-		    rcv = prod.getNeedQa();
+		    //rcv = prod.getNeedQa();
+		    rcv = prod.getQaEntrance();
 		    outResource = prod.outResource; 
 		} else {
 		    // just assuming input buffer 0
