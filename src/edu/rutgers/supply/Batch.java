@@ -236,6 +236,13 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	return (r instanceof Batch)?  ((Batch)r).getContentAmount() : r.getAmount();
     }
 
+    public static double getContentAmount(Collection<Resource> c) {
+	double sum = 0;
+	for(Resource r: c) sum +=  getContentAmount(r);
+	return sum;
+	   
+    }
+
    
     /** How much "stuff" (e.g. how many pills) does the Provider have
 	on hand? This is an alternative to Provider.getAvailable(),

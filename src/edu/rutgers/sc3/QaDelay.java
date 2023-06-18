@@ -47,6 +47,9 @@ public class QaDelay extends SimpleDelay
     public double getBadResource() { return badResource; }
     public double getReleasedGoodResource() { return releasedGoodResource; }
     public double getReworkResource() { return reworkResource; }
+
+    public double getEverReleased()  { return releasedGoodResource; }
+  
     
     long badResourceBatches = 0, releasedGoodResourceBatches=0;
  

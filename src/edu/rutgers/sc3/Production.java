@@ -35,7 +35,10 @@ class Production extends AbstractProduction
     private Charter charter;
 
     /** This could be a ProdDelay, a ThrottledStage, or a Pipeline, as needed */
-    private Middleman prodStage;
+    private Middleman _prodStage;
+    private <T extends Middleman & NeedsPriming & Reporting.HasBatches> T  prodStage() {
+	return (T)_prodStage;
+    }
     //    private ProdDelay prodDelay;
     //    private final ThrottleQueue needProd;
 
@@ -60,12 +63,13 @@ class Production extends AbstractProduction
 	    by capacity? It is true for a lone (unthrottled) ProdDelay;
 	    false for throttled system. */
 	default boolean unconstrained() { return (this instanceof ProdDelay); }
+	//double getEverReleased();
     }
     
     /** Returns true if the production step is empty, and one
 	should see if it needs to be reloaded */
     boolean needsPriming() {
-	return ((NeedsPriming)prodStage).needsPriming();
+	return prodStage().needsPriming();
     }
     
     /** If an external producer sends it product for us to do QA, this
@@ -95,7 +99,7 @@ class Production extends AbstractProduction
     */
     public Provider getTheLastStage() {
 	return qaDelay!=null? qaDelay:
-	    transDelay!=null? transDelay: prodStage;
+	    transDelay!=null? transDelay: prodStage();
     }
 
     /** A Recipe contains information about the inputs needed to
@@ -275,18 +279,18 @@ class Production extends AbstractProduction
 
 	    needProd.setWhose(this);
 	    needProd.setAutoReloading(true);
-	    prodStage = new ThrottledStage(state, needProd, prodDelay);
+	    _prodStage = new ThrottledStage(state, needProd, prodDelay);
 	} else {
 	    // Production delay is not specified; thus we assumed that
 	    // production is (nearly) instant, as it's the case for
 	    // RM EE supplier in SC-2. Therefore it's not throttled...
 	    // A kludge for nearly-instant production
 	    prodDelay.setDelayTime(0.0001);
-	    prodStage = prodDelay;
+	    _prodStage = prodDelay;
 	}
 	
 	if (qaDelay !=null && qaDelay.reworkProb >0) {
-	    qaDelay.setRework( prodStage);
+	    qaDelay.setRework( prodStage());
 	}
 
 	stolenShipmentSink = new MSink(state, outResource);
@@ -544,7 +548,7 @@ class Production extends AbstractProduction
 		//double r = 0.1 * d.magnitude;
 		double r = d.magnitude;
 		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" increasing failure rate by " + r +", until " + (now+1));
-		((NeedsPriming)prodStage).setFaultRateIncrease(r, now+1);
+		prodStage().setFaultRateIncrease(r, now+1);
 	    }
 
 
@@ -568,7 +572,7 @@ class Production extends AbstractProduction
 	    }
 
 
-	    if (((NeedsPriming)prodStage).unconstrained()) {
+	    if (prodStage().unconstrained()) {
 		// If the production stage apparently allows
 		// uncosntrained parallel processing, put everything
 		// into it		
@@ -576,7 +580,7 @@ class Production extends AbstractProduction
 		while( mkBatch()) {
 		    n++;
 		}		
-	    } else if (((NeedsPriming)prodStage).needsPriming()) {
+	    } else if (prodStage().needsPriming()) {
 		// This will "prime the system" by starting the first
 		// mkBatch(), if needed and possible. After that, the
 		// production cycle will repeat via the slackProvider
@@ -688,7 +692,7 @@ class Production extends AbstractProduction
 	double outAmt = (prorate)? need: recipe.outBatchSize;
 	Batch onTheTruck = outResource.mkNewLot(outAmt, now, usedBatches);
 	Provider provider = null;  // why do we need it?		
-	prodStage.accept(provider, onTheTruck, 1, 1);
+	prodStage().accept(provider, onTheTruck, 1, 1);
 
 	batchesStarted++;
 	everStarted += outAmt;
@@ -725,7 +729,8 @@ class Production extends AbstractProduction
      */
     public double getReleased() {
 	return  (qaDelay!=null) ? qaDelay.getReleasedGoodResource():
-	    prodDelay.getTotalStarted(); // ZZZZ
+	    //prodDelay.getTotalStarted(); // ZZZZ
+	    prodStage().getEverReleased();
     }
 
     public String report() {
@@ -741,7 +746,7 @@ class Production extends AbstractProduction
 	s +=
 	    ". Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 
-	s += " = (in prod=" + ((Reporting.HasBatches)prodStage).hasBatches() + ba +")";
+	s += " = (in prod=" + prodStage().hasBatches() + ba +")";
 	if (qaDelay!=null) {
 	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
 	    s += " " + qaDelay.report();	    
@@ -749,7 +754,7 @@ class Production extends AbstractProduction
 	} else {
 	}
 	    
-	s += "\n" + prodDelay.report();
+	//	s += "\n" + prodStage().report();
 
 	//if (stolenShipmentSink.getEverConsumed()>0) s+="\n" + stolenShipmentSink.report();
 	if (everStolen>0) s+="\nLost in shipment " + everStolen + " u";

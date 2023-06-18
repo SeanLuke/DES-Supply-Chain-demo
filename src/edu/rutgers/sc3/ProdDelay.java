@@ -83,9 +83,14 @@ public class ProdDelay extends SimpleDelay
     private Timed faultRateIncrease = new Timed();
     /** This is used by a disruptor to reduce the quality of the products
 	produced by this unit over a certain time interval. */
-    void setFaultRateIncrease(double x, Double _untilWhen) {
+    public void setFaultRateIncrease(double x, Double _untilWhen) {
 	faultRateIncrease.setValueUntil(x,_untilWhen);
     }
+
+    private double everReleased = 0;
+    private double ot0 = -2;
+
+ 
 
        /** Overrides the super.offerReceiver(Receiver,Entity) in order to sometimes
 	reduce the quality of the offered batch.
@@ -103,9 +108,16 @@ public class ProdDelay extends SimpleDelay
 	//	if (r!=0) System.out.println("DEBUG: at " +t +", "+ getName() + " creates a batch with dr=" + r);
 	b.getLot().setIncreaseInFaultRate( r );
 	boolean z=super.offerReceiver( receiver, entity);
+	double ot = getLastOfferTime();
+	if (z && ot > ot0) {
+	    everReleased += Batch.getContentAmount(  getLastAcceptedOffers());
+	    ot0 = ot;
+	}
 
 	return z; 
-    }    
+    }
+
+    public double getEverReleased()  { return everReleased; }
 
     //  protected boolean offerReceivers() { //ArrayList<Receiver> receivers) {
     /** Just for debugging */

@@ -246,7 +246,13 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	return super.offer(receiver);
     }
 
- 
+    public double getEverReleased()  {
+	if (delay instanceof Reporting.HasBatches) {
+	    return ((Reporting.HasBatches)delay).getEverReleased();
+	} else {
+	    throw new UnsupportedOperationException();
+	}
+    }
     
 }
      

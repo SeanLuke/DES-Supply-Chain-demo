@@ -52,6 +52,9 @@ public interface Reporting {
 	    in (e.g.) a Queue or Delay both in term of units and
 	    in terms of batches */
 	public String hasBatches();
+	default public double getEverReleased() {
+	    throw new UnsupportedOperationException();
+	}
     }
     
 }

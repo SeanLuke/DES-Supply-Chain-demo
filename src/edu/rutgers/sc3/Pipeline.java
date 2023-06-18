@@ -19,12 +19,15 @@ import edu.rutgers.supply.Reporting.HasBatches;
     because it's either concurrent-processing, or has an input
     buffer in front of the one-batch-at-a-time stage
 */
-public class Pipeline extends Middleman implements NeedsPriming, HasBatches {
+public class Pipeline extends MultiStage {
     
     Vector<Middleman> stages = new Vector<>();
 
-    public Pipeline(SimState state,Resource typical
-			 )        {
+    Middleman firstStage() { return stages.get(0); }
+    Middleman lastStage() { return stages.lastElement(); }
+ 
+    
+    public Pipeline(SimState state,Resource typical )        {
         super(state, typical);
     }
 
@@ -34,48 +37,27 @@ public class Pipeline extends Middleman implements NeedsPriming, HasBatches {
     }
 
    
-    public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
-	return stages.get(0).accept(provider, resource, atLeast, atMost);
-    }
-
-    /** This can only be used ater the pipeline has been fully assembled */
-    public boolean addReceiver(Receiver receiver) {
-	return stages.lastElement().addReceiver(receiver);
-    }
-
-    public boolean offerReceiver(Receiver receiver, double atMost) {
-	return stages.lastElement().offerReceiver(receiver, atMost);
-    }
-
-    public ArrayList<Resource> getLastAcceptedOffers() {
-	return stages.lastElement().getLastAcceptedOffers();
-    }
-
-    
-    /** Returns true if the production step is empty, and one
-	should see if it needs to be reloaded */
-    boolean needsPriming() {
-	return (stages.get(0) instanceof NeedsPriming) &&
-	    ((NeedsPriming)stages.get(0)).needsPriming();
-    }
-
-    void setFaultRateIncrease(double x, Double _untilWhen) {
-	((NeedsPriming)stages.get(0)).setFaultRateIncrease(x, _untilWhen);
-    }
-
     public String hasBatches() {
 	Vector<String> v = new Vector<>();
 	int j=0;
 	for(Middleman stage: stages) {
 	    String s = "["+j+"]";
-	    s += ((HasBatches)stage.hasBatches());
+	    if (stage instanceof HasBatches) {
+		s += ((HasBatches)stage).hasBatches();
+	    } else {
+		s += "?";
+	    }
 	    v.add(s);
 	    j++;
 	}
 	return String.join(" : ", v);
-
     }
 
-    
+    /** Returns true if the production step is empty, and one
+	should see if it needs to be reloaded */
+    public boolean needsPriming() {
+	return (firstStage() instanceof NeedsPriming) &&
+	    ((NeedsPriming)firstStage()).needsPriming();
+    }
     
 }
