@@ -1,3 +1,18 @@
+#-- FIXME: parts to fill in later
+# Substrate Contract Negotiation parameters:
+# Substrate Contract Negotiation Delay: Unif(7,60) days
+
+
+#-- need backend processing for
+# substrateSmallProd.safety.prepreg,source,prepregProd
+
+#substrateSmallProd,prodStages,2
+#substrateSmallProd,delay.1,triangular,5,7,14
+#substrateSmallProd,delay.2,triangular,5,7,14
+
+#--------------------------------------------------------------
+
+
 #-- the notional batch size is very large, so that in real life
 #-- normally proration will happen, and the actual batch size will be equal to
 #-- the order size
@@ -39,28 +54,44 @@ prepregProd,outputDelay,Uniform,5,10
 prepregProd,output,substrateProd,0,1.0
 
 #----------------------------------
+#-- We have 2 parallel production lines, SubstrateSmallProd and
+#-- SubstrateLargeProd. They share their input buffers: the latter
+#-- makes use of the former's buffers
+#--
 substrateSmall,expiration,+Infinity
+substrateLarge,expiration,+Infinity
 
 
-substrateProd.safety.prepreg,initial,1836	
-substrateProd.safety.prepreg,targetLevel,1836	
-substrateProd.safety.prepreg,reorderPoint,918
-substrateProd.safety.prepreg,delay,triangular,60,75,90
-substrateProd.safety.prepreg,orderExpiration,91
-substrateProd.safety.prepreg,source,prepregProd
+substrateSmallProd.safety.prepreg,initial,1836	
+substrateSmallProd.safety.prepreg,targetLevel,1836	
+substrateSmallProd.safety.prepreg,reorderPoint,918
+substrateSmallProd.safety.prepreg,delay,triangular,60,75,90
+substrateSmallProd.safety.prepreg,orderExpiration,91
+substrateSmallProd.safety.prepreg,source,prepregProd
 
 
-substrateProd.safety.aluminum,initial,
-substrateProd.safety.aluminum,targetLevel,
-substrateProd.safety.aluminum,reorderPoint,
-substrateProd.safety.aluminum,delay,triangular,60,75,90
-substrateProd.safety.aluminum,orderExpiration,29
+substrateSmallProd.safety.aluminum,initial,
+substrateSmallProd.safety.aluminum,targetLevel,
+substrateSmallProd.safety.aluminum,reorderPoint,
+substrateSmallProd.safety.aluminum,delay,triangular,60,75,90
+substrateSmallProd.safety.aluminum,orderExpiration,29
 
 # (prepreg,aluminum)
-substrateProd,inBatch,
-substrateProd,batch,
-substrateProd,delay,triangular,14,17,21
-substrateProd,qaDelay,uniform,20,40
-substrateProd,faulty,0.05
+substrateSmallProd,inBatch,54*2,9*2
+substrateSmallProd,batch,2
+substrateSmallProd,prodStages,2
+substrateSmallProd,delay.1,triangular,5,7,14
+substrateSmallProd,delay.2,triangular,5,7,14
+substrateSmallProd,qaDelay,uniform,20,40
+substrateSmallProd,faulty,0.05
 
-substrateProd,outputDelay,Uniform,5,10
+
+substrateLargeProd,inBatch,432*2,72*2
+substrateLargeProd,batch,2
+substrateLargeProd,prodStages,3
+substrateLargeProd,delay.1,triangular,10,15,20
+substrateLargeProd,delay.2,triangular,10,15,20
+substrateLargeProd,delay.3,triangular,10,15,20
+
+
+# substrateProd,outputDelay,Uniform,5,10

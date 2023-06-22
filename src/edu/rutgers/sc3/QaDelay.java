@@ -41,6 +41,13 @@ public class QaDelay extends SimpleDelay
 	the production stage for reworking.
      */
     final double discardProb, reworkProb;
+
+    /** If true, the discard decision is made by applying "discardProb"
+	(and "reworkProb") separately to each item, rather than by simply
+	computing the number of discarded item by multiplying the
+	batch size by value drawn from faultyPortionDistribution
+    */
+    final boolean unitLevel;
     
     /** Unit (pill) counts for the 3 directions of flow. */
     double badResource = 0, reworkResource=0, releasedGoodResource=0;
@@ -77,7 +84,7 @@ public class QaDelay extends SimpleDelay
     /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
 	@param _faultyPortionDistribution If non-null, then _discardProb and double _reworkProb must be zero, and vice versa.
      */
-    public QaDelay(SimState state, Resource typicalBatch,  double _discardProb, double _reworkProb, AbstractDistribution _faultyPortionDistribution) {
+    public QaDelay(SimState state, Resource typicalBatch,  double _discardProb, double _reworkProb, AbstractDistribution _faultyPortionDistribution, boolean _unitLevel) {
 	super(state, typicalBatch);
 	prototype = typicalBatch;
 	setName("QaDelay("+typicalBatch.getName()+")");
@@ -85,6 +92,7 @@ public class QaDelay extends SimpleDelay
 	discardProb = _discardProb;
 	reworkProb= _reworkProb;
 	faultyPortionDistribution = _faultyPortionDistribution;
+	unitLevel = _unitLevel;
   	discardSink = new MSink( state, typicalBatch);
 
 	//	System.out.println("DEBUG: Created QaDelay(" + getName()+"," + discardProb + "," + reworkProb);
@@ -115,8 +123,12 @@ public class QaDelay extends SimpleDelay
 	double reworkProb = para.getDouble("rework", 0.0);	    
 
 	if (faultyPortionDistribution !=null && faultyProb+reworkProb!=0) throw new IllegalInputException("For " + para.name +", specify either faulty portion distribution or faulty+rework probabilities, but not both!");    
-    
-	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution);			      
+
+	boolean unitLevel = (faultyPortionDistribution ==null);
+	unitLevel = para.getBoolean("qaUnitLevel", unitLevel);
+	if (faultyPortionDistribution !=null && unitLevel) throw new IllegalInputException("In " + para.name +", cannot have both faulty portion distribution and qaUnitLevel=true");
+	
+	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution, unitLevel);			      
 	//qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
 	//Double delayTime = para.getDouble("qaDelay", null);
 	//if (delayTime==null) throw new IllegalInputException("Missing value for " + para.name +".qaDelay in config file!");
@@ -138,6 +150,53 @@ public class QaDelay extends SimpleDelay
     void setRework( Receiver _sentBackTo) {
 	sentBackTo=_sentBackTo;
     }
+
+    /** Deciding how many units from a batch are to be discarded,
+	and how many are to be sent to be reworked. 
+
+	@param amt Size of the batch
+	@param li The lot info (if available), from which fault rate
+	adjustment can be obtained. It can be null for a fungible product
+	@return { numberToDiscard, numberToRework}
+     */
+    private double[] unitLevelDiscard(double amt, LotInfo li) {
+	double now = state.schedule.getTime();
+	double discard=0, rework=0;
+       	if (faultyPortionDistribution!=null) {
+	    double r =faultyPortionDistribution.nextDouble();
+			//CombinationDistrinution.nextDouble(faultyPortionDistribution, (int)amt);
+	    if (r<0) r=0;
+	    if (r>1) r=1;
+
+	    double rEffective = Math.min(r + faultRateIncrease.getValue(now), 1.0);
+		
+	    discard = Math.round( amt * rEffective);
+	} else if (unitLevel) { // true unit-level decision
+
+	    double dp = discardProb;
+	    if (li!=null) 	dp    += li.getIncreaseInFaultRate();
+	    dp = Math.min(dp, 1);
+
+	    // The probability that the unit is "not good", i.e must be
+	    // either discarded or reworked
+	    double notGoodProb = Math.min( dp + reworkProb, 1);
+	    if ( notGoodProb  >0) {
+		
+		int n = (int)Math.round(amt);
+		if (n != amt) throw new IllegalArgumentException("Cannot perform unit-level QA decisions, because batch size is not integer: " + amt);
+		for(int j=0; j<n; j++) {		    
+		    boolean isBad = state.random.nextBoolean(notGoodProb);
+		    if (isBad) {
+			boolean willRework = state.random.nextBoolean( reworkProb/notGoodProb);
+			if (willRework) rework++;
+			else discard++;
+		    }
+		}
+	    }
+	}
+	return new double[] { discard, rework };
+    }
+
     
     /** This is a wrapper over the standard Provider.offerReceiver(),
 	which reduces the amount of available stuff (resource) we are
@@ -152,6 +211,19 @@ public class QaDelay extends SimpleDelay
 	the already-checked pool. This can be fixed by creating a
 	separate Queue for the already-checked stuff, and passing it
 	to Receiver.accept() calls.
+	
+	<P>
+	Types of decision:
+	<ul>
+	<li>Entire batch accepted or discarded. This is specified by a scalar,
+	discardProb (and reworkProb, if needed), that contains the probability
+	of the decision.
+	<li>Part of the batch is discarded, with a decision based by drawing a single number from a distribution (faultyPortionDistribution)
+	<li>Part of the batch is discarded, with decisions based on the level of individual items. For this discardProb  (and reworkProb, if needed) is provided, and the flag .... is set to true.
+	
+	</ul>
+       
+      
        		
     */
     protected boolean offerReceiver(Receiver receiver, double atMost) {
@@ -161,28 +233,30 @@ public class QaDelay extends SimpleDelay
 	boolean showAge = false; // !Demo.quiet;
 	boolean z;
 
-	double t = state.schedule.getTime();
+	double now = state.schedule.getTime();
 
-	if (faultyPortionDistribution!=null) {
-	    double amt, faulty;
+	// Can we discard part of the lot, or do we only do whole-lot discards?
+	boolean partialLotDiscard = (faultyPortionDistribution!=null) || unitLevel;      
 
+	if (partialLotDiscard) {
+	    //if (faultyPortionDistribution!=null) {
+	    // Discarding part of the batch based on a percentage
+	    // drawn from a random distribution. 
+	    double amt, discard=0, rework=0;
+	    
 	    if (entities == null) {
 		CountableResource cr = resource;
 		amt = Math.min( cr.getAmount(), atMost);		
 		if (amt==0) return false; // this happens sometimes, triggered by SimpleDelay.step()
-
-
-		double r = faultyPortionDistribution.nextDouble();
-		if (r<0) r=0;
-		if (r>1) r=1;
-
-		double rEffective = Math.min(r + faultRateIncrease.getValue(t), 1.0);
 		
-		faulty = Math.round( amt * rEffective);
-		// The faulty product is destroyed, so we decrease the resource now
-		cr.decrease(faulty);
+		double[] dr = unitLevelDiscard(amt, null);
 
-		double atMost1 = atMost - faulty;
+		discard = dr[0];
+		if (dr[1]>0) throw new AssertionError("No support for rework");
+		// The faulty product is destroyed, so we decrease the resource now
+		cr.decrease(discard);
+		
+		double atMost1 = atMost - discard;
 		if (atMost1<0) {
 		    throw new AssertionError("Error in atMost arithmetic");
 		} else if (atMost1==0 || cr.getAmount()==0) {
@@ -193,50 +267,44 @@ public class QaDelay extends SimpleDelay
 		}
 		
 	    } else {
-		// throw new IllegalArgumentException("pharma3.QaDelay with faultyPortionDistribution only works with fungibles, because we don't support variable-size batches!");
-		
-		
+						
 		Batch e = (Batch)entities.getFirst();
-
+		LotInfo li = e.getLot();
 		if (showAge) {
-		    double now = state.schedule.getTime();
-		    LotInfo li = e.getLot();
 		    double age =  (now - li.getEarliestAncestorManufacturingDate());
 		    System.out.println(getName() + " at " + now + " testing batch aged " + age + "; " + li);
 		}
-				     
-  		
+				       		
 		amt = e.getContentAmount();
+		double[] dr = unitLevelDiscard(amt, li);
+				
+		discard = dr[0];
+		rework = dr[1];
 
-		double r = faultyPortionDistribution.nextDouble() + e.getLot().getIncreaseInFaultRate();
-
-
-		//if (prototype.getName().equals("BatchOfEE")) {
-		//System.out.println("DEBUG: QA("+getName()+") at t=" + t+", r=" + r);
-		    //}
+		if (rework>0) {
+		    Batch rb =e.split(rework);
+		    z = super.offerReceiver(sentBackTo, rb);
+		    reworkResource += rework;
+		    reworkBatches++;
+		}
 		
-		if (r<0) r=0;
-		if (r>1) r=1;
-
-
-		faulty = Math.round( amt * r);
-		e.getContent().decrease(faulty);
+		e.getContent().decrease( discard);
 		z = super.offerReceiver(receiver, e);
-		entities.remove(e);		// manually remove e from entities?
+		entities.remove(e);	// manually remove e from entities?
 	    }
-
-
-	    if (!z) throw new IllegalArgumentException("QaDelay cannot be used with a receiver ("+receiver.getName()+") that refuses offers.  amt="+amt+", atMost=" +atMost+", faulty="+faulty);
 	    
-	    badResource +=  faulty;
-	    releasedGoodResource += (amt-faulty);
+	    if (!z) throw new IllegalArgumentException("QaDelay cannot be used with a receiver ("+receiver.getName()+") that refuses offers.  amt="+amt+", atMost=" +atMost+", discard="+discard);
+	    
+	    badResource +=  discard;
+	    releasedGoodResource += (amt-discard);
 
-	    if (faulty>0) 	    badBatches++;
-	    if (faulty<amt)	    releasedBatches ++;
-
+	    if (discard>0) 	    badBatches++;
+	    if (discard<amt)	    releasedBatches ++;
+	    
 	    //System.out.println("F=" + faulty +", G=" + (amt-faulty));
 	    
-	} else {
+	} else {  // Entire-lot discard, using discardProb (with unitLevel=false)
+	    if (unitLevel) throw new AssertionError("unitLevel");
 	    if (entities == null) throw new IllegalArgumentException("pharma3.QaDelay with faultyProb only works with Batches!");
 
 	    Batch b = (Batch)entities.getFirst();
@@ -247,12 +315,6 @@ public class QaDelay extends SimpleDelay
 	    double dp = discardProb + b.getLot().getIncreaseInFaultRate();
 	    dp = Math.min(dp, 1);
 
-
-	    //	    if (prototype.getName().equals("BatchOfEE")) {
-	    //	System.out.println("DEBUG: QA("+getName()+") at t=" + t+", dp=" + dp);
-	    //}
-	    
-	    
 	    // The probability that the lot is "not good", i.e must be
 	    // either discarded or reworked
 	    double notGoodProb = Math.min( dp + reworkProb, 1);
@@ -273,16 +335,13 @@ public class QaDelay extends SimpleDelay
 	    if (!z) throw new IllegalArgumentException("The expectation is that the receivers for QaDelay " + getName() + " never refuse a batch");
 	    
 	    if (showAge) {
-		double now = state.schedule.getTime();
 		LotInfo li = b.getLot();
 		String code = willRework? "r" :willDiscard? "b" : "g";
 		li.addToMsg("[tested " + code + " @" + now +" ]");
-		double age =  (now - li.getEarliestAncestorManufacturingDate());
-		
+		double age =  (now -li.getEarliestAncestorManufacturingDate());
 		System.out.println(getName() + " at " + now + " testing batch aged " + age + "; " + li );
 	    }
 				     
-	    
 	    if (willRework) {
 		reworkResource += amt;
 		reworkBatches++;
@@ -293,7 +352,6 @@ public class QaDelay extends SimpleDelay
 		releasedGoodResource += amt;
 		releasedBatches++;
 	    }
-
 	}
 	
 	return z;
