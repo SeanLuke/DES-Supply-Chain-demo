@@ -10,6 +10,8 @@
 #substrateSmallProd,delay.1,triangular,5,7,14
 #substrateSmallProd,delay.2,triangular,5,7,14
 
+# Need to accommodate batch size change in substrate prod/QA (2/1)
+
 #--------------------------------------------------------------
 
 
@@ -79,19 +81,30 @@ substrateSmallProd.safety.aluminum,orderExpiration,29
 # (prepreg,aluminum)
 substrateSmallProd,inBatch,54*2,9*2
 substrateSmallProd,batch,2
-substrateSmallProd,prodStages,2
-substrateSmallProd,delay.1,triangular,5,7,14
-substrateSmallProd,delay.2,triangular,5,7,14
-substrateSmallProd,qaDelay,uniform,20,40
+#-- we treat the first 3 stages of QA as if they were production stages,
+#-- in order to avoid coding multi-stage QA
+substrateSmallProd,prodStages,2+3
+substrateSmallProd,prodDelay.1,triangular,5,7,14
+substrateSmallProd,prodDelay.2,triangular,5,7,14
+substrateSmallProd,prodDelay.3,uniform,7,12
+substrateSmallProd,prodDelay.4,uniform,7,12
+substrateSmallProd,prodDelay.5,uniform,7,12
+substrateSmallProd,qaUnitLevel,true
+substrateSmallProd,qaDelay,uniform,7,12
 substrateSmallProd,faulty,0.05
+
+
+substrateSmallProd.rework,prodDelay,uniform,1,14
+substrateSmallProd.rework,qaDelay,uniform,1,50
+
 
 
 substrateLargeProd,inBatch,432*2,72*2
 substrateLargeProd,batch,2
 substrateLargeProd,prodStages,3
-substrateLargeProd,delay.1,triangular,10,15,20
-substrateLargeProd,delay.2,triangular,10,15,20
-substrateLargeProd,delay.3,triangular,10,15,20
+substrateLargeProd,prodDelay.1,triangular,10,15,20
+substrateLargeProd,prodDelay.2,triangular,10,15,20
+substrateLargeProd,prodDelay.3,triangular,10,15,20
 
 
 # substrateProd,outputDelay,Uniform,5,10

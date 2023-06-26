@@ -112,10 +112,16 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	if (v==null) 	return defVal;
 	if (v.size()!=1) throwII(key, "Expected exactly 1 data column");
 	String s = v.get(0);
-	return  parseDoubleEx(key, s);
-	
+	return  parseDoubleEx(key, s);	
     }
 
+    public Integer getInt(String key, Integer defVal) throws IllegalInputException {
+	Double d = getDouble(key, null);
+	if (d==null) return defVal;
+	int n = d.intValue();
+	if ((double)n != d.doubleValue()) throw new  IllegalInputException("For key '"+key+"' expected an integer value, found " + d);
+	return n;
+    }
 
     public double getDouble(String key) throws IllegalInputException {
 	Double  x = getDouble(key, null);

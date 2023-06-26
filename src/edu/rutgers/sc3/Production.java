@@ -36,7 +36,7 @@ class Production extends AbstractProduction
 
     /** This could be a ProdDelay, a ThrottledStage, or a Pipeline, as needed */
     private Middleman _prodStage;
-    private <T extends Middleman & NeedsPriming & Reporting.HasBatches> T  prodStage() {
+    <T extends Middleman & NeedsPriming & Reporting.HasBatches> T  prodStage() {
 	return (T)_prodStage;
     }
     //    private ProdDelay prodDelay;
@@ -87,6 +87,9 @@ class Production extends AbstractProduction
     Receiver getTransEntrance() { return needTrans!=null? needTrans: transDelay; }
 	
 
+    /** This may be inserted if QA induces a split, in order to
+	put the two streams together again. */
+    private Filter postQaJoin = null;
 
     //public ProdDelay getProdDelay() { return prodDelay; }
 
@@ -98,7 +101,9 @@ class Production extends AbstractProduction
 	to send its product to the next element of the supply chain.
     */
     public Provider getTheLastStage() {
-	return qaDelay!=null? qaDelay:
+	return
+	    postQaJoin != null?  postQaJoin:
+	    qaDelay!=null? qaDelay:
 	    transDelay!=null? transDelay: prodStage();
     }
 
@@ -167,7 +172,15 @@ class Production extends AbstractProduction
 	(Historically, it was 1, but in SC-3 multiple products can be produced)
     */
     //final int nout;
-    
+
+    /** I added this because the Filter class is, strangely, abstract! */
+    /*
+    static class SimpleFilter extends Filter {
+	public SimpleFilter(sim.engine.SimState state, Resource typical) {
+	    super(state, typical);
+	}
+    }
+    */
     /** @param inResource Inputs (e.g. API and excipient). Each of them is either a (prototype) Batch or a CountableResource
 	@param outResource batches of output (e.g. bulk drug)
      */    
@@ -214,7 +227,7 @@ class Production extends AbstractProduction
 
 	double cap = (outResource instanceof Batch) ? 1:  recipe.outBatchSize;	
 
-	qaDelay = QaDelay.mkQaDelay( para, state, outResource);
+	qaDelay = QaDelay.mkQaDelay( config, para, state, outResource);
 	if (qaDelay != null) {
 	    if (this instanceof Macro)  addProvider(qaDelay, false);
 	    if ( qaIsThrottled) {
@@ -261,36 +274,32 @@ class Production extends AbstractProduction
 	    transDelay = null;
 	    needTrans = null;
 	}
-	
-	ProdDelay prodDelay = new ProdDelay(state,this,outResource);
 
-	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
-	if (w!=null) prodDelay.addReceiver(w);
 
-	AbstractDistribution d0 = para.getDistribution("prodDelay",state.random);
-	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)recipe.outBatchSize);
-
-	AbstractDistribution d = para.getDistribution("prodDelay",state.random);
-	boolean unit = (d==null);
-	if (unit)  d = para.getDistribution("prodDelayUnit",state.random);
-
-	if (d!=null) {
-	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap, d, unit);
-
-	    needProd.setWhose(this);
-	    needProd.setAutoReloading(true);
-	    _prodStage = new ThrottledStage(state, needProd, prodDelay);
+	Integer nProdStages = para.getInt("prodStages", null);
+	if ( nProdStages == null) {
+	    _prodStage = mkProdDelay("");
+	} else if ( nProdStages == 1) {
+	    _prodStage = mkProdDelay(".1");
+	} else if ( nProdStages > 1) {
+	    Pipeline p = new Pipeline(state, outResource);
+	    for(int j=0; j<nProdStages; j++) {
+		p.addStage( mkProdDelay("."+j));
+	    }
+	    _prodStage = p;
 	} else {
-	    // Production delay is not specified; thus we assumed that
-	    // production is (nearly) instant, as it's the case for
-	    // RM EE supplier in SC-2. Therefore it's not throttled...
-	    // A kludge for nearly-instant production
-	    prodDelay.setDelayTime(0.0001);
-	    _prodStage = prodDelay;
-	}
-	
-	if (qaDelay !=null && qaDelay.reworkProb >0) {
-	    qaDelay.setRework( prodStage());
+	    throw new IllegalInputException("Unexpected number of stages: " + nProdStages);
+	}	
+
+	    
+	if (qaDelay !=null) {
+	    if (qaDelay.reworkStage!=null) {
+		postQaJoin = new Filter(state, outResource);
+		qaDelay.addReceiver(postQaJoin);
+		qaDelay.reworkStage.setQaReceiver(postQaJoin, 1.0);
+	    } else  if (qaDelay.reworkProb >0) {
+		qaDelay.setRework( prodStage());
+	    }
 	}
 
 	stolenShipmentSink = new MSink(state, outResource);
@@ -322,9 +331,42 @@ class Production extends AbstractProduction
 	if (outputName!=null) {
 	    throw new AssertionError("Using outputName (" +outputName+") is not supported yet");
 	}
-
-
 	
+    }
+
+    /** Creates the prod delay (throttled, if needed)
+	@param suff Either "", or ".1" etc
+    */
+    Middleman mkProdDelay(String suff) throws IllegalInputException {
+	ProdDelay prodDelay = new ProdDelay(state,this,outResource);
+
+	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
+	if (w!=null) prodDelay.addReceiver(w);
+
+	AbstractDistribution d0 = para.getDistribution("prodDelay"+suff,state.random);
+	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)recipe.outBatchSize);
+
+	AbstractDistribution d = para.getDistribution("prodDelay"+suff,state.random);
+	boolean unit = (d==null);
+	if (unit)  d = para.getDistribution("prodDelayUnit"+suff,state.random);
+
+	if (d!=null) {
+	    final double cap = 1;
+	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap, d, unit);
+
+	    needProd.setWhose(this);
+	    needProd.setAutoReloading(true);
+	    return new ThrottledStage(state, needProd, prodDelay);
+	} else {
+	    // Production delay is not specified; thus we assumed that
+	    // production is (nearly) instant, as it's the case for
+	    // RM EE supplier in SC-2. Therefore it's not throttled...
+	    // A kludge for nearly-instant production
+	    prodDelay.setDelayTime(0.0001);
+	    return prodDelay;
+	}
+
+
     }
 
     /** Have this Production unit make use of another unit's
@@ -477,7 +519,18 @@ class Production extends AbstractProduction
     //	if (startPlan != null) x += startPlan;
     //	startPlan = x;
     //}
+
+    /** This is set by the constructor if there is a contract
+	negotiation delay which may delay execution of orders */
+    private OrderDelay orderDelay = null;
+
+    
     public void addToPlan(Order order) {
+	if (orderDelay==null)   doAddToPlan(order);
+	else orderDelay.enter(order);
+    }
+    
+    public void doAddToPlan(Order order) {
 	if (order==null || order.amount<0) throw new IllegalArgumentException(getName() +".addToPlan(" + order+")");
 	if (order.amount==0) return;
 	everPlanned += order.amount;
@@ -769,7 +822,9 @@ class Production extends AbstractProduction
 
     /** Produces an optional Delay element that can be stuck at the output
 	end of this Production unit. Configured based on the "outputDelay"
-	field in the ParaSet.
+	field in the ParaSet. This element is not viewed as part of Production;
+	rather, the higher level structure (Demo) may tack an output delay
+	after the Production's output.
     */
     Delay mkOutputDelay(Receiver rcv)  throws IllegalInputException {
 

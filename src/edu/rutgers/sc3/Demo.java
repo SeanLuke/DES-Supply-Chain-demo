@@ -112,12 +112,12 @@ public class Demo extends SimState {
     Production 	adhesiveSupplier, diodeSupplier;
 
 
-    Production prepregProd, substrateProd, cellProd, cellCoverglassAssembly, cellPackaging;
+    Production prepregProd, substrateProd[] = new Production[2], cellProd, cellCoverglassAssembly, cellPackaging;
     Production arrayAssembly;
     
  
     Batch fiberBatch, resinBatch, prepregBatch, aluminumBatch;
-    Batch2 substrateBatch;
+    Batch[] substrate = new Batch[2], parray = new Batch[2];
     Batch cellBatch, packagedCellBatch, cellRMBatch, coverglassBatch, coverglassAssemblyBatch, diodeBatch, adhesiveBatch;
 
     /** The main part of the start() method. It is taken into a separate
@@ -149,7 +149,17 @@ public class Demo extends SimState {
 		new CountableResource("substrateSmall", 1),
 		new CountableResource("substrateLarge", 1)};
 
-	    Batch2 substrateBatch = Batch2.mkPrototype(substrate, config);
+	    Batch substrateBatch[] = {
+		Batch.mkPrototype(substrate[0], config),
+		Batch.mkPrototype(substrate[1], config)};
+
+	    CountableResource parray[] = {
+		new CountableResource("panelArraySmall", 1),
+		new CountableResource("panelArrayLarge", 1)};
+
+	    Batch parrayBatch[] = {
+		Batch.mkPrototype(parray[0], config),
+		Batch.mkPrototype(parray[1], config)};
 
 	    UncountableResource adhesive = new UncountableResource("adhesive", 1);
 	    Batch adhesiveBatch = Batch.mkPrototype(adhesive, config);
@@ -171,19 +181,24 @@ public class Demo extends SimState {
 	    CountableResource coverglassAssembly = new CountableResource("coverglassAssembly", 1);
 	    Batch coverglassAssemblyBatch = Batch.mkPrototype(coverglassAssembly, config);
 
-	    
+	    addFiller("   --- SUBSTRATES ---");		      	    
 	    prepregProd = new Production(this, "prepregProd", config,
 					 new Resource[] {fiberBatch, resinBatch},
 					 prepregBatch);
 	    add(prepregProd);
 
-	    substrateProd = new Production(this, "substrateProd", config,
-					 new Resource[] {prepregBatch, aluminumBatch},
-					 substrateBatch);
-	    add(substrateProd);
-
-	    prepregProd.setQaReceiver(substrateProd.getEntrance(0), 1.0);	
+	    for(int j=0; j<1; j++) { // FIXME 2
 	    
+		substrateProd[j] = new Production(this, substrate[j].getName() + "Prod", config,
+						  new Resource[] {prepregBatch, aluminumBatch},
+						  substrateBatch[j]);
+		add(substrateProd[j]);
+	    }
+
+	    prepregProd.setQaReceiver(substrateProd[0].getEntrance(0), 1.0);
+
+	   
+ 	    addFiller("   --- ASSEMBLY ---");		      	    
 
 	    /*
 	    eeRMSupplier = new Production(this, "eeRMSupplier", config,

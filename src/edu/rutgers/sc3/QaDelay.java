@@ -3,6 +3,7 @@ package  edu.rutgers.sc3;
 import edu.rutgers.supply.*;
 
 import java.util.*;
+import java.io.*;
 import java.text.*;
 
 import sim.engine.*;
@@ -48,7 +49,7 @@ public class QaDelay extends SimpleDelay
 	batch size by value drawn from faultyPortionDistribution
     */
     final boolean unitLevel;
-    
+
     /** Unit (pill) counts for the 3 directions of flow. */
     double badResource = 0, reworkResource=0, releasedGoodResource=0;
     public double getBadResource() { return badResource; }
@@ -107,7 +108,7 @@ public class QaDelay extends SimpleDelay
 	@return a new QaDelay object, or null if the para set contains no 
 	parameters for one.
      */
-    static public QaDelay mkQaDelay(ParaSet para, SimState state, Resource outResource) throws IllegalInputException {	
+    static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state, Resource outResource) throws IllegalInputException, IOException {	
 	// See if "faulty" in the config file is a number or
 	// a distribution....
 	double faultyProb=0;	
@@ -128,7 +129,17 @@ public class QaDelay extends SimpleDelay
 	unitLevel = para.getBoolean("qaUnitLevel", unitLevel);
 	if (faultyPortionDistribution !=null && unitLevel) throw new IllegalInputException("In " + para.name +", cannot have both faulty portion distribution and qaUnitLevel=true");
 	
-	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution, unitLevel);			      
+	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution, unitLevel);
+
+	String reworkName = para.name + ".rework";
+	ParaSet para2 = config.get(reworkName);
+	if (para2 != null) {
+	    qaDelay.reworkStage = new Production(state, reworkName, config,
+						 new Resource[0],
+						 (Batch)outResource);
+	    qaDelay.setRework(qaDelay.reworkStage.prodStage());
+	}
+	
 	//qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
 	//Double delayTime = para.getDouble("qaDelay", null);
 	//if (delayTime==null) throw new IllegalInputException("Missing value for " + para.name +".qaDelay in config file!");
@@ -137,6 +148,16 @@ public class QaDelay extends SimpleDelay
 	return qaDelay;
     }
 
+    /** The optional node that includes production and QA, to which
+	some batches may be sent for rework. This is null (and faulty
+	batches are sent back to the main production unit for rework),
+	unless "name.rework" para set exists in the config file */
+    Production reworkStage;
+    
+
+    /** This is where some bad batches may be sent for rework.
+	This is either the main production unit (default), or reworkStage
+	(if so specified in the config file). */
     Receiver sentBackTo=null;
 
 
