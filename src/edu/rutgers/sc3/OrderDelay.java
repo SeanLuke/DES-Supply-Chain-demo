@@ -18,7 +18,7 @@ import edu.rutgers.util.*;
     <p> A ContractDelay is created by a Production object who received
     delayed orders. The Production object should also set the delay
     distribution as specified by the config file. Whenever
-    Production.addToPlan(Order order) is called, the Production object
+    Production.request(Order order) is called, the Production object
     puts the order (packaged into an Entity) into the OrderDelay;
     once the order has ripened, the OrderDelay feeds it into its internal
     sink, which triggers Production.doAddToPlan().

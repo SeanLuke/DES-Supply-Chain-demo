@@ -314,8 +314,15 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	if (!(getInfo() instanceof PrototypeInfo)) throw new AssertionError();
 	return (CountableResource[])getStorage();
     }
-	    
 
+    /** Resets the product's manufacturing date and expiration
+	date. Is used when a product's expiration date is counted not
+	from the batch creation but from some other date in its life
+	cycle, e.g. QA or arrival to the input buffer.
+     */
+    public void resetExpiration(double now) {
+	getLot().resetExpiration(now);
+    }
     
     
 }

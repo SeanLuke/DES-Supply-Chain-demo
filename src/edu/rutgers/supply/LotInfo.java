@@ -101,6 +101,15 @@ public class LotInfo {
 	
     }
 
+    /** Resets the manufacturing and expiration date.  This method
+	should only be used for products whose lots are initialized
+	during the batch creation based on the standard shelf life.
+     */
+    public void resetExpiration(double now) {
+	double d = now - manufacturingDate;
+	manufacturingDate = now;
+	expirationDate += d;
+    }
     
     /** Adjusts the various dates in this lot as a result of merger with
 	another lot, the product in which may be not as fresh as in this lot.

@@ -154,12 +154,18 @@ extends Probe implements Reporting
 	
 	String un= Batch.getUnderlyingName(prototype);
 
-	if (para.get("delay")==null) throw new IllegalInputException("No " + getName() +",delay value in the config file");
-	AbstractDistribution refillDistr = para.getDistribution("delay", state.random); 
-	refillDelay = new Delay(state,prototype);
-	refillDelay.setDelayDistribution(refillDistr);
-	refillDelay.setName("RefillDelay." + name);
-	refillDelay.addReceiver(this);
+	if (para.get("delay")==null) {
+	    if (para.get("source")==null) {
+		throw new IllegalInputException("No " + getName() +",delay value in the config file. All safety stocks are supposed to have a delay value, unless fed from a production node");
+	    }
+	    refillDelay = null;
+	} else {
+	    AbstractDistribution refillDistr = para.getDistribution("delay", state.random); 
+	    refillDelay = new Delay(state,prototype);
+	    refillDelay.setDelayDistribution(refillDistr);
+	    refillDelay.setName("RefillDelay." + name);
+	    refillDelay.addReceiver(this);
+	}
 	this.addReceiver(whose);
 	// to ensure multi-batch shipments are consolidated safely
 	if (getTypicalProvided() instanceof Batch) {
@@ -172,22 +178,18 @@ extends Probe implements Reporting
 	Double q = para.getDouble("needsAnomaly", null);
 	needsAnomaly = (q==null || q<0) ? null: q;
 
-	Vector<String> sourceName = para.get("source");
-	if (sourceName==null) {
-	
-	    magicSource = new MagicSource(state);
-	    magicChannel = new Channel(magicSource, refillDelay, getName());
-	    initSupply(initial);
-	} else {
-	    throw new AssertionError("Using named source ("+sourceName+") is not supported yet");
-	    // Need to set up ordering process, and initialization
-	}
+	initSupply(initial);
+
+	// We'll set up mySource in linkUp()
     }
 
-    private final MagicSource magicSource;
+    /** The replenishment source, which is either a built-in
+	MagicSource, or an external Pool or Provider. It is
+	initialized in linkUp() */
+    private BatchProvider2 mySource;
     
     /** This is just a dummy variable for use in the Order constructor */
-    private final Channel magicChannel;
+    private  Channel magicChannel;
     
     /** This methos is called daily, from step(), to check the
 	current stock level and make a replenishment order,
@@ -217,7 +219,7 @@ extends Probe implements Reporting
 	double need = targetLevel - has;
 	Order order = new Order(now, magicChannel, orderedToday);
 
-	magicSource.request(order);
+	mySource.request(order);
 	orderedToday = need; 
 	
 	onOrder.add(order);
@@ -226,6 +228,9 @@ extends Probe implements Reporting
 
     }
 
+    /** A built-in provider for MTS replenishments. Used in input
+	buffers unless they have a "real" external source for this
+	purpose. */
     class MagicSource extends Source implements BatchProvider2 {
 
 	MagicSource(SimState state) {
@@ -421,7 +426,8 @@ extends Probe implements Reporting
 	String s = "[" + getName()+
 	    " has ordered " + (long)everOrdered + " u, " +
 	    " has received " + (long)everReceived + " u. " +
-	    "On order=" + onOrder +"; in transit " + refillDelay.getDelayedPlusAvailable() + ba;
+	    "On order=" + onOrder;
+	if (refillDelay!=null) s += "; in transit " + refillDelay.getDelayedPlusAvailable() + ba;
 
 	s += "]";
        return wrap(s);
@@ -468,6 +474,25 @@ extends Probe implements Reporting
    	//System.out.println("DEBUG:" + getName() + ", initSupply(" +initial+") out");
     }
 
+    /**
+       
+	<pre>
+	substrateSmallProd.safety.prepreg,source,prepregProd
+	</pre>
+    */
+    void linkUp(HashMap<String,Steppable> knownPools) throws IllegalInputException {
+	String source = para.getString("source", null);
 
+
+	if (source==null) {	
+	    mySource = new MagicSource(state);
+	} else {
+
+	    Steppable _from =  knownPools.get(source);
+	    if (_from==null || !(_from instanceof BatchProvider2)) throw new  IllegalInputException("There is no provider unit named '" + getName() +"', in " + getName() + ",source");
+	    mySource = (BatchProvider2)_from;
+	}
+	magicChannel = new Channel(mySource, refillDelay!=null?refillDelay:this, getName());
+    }
     
 }

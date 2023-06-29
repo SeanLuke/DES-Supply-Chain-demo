@@ -49,6 +49,7 @@ prepregProd,inBatch,600*0.041,600*0.027
 prepregProd,batch,600
 prepregProd,delay,triangular,14,17,21
 prepregProd,qaDelay,uniform,20,40
+prepregProd,qaResetExpiration,true
 prepregProd,faulty,0.05
 
 prepregProd,outputDelay,Uniform,5,10
@@ -79,6 +80,7 @@ substrateSmallProd.safety.aluminum,delay,triangular,60,75,90
 substrateSmallProd.safety.aluminum,orderExpiration,29
 
 # (prepreg,aluminum)
+substrateSmallProd,orderDelay,uniform,7,60
 substrateSmallProd,inBatch,54*2,9*2
 substrateSmallProd,batch,2
 #-- we treat the first 3 stages of QA as if they were production stages,
@@ -97,8 +99,9 @@ substrateSmallProd,faulty,0.05
 substrateSmallProd.rework,prodDelay,uniform,1,14
 substrateSmallProd.rework,qaDelay,uniform,1,50
 
+substrateSmallProd,outputDelay,Uniform,7,14
 
-
+#--- Substrate, large (SALP)  FIXME: fill it in!
 substrateLargeProd,inBatch,432*2,72*2
 substrateLargeProd,batch,2
 substrateLargeProd,prodStages,3
@@ -106,5 +109,74 @@ substrateLargeProd,prodDelay.1,triangular,10,15,20
 substrateLargeProd,prodDelay.2,triangular,10,15,20
 substrateLargeProd,prodDelay.3,triangular,10,15,20
 
+#--- Solar cell production
 
-# substrateProd,outputDelay,Uniform,5,10
+
+#-- uniform,0,66624
+cellProd.safety.cellRM,initial,55520	
+cellProd.safety.cellRM,targetLevel,55520	
+cellProd.safety.cellRM,reorderPoint,27760
+cellProd.safety.cellRM,delay,triangular,60,84,140
+cellProd.safety.cellRM,orderExpiration,141
+
+#--- Cell Prod; inputs: cellRM
+cellProd,inBatch,2776
+cellProd,batch,2776
+cellProd,prodStages,2
+cellProd,prodDelay.1,uniform,7,10
+cellProd,prodDelay.2,triangular,7,14,21
+cellProd,outputDelay,uniform,2,4
+cellProd,output,cellAssembly,0,1.0
+
+#---- Solar Cell Assembly; inputs: cell, coverglass
+cellAssembly,inBatch,2776,2776
+cellAssembly,batch,2776
+cellAssembly,prodDelay,triangular,7,10,14
+cellAssembly,tranDelay,Uniform,1,2
+cellAssembly,qaDelay,uniform,5,10
+cellAssembly,faulty,0.05
+cellAssembly,output,cellPackaging,0,1.0
+cellAssembly,outputDelay,uniform,1,2
+
+#---coverglass FIXME
+#cellAssembly.safety.coverglass,initial,22224	
+#cellAssembly.safety.coverglass,targetLevel,?
+#cellAssembly.safety.coverglass,reorderPoint,?
+#cellAssembly.safety.coverglass,delay,triangular,120,180,240
+#--- FIXME: coverglass is MTO, not MTS!
+#cellAssembly.safety.coverglass,orderExpiration,?
+
+
+#----- Solar cell packaging
+
+#-- uniform,0,22224
+cellPackaging.safety.cellPM,initial,22224	
+cellPackaging.safety.cellPM,targetLevel,11112
+cellPackaging.safety.cellPM,reorderPoint,22224
+cellPackaging.safety.cellPM,delay,triangular,30,45,60
+cellPackaging.safety.cellPM,orderExpiration,61
+
+
+cellPackaging,inBatch,2776,2776
+cellPackaging,batch,2776
+cellPackaging,prodDelay,uniform,1,2
+# FIXME to where?
+cellPackaging,output,???,0,1.0
+cellPackaging,outputDelay,uniform,5,10
+
+#-------------------------
+# inputs: prepregSmall,prepregLarge,diode,adhesive
+arraySmallAssembly.safety.adhesive,reorderPoint,50
+arraySmallAssembly.safety.adhesive,targetLevel,100
+arraySmallAssembly.safety.adhesive,delay,triangular,90,135,180
+arraySmallAssembly.safety.adhesive,
+arraySmallAssembly.safety.adhesive,
+arraySmallAssembly.safety.adhesive,
+
+
+
+
+
+
+
+

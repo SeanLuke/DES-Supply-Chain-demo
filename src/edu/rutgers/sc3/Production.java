@@ -18,7 +18,7 @@ import edu.rutgers.supply.Disruptions.Disruption;
     The buffer is self-replenishable, sending orders to the suppliers when needed.
  */
 class Production extends AbstractProduction
-    implements Reporting, Named 
+    implements Reporting, BatchProvider2
 {
 
     double now() {
@@ -198,6 +198,12 @@ class Production extends AbstractProduction
 
 	manual = para.getBoolean("manual", false);
 
+	AbstractDistribution od = para.getDistribution("orderDelay" ,state.random);
+	if (od!=null) {
+	    orderDelay = new OrderDelay(state, this);
+	    orderDelay.setDelayDistribution( od);
+	}
+	
 	//-- what products we can produce
 	//CountableResource [] oru = outResource.listUnderlying();
 	//nout = oru.length;
@@ -240,7 +246,7 @@ class Production extends AbstractProduction
 	    } else {
 		needQa = null;
 	    }
-	} else {
+	} else { //-- no QA step
 	    needQa = null;
 	}
 
@@ -327,10 +333,10 @@ class Production extends AbstractProduction
 	//}
 	charter.printHeader(moreHeaders);
 
-	Vector<String> outputName = para.get("output");
-	if (outputName!=null) {
-	    throw new AssertionError("Using outputName (" +outputName+") is not supported yet");
-	}
+	//	Vector<String> outputName = para.get("output");
+	//if (outputName!=null) {
+	//    throw new AssertionError("Using outputName (" +outputName+") is not supported yet");
+	//}
 	
     }
 
@@ -524,13 +530,19 @@ class Production extends AbstractProduction
 	negotiation delay which may delay execution of orders */
     private OrderDelay orderDelay = null;
 
-    
-    public void addToPlan(Order order) {
+    /** Consumers (or management offices) call this method when
+	they want this production unit to manufacture some
+	product for them. This call may result in an immediate
+	adding of the requested amount to the production plan,
+	or to the start of contract negotiation, which will
+	cause the plan increment at some later point.
+    */	
+    public void request(Order order) {
 	if (orderDelay==null)   doAddToPlan(order);
 	else orderDelay.enter(order);
     }
     
-    public void doAddToPlan(Order order) {
+    void doAddToPlan(Order order) {
 	if (order==null || order.amount<0) throw new IllegalArgumentException(getName() +".addToPlan(" + order+")");
 	if (order.amount==0) return;
 	everPlanned += order.amount;
@@ -560,7 +572,9 @@ class Production extends AbstractProduction
 	if (!Demo.quiet) System.out.println("At " + now()+", " + getName() + " cannot cancel already executed order: " + order);
     }
     
-    /** After a batch has been made, subtracts it from the plan */
+    /** After a batch has been made, subtracts it from the plan. Orders
+	are treated as filled in the FIFO order.
+     */
     private void recordProduction(double amt) {
 	if (noPlan) return;
        	while(!needToSend.isEmpty() && amt>0) {
@@ -782,7 +796,6 @@ class Production extends AbstractProduction
      */
     public double getReleased() {
 	return  (qaDelay!=null) ? qaDelay.getReleasedGoodResource():
-	    //prodDelay.getTotalStarted(); // ZZZZ
 	    prodStage().getEverReleased();
     }
 
@@ -834,5 +847,59 @@ class Production extends AbstractProduction
 	delay.addReceiver(rcv);
 	return delay;
     }
-       
+
+    /** Connect this Production unit with other elements of the supply chain,
+	in accordance with the config parameters defining these links.
+	This method should be called after all Production units have been
+	created.
+
+	<p>Examples:
+	<pre>
+	#-- 100% of the output goes to substrateProd.input[0]
+	prepregProd,output,substrateProd,0,1.0
+	</pre>
+
+	<pre>
+	substrateSmallProd.safety.prepreg,source,prepregProd
+	</pre>
+    */
+    void linkUp(HashMap<String,Steppable> knownPools) throws IllegalInputException {
+	Vector<String> output = para.get("output");
+	if (output != null) {
+	    if (output.size()!=3) throw new  IllegalInputException("Expected 3 values for " + getName() + ",output");
+	    String name = output.get(0);
+	    Steppable _to =  knownPools.get(name);
+	    if (_to==null || !(_to instanceof Production)) throw new  IllegalInputException("There is no Production unit named '" + name +"', in " + getName() + ",output");
+	    Production to = (Production)_to;
+	    int j = Integer.parseInt(output.get(1));
+	    double f = Double.parseDouble(output.get(2));
+	    setQaReceiver(to.getEntrance(j), f);
+	}
+
+
+	for(int j=0; j<nin; j++) {
+	    if (inputStore[j].safety!=null) {
+		inputStore[j].safety.linkUp(knownPools);
+		//new InputStore(this, state, config, inResources[j]);
+	    }
+	}
+
+
+    }
+
+    
+    /** This can be called when the channel is first created, so that we'll be ready to
+	impose a "StopInfoFlow" disruption on it even before it's first use.
+	This method is needed to implement BatchProvider2, even if its
+	actual functionality does not matter much
+    */
+    public void registerChannel(Channel channel) {
+	outChannels.add(channel);
+    }
+
+    
+    
+    /** Whither, and how, this Pool may send stuff. The list is compiled based on calls to feedTo() */
+    Set<Channel> outChannels = new HashSet<>();
+  
 }

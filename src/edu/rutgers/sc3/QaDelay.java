@@ -81,6 +81,9 @@ public class QaDelay extends SimpleDelay
   
     final Resource prototype;
 
+    /** If true, the product's expiration date is counted from the
+	QA, rather than from the batch production */
+    private boolean resetExpiration;
     
     /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
 	@param _faultyPortionDistribution If non-null, then _discardProb and double _reworkProb must be zero, and vice versa.
@@ -130,6 +133,9 @@ public class QaDelay extends SimpleDelay
 	if (faultyPortionDistribution !=null && unitLevel) throw new IllegalInputException("In " + para.name +", cannot have both faulty portion distribution and qaUnitLevel=true");
 	
 	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution, unitLevel);
+
+	qaDelay.resetExpiration = para.getBoolean("qaResetExpiration", false);
+	
 
 	String reworkName = para.name + ".rework";
 	ParaSet para2 = config.get(reworkName);
@@ -310,6 +316,7 @@ public class QaDelay extends SimpleDelay
 		}
 		
 		e.getContent().decrease( discard);
+		if (resetExpiration) e.resetExpiration(now);
 		z = super.offerReceiver(receiver, e);
 		entities.remove(e);	// manually remove e from entities?
 	    }
@@ -348,9 +355,10 @@ public class QaDelay extends SimpleDelay
 		}
 	    }
 
+	    if (resetExpiration) b.resetExpiration(now);
 	    z =
 		willRework ? super.offerReceiver(sentBackTo, b):
-		willDiscard? super.offerReceiver(discardSink, b):
+		willDiscard? super.offerReceiver(discardSink, b):		
 		super.offerReceiver(receiver, b);
 
 	    if (!z) throw new IllegalArgumentException("The expectation is that the receivers for QaDelay " + getName() + " never refuse a batch");

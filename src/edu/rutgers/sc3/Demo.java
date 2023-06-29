@@ -112,12 +112,12 @@ public class Demo extends SimState {
     Production 	adhesiveSupplier, diodeSupplier;
 
 
-    Production prepregProd, substrateProd[] = new Production[2], cellProd, cellCoverglassAssembly, cellPackaging;
-    Production arrayAssembly;
+    Production prepregProd, substrateProd[] = new Production[2], cellProd, cellAssembly, cellPackaging;
+    Production[] arrayAssembly;
     
  
     Batch fiberBatch, resinBatch, prepregBatch, aluminumBatch;
-    Batch[] substrate = new Batch[2], parray = new Batch[2];
+    Batch[] substrate = new Batch[2], array = new Batch[2];
     Batch cellBatch, packagedCellBatch, cellRMBatch, coverglassBatch, coverglassAssemblyBatch, diodeBatch, adhesiveBatch;
 
     /** The main part of the start() method. It is taken into a separate
@@ -153,13 +153,13 @@ public class Demo extends SimState {
 		Batch.mkPrototype(substrate[0], config),
 		Batch.mkPrototype(substrate[1], config)};
 
-	    CountableResource parray[] = {
-		new CountableResource("panelArraySmall", 1),
-		new CountableResource("panelArrayLarge", 1)};
+	    CountableResource array[] = {
+		new CountableResource("arraySmall", 1),
+		new CountableResource("arrayLarge", 1)};
 
-	    Batch parrayBatch[] = {
-		Batch.mkPrototype(parray[0], config),
-		Batch.mkPrototype(parray[1], config)};
+	    Batch arrayBatch[] = {
+		Batch.mkPrototype(array[0], config),
+		Batch.mkPrototype(array[1], config)};
 
 	    UncountableResource adhesive = new UncountableResource("adhesive", 1);
 	    Batch adhesiveBatch = Batch.mkPrototype(adhesive, config);
@@ -195,10 +195,16 @@ public class Demo extends SimState {
 		add(substrateProd[j]);
 	    }
 
-	    prepregProd.setQaReceiver(substrateProd[0].getEntrance(0), 1.0);
-
+	    //prepregProd.setQaReceiver(substrateProd[0].getEntrance(0), 1.0);
 	   
- 	    addFiller("   --- ASSEMBLY ---");		      	    
+ 	    addFiller("   --- ASSEMBLY ---");
+
+	    //-- Link up the production nodes
+	    for(Steppable q: addedNodes.values()) {
+		if (q instanceof Production) {
+	    	    ((Production)q).linkUp(addedNodes);
+		}
+	    }
 
 	    /*
 	    eeRMSupplier = new Production(this, "eeRMSupplier", config,
