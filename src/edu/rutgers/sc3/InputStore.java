@@ -65,6 +65,22 @@ class InputStore extends sim.des.Queue {
     //private SimpleDetector detector = new SimpleDetector();
 
 
+    /** If null (the default), then there is no MTO (make-to-order)
+	ordering process, because either there is an MTS mechanism, or
+	the suppliers have other mechanisms to know what to send. If
+	non-null, then we need to place MTO orders with mtoSource; the
+	value is either 1.0 or a slightly greater number, indicating a
+	factor by which the number resulting from the in/out batch
+	size ratio should be multiplied.
+    */	
+    Double mto=null;
+
+    /** MTO orders, if any, are sent to this source. */
+    BatchProvider2 mtoSource=null;
+    Channel mtoChannel=null;
+    
+    final ParaSet para;
+    
     /** Creates the input buffer for one of the products consumed by 
 	a Production unit.
 	@param _whose The Production unit whose buffer this is
@@ -74,15 +90,13 @@ class InputStore extends sim.des.Queue {
     InputStore(Production _whose, 
 	       SimState _state,
 	       Config config,
-	       Resource resource//,
-	       //     double _batchSize
-	       ) throws IllegalInputException, IOException {
+	       Resource resource ) throws IllegalInputException, IOException {
 	super(_state, resource);
 	whose = _whose;
 	prototype = resource;
 	//batchSize = _batchSize;
 	
-	String name = "Input("+getUnderlyingName() +")";
+	String name = mkName(whose, resource);
 	setName(name);
 
 
@@ -106,10 +120,18 @@ class InputStore extends sim.des.Queue {
 	state.schedule.scheduleRepeating(safety);
 
 	// Optionally, this may be a pool capable of sending replenishement requests
-	
+	para = config.get(name);
 
     }
 
+
+   /** Creates the name for the InputStore object. This name will
+	be used to look up its properties in the config file. */
+    private static String mkName( Production production,  Resource resource) {
+	return production.getName() + ".input."+ Batch.getUnderlyingName(resource);
+    }
+
+    
     /** The name of the underlying resource */
     String getUnderlyingName() {
 	return (prototype instanceof Batch)? ((Batch)prototype).getUnderlyingName(): prototype.getName();
@@ -253,6 +275,10 @@ class InputStore extends sim.des.Queue {
 	return  destroyed;		
     }
 
+    /** If true, the expiration time of the resource is measured from receipt,
+	rather than from manufacturing */
+    boolean resetExpiration=false;
+    
     /** Performs certain auxiliary operation piggy-backed on acceptance
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
@@ -260,6 +286,9 @@ class InputStore extends sim.des.Queue {
 //	    System.out.println("DEBUG: " + getName() + ".accept(" + amount +
 //			       ") from " + provider);
 //	}
+	double now = state.schedule.getTime();
+	if (resetExpiration) ((Batch)amount).resetExpiration(now);
+	
 	return doAccept(provider,  amount, atLeast, atMost, false);
     }
 
@@ -370,5 +399,26 @@ class InputStore extends sim.des.Queue {
 	}*/
    
 
+    void linkUp(HashMap<String,Steppable> knownPools) throws IllegalInputException {
+
+	if (para!=null) {
+	    Vector<String> mtos = para.get("mto");	    
+	    if (mtos!=null) {
+		if (mtos.size()!=2) throw new IllegalInputException("mtos=" + String.join(",",mtos));
+		String name2 = mtos.get(0);
+		Steppable _from =  knownPools.get(name2);
+		if (_from==null || !(_from instanceof BatchProvider2)) throw new  IllegalInputException("There is no provider unit named '" + name2 +"', in " + getName() + ",mto");
+		mtoSource = (BatchProvider2)_from;
+		mtoChannel = new Channel(mtoSource, this, getName());
+		
+		mto = Double.parseDouble(mtos.get(1));
+		if (mto!=null && mto<1.0) throw new IllegalInputException("mto=" + mto);
+	    }
+	}  
+
+	if (safety!=null) {
+	    safety.linkUp(knownPools);
+	}
+    }
 }
 

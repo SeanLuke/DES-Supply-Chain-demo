@@ -3,18 +3,26 @@ package  edu.rutgers.supply;
 import java.util.*;
 import java.text.*;
 
-//import sim.engine.*;
-
 import edu.rutgers.util.IllegalInputException;
 import edu.rutgers.util.Config;
 import edu.rutgers.util.ParaSet;
 
-/** An auxiliary class used in various Pools to keep track of orders that have been placed by them but not yet filled.
+/** An auxiliary class used in various Pools to keep track of orders that have been placed by them but not yet filled. Provides functionality for order expiration, if desired.
+
+    <p>Usage (e.g. in a Pool class, or in any other Receiver):
+    <ul>Create an OnOrder object in the constructor.
+    <li>In accept(), call  onOrder.subtract(now, a);
+    <li>On regular intervals (e.g. in step() before placing new orders)
+    call   onOrder.refresh(now);
+    <li>After placing an order, call     onOrder.add(order);
+    <li>For reporting, use onOrder.toString().
+    </ul>
+    
  */
 public class OnOrder {
     /** After how many days unfilled orders expire (i.e. are treated
 	as if they are never going to be fulfilled, so that it's OK to
-	reorder.
+	reorder).
      */
     final double expiration;
 

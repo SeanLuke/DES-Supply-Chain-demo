@@ -108,14 +108,21 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	@param config A configuration file which has a section (a
 	ParaSet) with the name that's the same as that of the
 	typicalUnderlying; that ParaSet has a parameter named
-	"expiration", to get the shelf life from.
+	"expiration", to get the shelf life from. If such a section
+	is absent, a dummy ParaSet is created, and the product
+	is initialized with all defaults (no expiration etc)
      */
     public static Batch mkPrototype(CountableResource typicalUnderlying,
 			     Config config 	     )
 	throws IllegalInputException     {
 	String uname = typicalUnderlying.getName();
 	ParaSet para = config.get(uname);
-	if (para==null) throw new  IllegalInputException("No config parameters specified for product named '" + uname +"'");
+	//	if (para==null) throw new  IllegalInputException("No config parameters specified for product named '" + uname +"'");
+	if (para==null) {
+	    //if (!Demo.quiet)
+	    System.out.println("Warning: No config parameters specified for product named '" + uname +"'");
+	    para = new ParaSet(uname);
+	}
 
 	PrototypeInfo pi = new PrototypeInfo(para);
 
@@ -137,7 +144,10 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	super(prototype); // this sets name and type
 	setInfo(lot);
 	CountableResource r0 = prototype.getContent();
-	CountableResource r = new CountableResource(r0, amount);
+	//System.out.println("DEBUG: proto.r=" + r0);
+	CountableResource r =	    (r0 instanceof UncountableResource) ?
+	    new UncountableResource((UncountableResource)r0,amount):
+	    new CountableResource(r0, amount);
 	setStorage( new Resource[] {r});	    
 	//System.out.println("Created2: " + this);
     }

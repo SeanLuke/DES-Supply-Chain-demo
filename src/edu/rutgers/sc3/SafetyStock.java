@@ -141,6 +141,9 @@ extends Probe implements Reporting
        
 	whose = _whose;
 	addReceiver(whose);
+
+	whose.resetExpiration = para.getBoolean("resetExpiration", false);
+
 	
 	Double r = para.getDouble("reorderPoint", null);
 
@@ -217,7 +220,7 @@ extends Probe implements Reporting
 	if (deficit <= 0) return;
 
 	double need = targetLevel - has;
-	Order order = new Order(now, magicChannel, orderedToday);
+	Order order = new Order(now, magicChannel, need);
 
 	mySource.request(order);
 	orderedToday = need; 
@@ -489,7 +492,7 @@ extends Probe implements Reporting
 	} else {
 
 	    Steppable _from =  knownPools.get(source);
-	    if (_from==null || !(_from instanceof BatchProvider2)) throw new  IllegalInputException("There is no provider unit named '" + getName() +"', in " + getName() + ",source");
+	    if (_from==null || !(_from instanceof BatchProvider2)) throw new  IllegalInputException("There is no provider unit named '" + source +"', in " + getName() + ",source");
 	    mySource = (BatchProvider2)_from;
 	}
 	magicChannel = new Channel(mySource, refillDelay!=null?refillDelay:this, getName());

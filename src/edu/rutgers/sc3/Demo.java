@@ -120,6 +120,18 @@ public class Demo extends SimState {
     Batch[] substrate = new Batch[2], array = new Batch[2];
     Batch cellBatch, packagedCellBatch, cellRMBatch, coverglassBatch, coverglassAssemblyBatch, diodeBatch, adhesiveBatch;
 
+    private Batch batch(String name) throws IllegalInputException {
+	CountableResource r = new CountableResource(name, 1);
+	Batch b = Batch.mkPrototype(r, config);
+	return b;
+    }
+
+    private Batch batchU(String name) throws IllegalInputException {
+	UncountableResource r = new UncountableResource(name, 1);
+	Batch b = Batch.mkPrototype(r, config);
+	return b;
+    }
+
     /** The main part of the start() method. It is taken into a separate
 	method so that it can also be used from auxiliary tools, such as 
 	GraphAnalysis.
@@ -130,56 +142,27 @@ public class Demo extends SimState {
 	    
 	    //addFiller("   --- EE BRANCH ---");		      
 
-
-	    UncountableResource fiber = new UncountableResource("fiber", 1);
-	    Batch fiberBatch = Batch.mkPrototype(fiber, config);
-
-	    
-	    UncountableResource resin = new UncountableResource("resin", 1);
-	    Batch resinBatch = Batch.mkPrototype(resin, config);
-
-	    UncountableResource prepreg = new UncountableResource("prepreg", 1);
-	    Batch prepregBatch = Batch.mkPrototype(prepreg, config);
-
-
-	    UncountableResource aluminum = new UncountableResource("aluminum", 1);
-	    Batch aluminumBatch = Batch.mkPrototype(aluminum, config);
-
-	    CountableResource substrate[] = {
-		new CountableResource("substrateSmall", 1),
-		new CountableResource("substrateLarge", 1)};
+	    Batch fiberBatch = batchU("fiber"),
+		resinBatch = batchU("resin"),
+		prepregBatch = batchU("prepreg"),
+		aluminumBatch = batchU("aluminum"),
+		adhesiveBatch = batchU("adhesive");
 
 	    Batch substrateBatch[] = {
-		Batch.mkPrototype(substrate[0], config),
-		Batch.mkPrototype(substrate[1], config)};
+		batch("substrateSmall"),
+		batch("substrateLarge")};
 
-	    CountableResource array[] = {
-		new CountableResource("arraySmall", 1),
-		new CountableResource("arrayLarge", 1)};
 
 	    Batch arrayBatch[] = {
-		Batch.mkPrototype(array[0], config),
-		Batch.mkPrototype(array[1], config)};
-
-	    UncountableResource adhesive = new UncountableResource("adhesive", 1);
-	    Batch adhesiveBatch = Batch.mkPrototype(adhesive, config);
+		batch("arraySmall"),
+		batch("arrayLarge")};
 
 
-	    CountableResource cell = new CountableResource("cell", 1);
-	    Batch cellBatch = Batch.mkPrototype(cell, config);
+	    Batch cellBatch = batch("cell"),
+		cellRMBatch = batch("cellRM"),
+		cellPMBatch = batch("cellPM"),
+		coverglassBatch = batch("coverglass");
 
-	    CountableResource packagedCell = new CountableResource("packagedCell", 1);
-	    Batch packagedCellBatch = Batch.mkPrototype(packagedCell, config);
-
-	    CountableResource cellRM = new CountableResource("cellRM", 1);
-	    Batch cellRMBatch = Batch.mkPrototype(cellRM, config);
-
-	    CountableResource coverglass = new CountableResource("coverglass", 1);
-	    Batch coverglassBatch = Batch.mkPrototype(coverglass, config);
-	    
-
-	    CountableResource coverglassAssembly = new CountableResource("coverglassAssembly", 1);
-	    Batch coverglassAssemblyBatch = Batch.mkPrototype(coverglassAssembly, config);
 
 	    addFiller("   --- SUBSTRATES ---");		      	    
 	    prepregProd = new Production(this, "prepregProd", config,
@@ -187,22 +170,68 @@ public class Demo extends SimState {
 					 prepregBatch);
 	    add(prepregProd);
 
-	    for(int j=0; j<1; j++) { // FIXME 2
+
+	    final int M = 1; // FIXME 2
 	    
-		substrateProd[j] = new Production(this, substrate[j].getName() + "Prod", config,
+	    for(int j=0; j<M; j++) { 
+	    
+		substrateProd[j] = new Production(this,
+						  substrateBatch[j].getUnderlyingName() + "Prod",
+						  config,
 						  new Resource[] {prepregBatch, aluminumBatch},
 						  substrateBatch[j]);
 		add(substrateProd[j]);
 	    }
 
+
+	    cellProd =  new Production(this, "cellProd", config,
+				       new Resource[] {cellRMBatch},
+				       cellBatch);
+	    add(cellProd);
+
+	    cellAssembly =  new Production(this, "cellAssembly", config,
+					   new Resource[] {cellBatch, coverglassBatch},
+					   cellBatch);
+	    add(cellAssembly);
+
+	    cellPackaging =  new Production(this, "cellPackaging", config,
+					   new Resource[] {cellBatch, cellPMBatch},
+					   cellBatch);
+	    add(cellPackaging);
+
+	    
 	    //prepregProd.setQaReceiver(substrateProd[0].getEntrance(0), 1.0);
 	   
  	    addFiller("   --- ASSEMBLY ---");
 
+	    for(int j=0; j<M; j++) { 
+	    
+		arrayAssembly[j] = new Production(this,
+						  arrayBatch[j].getUnderlyingName() + "Prod",
+						  config,
+						  new Resource[] {arrayBatch[0],arrayBatch[1], adhesiveBatch, diodeBatch},
+						  arrayBatch[j]);
+		add(arrayAssembly[j]);
+	    }
+
+	    //-- End customers
+	    EndCustomer[] endCustomer = new EndCustomer[2];
+
+	    for(int j=0; j<M; j++) {
+		endCustomer[j] = new EndCustomer(this, 
+						 arrayBatch[j].getUnderlyingName() + "Customer",
+						 config,
+						 arrayBatch[j]);
+		add(endCustomer[j]);
+	    }
+
+	    
 	    //-- Link up the production nodes
 	    for(Steppable q: addedNodes.values()) {
 		if (q instanceof Production) {
 	    	    ((Production)q).linkUp(addedNodes);
+		} else if (q instanceof EndCustomer) {
+		    ((EndCustomer)q).linkUp(addedNodes);
 		}
 	    }
 

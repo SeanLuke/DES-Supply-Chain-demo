@@ -83,7 +83,7 @@ public class QaDelay extends SimpleDelay
 
     /** If true, the product's expiration date is counted from the
 	QA, rather than from the batch production */
-    private boolean resetExpiration;
+    private boolean resetExpiration=false;
     
     /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
 	@param _faultyPortionDistribution If non-null, then _discardProb and double _reworkProb must be zero, and vice versa.

@@ -7,11 +7,13 @@
 # substrateSmallProd.safety.prepreg,source,prepregProd
 
 #substrateSmallProd,prodStages,2
-#substrateSmallProd,delay.1,triangular,5,7,14
-#substrateSmallProd,delay.2,triangular,5,7,14
+#substrateSmallProd,delay.1,Triangular,5,7,14
+#substrateSmallProd,delay.2,Triangular,5,7,14
 
 # Need to accommodate batch size change in substrate prod/QA (2/1)
 
+
+# MTO requests (SALP orders substrates, cell prod orders glass...)
 #--------------------------------------------------------------
 
 
@@ -19,7 +21,7 @@
 #-- normally proration will happen, and the actual batch size will be equal to
 #-- the order size
 #fiberSupplier,batch,10000
-#fiberSupplier,transDelay,triangular,180,270,360
+#fiberSupplier,transDelay,Triangular,180,270,360
 
 
 fiber,expiration,+Infinity
@@ -28,27 +30,27 @@ resin,expiration,180
 
 
 #--------- Prepreg production ------------
-#- FIXME: measured from testing, not production
 prepreg,expiration,180
 
 prepregProd.safety.fiber,initial,904
 prepregProd.safety.fiber,targetLevel,904
 prepregProd.safety.fiber,reorderPoint,452
-prepregProd.safety.fiber,delay,triangular,180,270,360
+prepregProd.safety.fiber,delay,Triangular,180,270,360
 prepregProd.safety.fiber,orderExpiration,361
 
 
+prepregProd.safety.resin,resetExpiration,true
 prepregProd.safety.resin,initial,298
 prepregProd.safety.resin,targetLevel,298
 prepregProd.safety.resin,reorderPoint,149
-prepregProd.safety.resin,delay,triangular,14,21,28
+prepregProd.safety.resin,delay,Triangular,14,21,28
 prepregProd.safety.resin,orderExpiration,29
 
 # (fiber,resin)
 prepregProd,inBatch,600*0.041,600*0.027
 prepregProd,batch,600
-prepregProd,delay,triangular,14,17,21
-prepregProd,qaDelay,uniform,20,40
+prepregProd,delay,Triangular,14,17,21
+prepregProd,qaDelay,Uniform,20,40
 prepregProd,qaResetExpiration,true
 prepregProd,faulty,0.05
 
@@ -68,7 +70,7 @@ substrateLarge,expiration,+Infinity
 substrateSmallProd.safety.prepreg,initial,1836	
 substrateSmallProd.safety.prepreg,targetLevel,1836	
 substrateSmallProd.safety.prepreg,reorderPoint,918
-substrateSmallProd.safety.prepreg,delay,triangular,60,75,90
+substrateSmallProd.safety.prepreg,delay,Triangular,60,75,90
 substrateSmallProd.safety.prepreg,orderExpiration,91
 substrateSmallProd.safety.prepreg,source,prepregProd
 
@@ -76,107 +78,144 @@ substrateSmallProd.safety.prepreg,source,prepregProd
 substrateSmallProd.safety.aluminum,initial,
 substrateSmallProd.safety.aluminum,targetLevel,
 substrateSmallProd.safety.aluminum,reorderPoint,
-substrateSmallProd.safety.aluminum,delay,triangular,60,75,90
+substrateSmallProd.safety.aluminum,delay,Triangular,60,75,90
 substrateSmallProd.safety.aluminum,orderExpiration,29
 
 # (prepreg,aluminum)
-substrateSmallProd,orderDelay,uniform,7,60
+substrateSmallProd,orderDelay,Uniform,10,60
 substrateSmallProd,inBatch,54*2,9*2
 substrateSmallProd,batch,2
 #-- we treat the first 3 stages of QA as if they were production stages,
 #-- in order to avoid coding multi-stage QA
 substrateSmallProd,prodStages,2+3
-substrateSmallProd,prodDelay.1,triangular,5,7,14
-substrateSmallProd,prodDelay.2,triangular,5,7,14
-substrateSmallProd,prodDelay.3,uniform,7,12
-substrateSmallProd,prodDelay.4,uniform,7,12
-substrateSmallProd,prodDelay.5,uniform,7,12
+substrateSmallProd,prodDelay.1,Triangular,5,7,14
+substrateSmallProd,prodDelay.2,Triangular,5,7,14
+substrateSmallProd,prodDelay.3,Uniform,7,12
+substrateSmallProd,prodDelay.4,Uniform,7,12
+substrateSmallProd,prodDelay.5,Uniform,7,12
 substrateSmallProd,qaUnitLevel,true
-substrateSmallProd,qaDelay,uniform,7,12
+substrateSmallProd,qaDelay,Uniform,7,12
 substrateSmallProd,faulty,0.05
 
 
-substrateSmallProd.rework,prodDelay,uniform,1,14
-substrateSmallProd.rework,qaDelay,uniform,1,50
+substrateSmallProd.rework,prodDelay,Uniform,1,14
+substrateSmallProd.rework,qaDelay,Uniform,1,50
 
 substrateSmallProd,outputDelay,Uniform,7,14
+substrateSmallProd,output,cellAssembly,0,1.0
 
 #--- Substrate, large (SALP)  FIXME: fill it in!
 substrateLargeProd,inBatch,432*2,72*2
 substrateLargeProd,batch,2
 substrateLargeProd,prodStages,3
-substrateLargeProd,prodDelay.1,triangular,10,15,20
-substrateLargeProd,prodDelay.2,triangular,10,15,20
-substrateLargeProd,prodDelay.3,triangular,10,15,20
+substrateLargeProd,prodDelay.1,Triangular,10,15,20
+substrateLargeProd,prodDelay.2,Triangular,10,15,20
+substrateLargeProd,prodDelay.3,Triangular,10,15,20
+
+
+substrateLargeProd,output,cellAssembly,1,1.0
 
 #--- Solar cell production
 
 
-#-- uniform,0,66624
+#-- Uniform,0,66624
 cellProd.safety.cellRM,initial,55520	
 cellProd.safety.cellRM,targetLevel,55520	
 cellProd.safety.cellRM,reorderPoint,27760
-cellProd.safety.cellRM,delay,triangular,60,84,140
+cellProd.safety.cellRM,delay,Triangular,60,84,140
 cellProd.safety.cellRM,orderExpiration,141
 
 #--- Cell Prod; inputs: cellRM
+cellProd,orderDelay,Uniform,7,60
 cellProd,inBatch,2776
 cellProd,batch,2776
 cellProd,prodStages,2
-cellProd,prodDelay.1,uniform,7,10
-cellProd,prodDelay.2,triangular,7,14,21
-cellProd,outputDelay,uniform,2,4
+cellProd,prodDelay.1,Uniform,7,10
+cellProd,prodDelay.2,Triangular,7,14,21
+cellProd,outputDelay,Uniform,2,4
 cellProd,output,cellAssembly,0,1.0
 
 #---- Solar Cell Assembly; inputs: cell, coverglass
 cellAssembly,inBatch,2776,2776
 cellAssembly,batch,2776
-cellAssembly,prodDelay,triangular,7,10,14
-cellAssembly,tranDelay,Uniform,1,2
-cellAssembly,qaDelay,uniform,5,10
+cellAssembly,prodDelay,Triangular,7,10,14
+cellAssembly,transDelay,Uniform,1,2
+cellAssembly,qaDelay,Uniform,5,10
 cellAssembly,faulty,0.05
 cellAssembly,output,cellPackaging,0,1.0
-cellAssembly,outputDelay,uniform,1,2
+cellAssembly,outputDelay,Uniform,1,2
 
 #---coverglass FIXME
 #cellAssembly.safety.coverglass,initial,22224	
 #cellAssembly.safety.coverglass,targetLevel,?
 #cellAssembly.safety.coverglass,reorderPoint,?
-#cellAssembly.safety.coverglass,delay,triangular,120,180,240
+#cellAssembly.safety.coverglass,delay,Triangular,120,180,240
 #--- FIXME: coverglass is MTO, not MTS!
 #cellAssembly.safety.coverglass,orderExpiration,?
 
 
 #----- Solar cell packaging
 
-#-- uniform,0,22224
+#-- Uniform,0,22224
 cellPackaging.safety.cellPM,initial,22224	
 cellPackaging.safety.cellPM,targetLevel,11112
 cellPackaging.safety.cellPM,reorderPoint,22224
-cellPackaging.safety.cellPM,delay,triangular,30,45,60
+cellPackaging.safety.cellPM,delay,Triangular,30,45,60
 cellPackaging.safety.cellPM,orderExpiration,61
 
-
+#-- inputs: cell, cellPM
 cellPackaging,inBatch,2776,2776
 cellPackaging,batch,2776
-cellPackaging,prodDelay,uniform,1,2
+cellPackaging,prodDelay,Uniform,1,2
 # FIXME to where?
 cellPackaging,output,???,0,1.0
-cellPackaging,outputDelay,uniform,5,10
+cellPackaging,outputDelay,Uniform,5,10
 
 #-------------------------
-# inputs: prepregSmall,prepregLarge,diode,adhesive
+
+arraySmallAssembly.input.substrateSmall,mto,substrateSmallProd,1.0
+arraySmallAssembly.input.cell,mto,cellProd,1.0
+
+arraySmallAssembly.safety.adhesive,resetExpiration,true
 arraySmallAssembly.safety.adhesive,reorderPoint,50
 arraySmallAssembly.safety.adhesive,targetLevel,100
-arraySmallAssembly.safety.adhesive,delay,triangular,90,135,180
-arraySmallAssembly.safety.adhesive,
-arraySmallAssembly.safety.adhesive,
-arraySmallAssembly.safety.adhesive,
+arraySmallAssembly.safety.adhesive,delay,Triangular,90,135,180
+arraySmallAssembly.safety.adhesive,orderExpiration,181
+
+arraySmallAssembly.safety.diode,reorderPoint,1000
+arraySmallAssembly.safety.diode,targetLevel,3000
+arraySmallAssembly.safety.diode,delay,Triangular,360,450,540
+arraySmallAssembly.safety.diode,orderExpiration,541
 
 
 
 
+# inputs: substrateSmall,substrateLarge,adhesive,diode
+arraySmallAssembly,inBatch,1,0,0.4,10
+arraySmallAssembly,batch,1
+arraySmallAssembly,prodStages,6+1
+arraySmallAssembly,prodDelay.1,Triangular,1.2,2.3
+arraySmallAssembly,prodDelay.2,Triangular,1.2,2.3
+arraySmallAssembly,prodDelay.3,Triangular,1.2,2.3
+arraySmallAssembly,prodDelay.4,Triangular,1.2,2.3
+arraySmallAssembly,prodDelay.5,Triangular,1.2,2.3
+arraySmallAssembly,prodDelay.6,Triangular,1.2,2.3
+# inspection/rework
+arraySmallAssembly,prodDelay.7,Uniform,1,3
+arraySmallAssembly,qaDelay,Uniform,12,22
+arraySmallAssembly,faulty,0.00
+arraySmallAssembly,rework,0.10
+# arraySmallAssembly,output,?
+arraySmallAssembly,outputDelay,Uniform,10,15
 
+arraySmallAssembly.rework,prodStages,2
+arraySmallAssembly.rework,prodDelay.1,Uniform,1,3
+arraySmallAssembly.rework,prodDelay.2,Uniform,1,3
+arraySmallAssembly.rework,qaDelay,Uniform,7,22
 
+#=============================
 
-
+endCustomerSmall,orderProbability,1/12
+endCustomerSmall,orderSize,0,0,0,0,0,0,0.25,0,0,0,0.75
+endCustomerSmall,source,arraySmallAssembly
+endCustomerSmall,orderExpiration,+Infinity

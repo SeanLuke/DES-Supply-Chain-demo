@@ -19,6 +19,10 @@ public class Order implements Cloneable {
     final public long id;
     /** When this order was placed */
     final public double date;
+    /** This is sometimes used for statistics */
+    public double filledDate=Double.NaN;
+    /** The original order size (before any reduction due to filling) */
+    final public double amount0;
     /** Order size. This can be changed in the sender's copy of the order as the order is being partially filled */
     public double amount;
 
@@ -29,7 +33,7 @@ public class Order implements Cloneable {
     
     public Order(double _date, Channel _channel, double _amount) {
 	date = _date;
-	amount = _amount;
+	amount0 = amount = _amount;
 	channel = _channel;
 	id = (lastId++);
     }
@@ -50,5 +54,8 @@ public class Order implements Cloneable {
     public String toString() {
 	return "(" + channel.name+ "," + date + "," + amount + ")";
     }
-    
+
+    public void filled(double now) {
+	filledDate = now;
+    }
 }

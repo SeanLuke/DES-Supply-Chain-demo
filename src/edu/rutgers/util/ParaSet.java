@@ -25,8 +25,9 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	whose parameters this ParaSet contains.
      */
     final public String name;
-    
-    ParaSet(String _name) {
+
+    /** Creates an empty parameter set */
+    public ParaSet(String _name) {
 	name = _name;
     }
 
@@ -230,7 +231,7 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	public double getMax() { return _max;}
 	public double computeMean() {
 	    double mean = (getMin() + getMax())/2;
-	    if (Math.abs (getMode()-mean) > 1e-6) throw new IllegalArgumentException("No formula for skewed triangula distribution");
+	    if (Math.abs (getMode()-mean) > 1e-6) throw new IllegalArgumentException("No formula for skewed triangular distribution");
 	    return mean;
 	}
     }
@@ -299,6 +300,14 @@ public class ParaSet extends HashMap<String, Vector<String>> {
 	} else if (v.get(0).equals("Triangular")) {
 	    Vector<Double> p = parseDoubleParams(key, v, 1, 3);
 	    return new MyTriangular(p.get(0)+offset,p.get(1)+offset, p.get(2)+offset, random);
+	} else if (v.get(0).equals("EmpiricalWalker")) {
+	    double[] pdf = new double[v.size()-1];
+	    for(int j=1; j<v.size(); j++) {
+		pdf[j-1] = Double.parseDouble( v.get(j));
+	    }
+	    return new EmpiricalWalker(pdf, Empirical.NO_INTERPOLATION,
+				       random);
+
 	} else {
 	    throwII(key, "Random distribution type not supported: " +v.get(0));
 	    return null;

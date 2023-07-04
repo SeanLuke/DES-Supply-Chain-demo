@@ -290,7 +290,7 @@ class Production extends AbstractProduction
 	} else if ( nProdStages > 1) {
 	    Pipeline p = new Pipeline(state, outResource);
 	    for(int j=0; j<nProdStages; j++) {
-		p.addStage( mkProdDelay("."+j));
+		p.addStage( mkProdDelay("."+(j+1)));
 	    }
 	    _prodStage = p;
 	} else {
@@ -549,6 +549,18 @@ class Production extends AbstractProduction
 	//	if (startPlan != null) x += startPlan;
 	//startPlan = x;
 	needToSend.add(order.copy()); // use a copy, to enable later subtractions
+
+	for(int j=0; j<nin; j++) {	    
+	    InputStore p = inputStore[j];
+	    if (p.mto!=null) {
+		double need = (recipe.inBatchSizes[j]*order.amount*p.mto) / recipe.outBatchSize;
+		Order mtoOrder = new Order(now(), p.mtoChannel, need);
+		p.mtoSource.request(mtoOrder);
+		// FIXME: could add everOrdered, onOrder etc bookkeeping, like in Pool.java
+		// Probably encapsulating this bookeeping functionality into a separate class, also to be used by Safety.java
+	    }
+	}
+
     }
 
 
@@ -878,10 +890,7 @@ class Production extends AbstractProduction
 
 
 	for(int j=0; j<nin; j++) {
-	    if (inputStore[j].safety!=null) {
-		inputStore[j].safety.linkUp(knownPools);
-		//new InputStore(this, state, config, inResources[j]);
-	    }
+	    inputStore[j].safety.linkUp(knownPools);
 	}
 
 
