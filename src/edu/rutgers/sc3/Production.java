@@ -110,7 +110,7 @@ class Production extends AbstractProduction
     /** A Recipe contains information about the inputs needed to
 	produce a batch of an output product. 
      */
-    private class Recipe {
+    class Recipe {
 	/** How many units of each input need to be taken to start cooking a batch? */
 	final double[] inBatchSizes;
 	/** How big is the output batch? */
@@ -218,6 +218,7 @@ class Production extends AbstractProduction
 	// Storage for input ingredients
 	inputStore = new InputStore[nin];
 	for(int j=0; j<nin; j++) {
+	    //System.out.println("DEBUG: InputStore(r="+inResources[j]+")");
 	    inputStore[j] =
 		new InputStore(this, state, config, inResources[j]);
 
@@ -552,13 +553,7 @@ class Production extends AbstractProduction
 
 	for(int j=0; j<nin; j++) {	    
 	    InputStore p = inputStore[j];
-	    if (p.mto!=null) {
-		double need = (recipe.inBatchSizes[j]*order.amount*p.mto) / recipe.outBatchSize;
-		Order mtoOrder = new Order(now(), p.mtoChannel, need);
-		p.mtoSource.request(mtoOrder);
-		// FIXME: could add everOrdered, onOrder etc bookkeeping, like in Pool.java
-		// Probably encapsulating this bookeeping functionality into a separate class, also to be used by Safety.java
-	    }
+	    if (p.safety!=null) p.safety.placeMtoOrder(j, recipe, order.amount);
 	}
 
     }
@@ -890,7 +885,8 @@ class Production extends AbstractProduction
 
 
 	for(int j=0; j<nin; j++) {
-	    inputStore[j].safety.linkUp(knownPools);
+	    InputStore p = inputStore[j];
+	    if (p.safety!=null) p.safety.linkUp(knownPools);
 	}
 
 

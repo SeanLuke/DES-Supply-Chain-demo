@@ -113,7 +113,7 @@ public class Demo extends SimState {
 
 
     Production prepregProd, substrateProd[] = new Production[2], cellProd, cellAssembly, cellPackaging;
-    Production[] arrayAssembly;
+    Production[] arrayAssembly =  new Production[2];
     
  
     Batch fiberBatch, resinBatch, prepregBatch, aluminumBatch;
@@ -158,7 +158,9 @@ public class Demo extends SimState {
 		batch("arrayLarge")};
 
 
-	    Batch cellBatch = batch("cell"),
+	    Batch
+		diodeBatch = batch("diode"),
+		cellBatch = batch("cell"),
 		cellRMBatch = batch("cellRM"),
 		cellPMBatch = batch("cellPM"),
 		coverglassBatch = batch("coverglass");
@@ -204,13 +206,15 @@ public class Demo extends SimState {
 	   
  	    addFiller("   --- ASSEMBLY ---");
 
-	    for(int j=0; j<M; j++) { 
-	    
+	    for(int j=0; j<M; j++) {
+		Batch out = arrayBatch[j];
+		String name = out.getUnderlyingName() + "Assembly";
+		Resource[] inputs = {arrayBatch[0],arrayBatch[1], cellBatch, adhesiveBatch, diodeBatch};
 		arrayAssembly[j] = new Production(this,
-						  arrayBatch[j].getUnderlyingName() + "Prod",
+						  name,
 						  config,
-						  new Resource[] {arrayBatch[0],arrayBatch[1], adhesiveBatch, diodeBatch},
-						  arrayBatch[j]);
+						  inputs,
+						  out);
 		add(arrayAssembly[j]);
 	    }
 

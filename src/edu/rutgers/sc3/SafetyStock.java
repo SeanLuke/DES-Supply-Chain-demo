@@ -13,15 +13,9 @@ import sim.des.*;
 
 import edu.rutgers.util.*;
 
-/** SC-2: The "safety stock" is merely an alternative ordering (MTS-based)
-    mechanism for a particular input buffer. 
+/** SC-3: The "safety stock" is merely an alternative ordering (MTS-
+    or MTO-based) mechanism for a particular input buffer.
 
-    <p>SC-1:
-   Models the "safety stock" of some input resource at a Production 
-    node. The "safety stock" can be used when the InputStore for the
-    resource in question is empty. The safety stock is replenished
-    from an inexhaustible and un-disturbable "magic source", so it's
-    almost always available. 
 
     <p>The parameters for, e.g. the RawMaterial safety stock in ApiProduction
     come from the config file lines beginning with
@@ -38,6 +32,10 @@ the InputStore whom it serves.
 public class SafetyStock // extends Pool
 extends Probe implements Reporting
 {
+
+    double now() {
+	return  state.schedule.getTime();
+    }
 
     /** Creates the name for the SafetyStock object. This name will
 	be used to look up its properties in the config file. */
@@ -56,9 +54,20 @@ extends Probe implements Reporting
 	drug. */
     protected final Resource prototype;
 
-    protected double reorderPoint=0;
-    private double targetLevel=0;
+    protected Double reorderPoint=new Double(0);
+    private Double targetLevel=new Double(0);
     private double initial=0;
+
+
+    /** If null (the default), then we use the usual MTS mechanism
+	with reorderPoint and targetLevel. If non-null, then instead
+	of tracking inventory, we ignore reorderPoint and targetLevel
+	and place MTO orders instead.  The value is either 1.0 or a
+	slightly greater number, indicating a factor by which the
+	number resulting from the in/out batch size ratio should be
+	multiplied.
+    */	
+    Double mto=null;
 
         /** The outstanding order amount: the stuff that this pool has ordered, but which has not arrived yet.  It is used so that the pool does not try to repeat its order daily until the orignal order arrives.
       FIXME: it would be better to have separate vars for separate suppliers
@@ -129,7 +138,7 @@ extends Probe implements Reporting
 	so many days before the safety stock can be accessed.
 	(This was used in SC-1, but apparently won't be used in SC-2).
     */
-    final Double needsAnomaly;
+    //    final Double needsAnomaly;
     
     SafetyStock(SimState state, String name,  InputStore _whose, Config config,
 	 Resource _resource) throws IllegalInputException, IOException {
@@ -144,16 +153,18 @@ extends Probe implements Reporting
 
 	whose.resetExpiration = para.getBoolean("resetExpiration", false);
 
+	mto = para.getDouble("mto", null);
 	
-	Double r = para.getDouble("reorderPoint", null);
+	reorderPoint = para.getDouble("reorderPoint", null);
+	targetLevel =  para.getDouble("targetLevel", null);
 
-	reorderPoint = r;
+	if (mto==null) {
+	    if (reorderPoint==null || targetLevel==null)  throw new  IllegalInputException("Element named '" + whose.getName() +"', which is not MTO, has no reorderPoint or no targetLevel");
+	} else {
+	    if (reorderPoint!=null || targetLevel!=null) throw new  IllegalInputException("Element named '" + whose.getName() +"' has both MTS (reorderPoint and targetLevel) and MTO.");
+	}
 
-	r =  para.getDouble("targetLevel", null);
-	if (r==null)  throw new  IllegalInputException("Element named '" + whose.getName() +"' has reorder point, but no target level");
-	targetLevel = r;
-
-	initial = para.getDouble("initial", null);
+	initial = para.getDouble("initial", targetLevel==null? 0: targetLevel);
 	
 	String un= Batch.getUnderlyingName(prototype);
 
@@ -178,8 +189,8 @@ extends Probe implements Reporting
 	
 	onOrder = new OnOrder( para.getDouble("orderExpiration", Double.POSITIVE_INFINITY ));
 	
-	Double q = para.getDouble("needsAnomaly", null);
-	needsAnomaly = (q==null || q<0) ? null: q;
+	//Double q = para.getDouble("needsAnomaly", null);
+	//needsAnomaly = (q==null || q<0) ? null: q;
 
 	initSupply(initial);
 
@@ -198,17 +209,16 @@ extends Probe implements Reporting
 	current stock level and make a replenishment order,
 	if needed. */
     protected void reorderCheck() {
-
-	double now = getState().schedule.getTime();
-	if (isHalted(now)) return; // disruption
+	if (mto!=null) return;
+	if (isHalted(now())) return; // disruption
 
 	
 	//	if (Demo.verbose && currentStock != getContentAmount()) {
 	//	    System.out.println("DEBUG:" + getName() + ", t="+now+", mismatch(A) stock numbers: currentStock="+currentStock+ ", getContentAmount()=" + getContentAmount());
 	//	}
 
-	Vector<Order> eo = onOrder.refresh(now);
-	if (!Demo.quiet && eo.size()>0)  System.out.println(getName() + ", t="+now+", expired orders: " + Util.joinNonBlank(", ", eo));
+	Vector<Order> eo = onOrder.refresh(now());
+	if (!Demo.quiet && eo.size()>0)  System.out.println(getName() + ", t="+now()+", expired orders: " + Util.joinNonBlank(", ", eo));
 
 	double has =  whose.getContentAmount() + onOrder.sum();
 	double deficit = reorderPoint - has;
@@ -220,7 +230,7 @@ extends Probe implements Reporting
 	if (deficit <= 0) return;
 
 	double need = targetLevel - has;
-	Order order = new Order(now, magicChannel, need);
+	Order order = new Order(now(), magicChannel, need);
 
 	mySource.request(order);
 	orderedToday = need; 
@@ -256,7 +266,7 @@ extends Probe implements Reporting
 
 	    double sent = 0;
 	    if (prototype instanceof Batch) {
-		double now = getState().schedule.getTime();
+		double now = now();
 		Delay delay = (rcv instanceof Delay)? (Delay)rcv: null;
 		
 		for(int n=0; sent < amt; n++) {
@@ -365,8 +375,9 @@ extends Probe implements Reporting
 	in effect for a sufficiently long time
     */  
     boolean accessAllowed(double now, Double anomalyStart) {
-	return (needsAnomaly==null) ||
-	    (anomalyStart!=null  && anomalyStart <= now - needsAnomaly);
+	return true;
+	//(needsAnomaly==null) ||
+	//    (anomalyStart!=null  && anomalyStart <= now - needsAnomaly);
     }
 
 
@@ -392,7 +403,7 @@ extends Probe implements Reporting
 	
 	if (!z) throw new AssertionError("Pool " + getName() + " refused delivery. This ought not to happen!");
 	if ((amount instanceof CountableResource) && amount.getAmount()>0) throw new AssertionError("Incomplete acceptance by a Pool. Our pools ought not to do that!");
-	double now = getState().schedule.getTime();
+	double now = now(); //getState().schedule.getTime();
 	//if (provider instanceof SimpleDelay) { // Received a non-immediate delivery
 	double late = onOrder.subtract(now, a);
 
@@ -462,7 +473,7 @@ extends Probe implements Reporting
 
 	    double batchSize = Math.round(initial);
 	    int n = 1; // (int)Math.round( initial / batchSize);
-	    double now = state.schedule.getTime();
+	    double now = now();//state.schedule.getTime();
 	    for(int j=0; j<n; j++) {
 		Batch whiteHole = ((Batch)prototype).mkNewLot(batchSize, now);
 		Provider provider = null;  // why do we need it?
@@ -498,4 +509,19 @@ extends Probe implements Reporting
 	magicChannel = new Channel(mySource, refillDelay!=null?refillDelay:this, getName());
     }
     
+    /** Places an MTO order, if needed for this buffer.
+	@param j which ingredient this buffer is responsible for
+	@param baseAmount how much product will be made out of this input
+	material
+     */
+    void placeMtoOrder(int j, Production.Recipe recipe, double baseAmount) {
+	if (mto==null) return;
+	double need = (recipe.inBatchSizes[j]* baseAmount*mto) / recipe.outBatchSize;
+	Order mtoOrder = new Order(now(), magicChannel, need);
+	mySource.request(mtoOrder);
+	// FIXME: could add everOrdered, onOrder etc bookkeeping, like in Pool.java
+	// Probably encapsulating this bookeeping functionality into a separate class, also to be used by Safety.java
+    }
+
+
 }

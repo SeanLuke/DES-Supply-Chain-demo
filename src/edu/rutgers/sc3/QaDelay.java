@@ -143,6 +143,7 @@ public class QaDelay extends SimpleDelay
 	    qaDelay.reworkStage = new Production(state, reworkName, config,
 						 new Resource[0],
 						 (Batch)outResource);
+	    qaDelay.reworkStage.setNoPlan();
 	    qaDelay.setRework(qaDelay.reworkStage.prodStage());
 	}
 	

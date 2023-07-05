@@ -65,19 +65,10 @@ class InputStore extends sim.des.Queue {
     //private SimpleDetector detector = new SimpleDetector();
 
 
-    /** If null (the default), then there is no MTO (make-to-order)
-	ordering process, because either there is an MTS mechanism, or
-	the suppliers have other mechanisms to know what to send. If
-	non-null, then we need to place MTO orders with mtoSource; the
-	value is either 1.0 or a slightly greater number, indicating a
-	factor by which the number resulting from the in/out batch
-	size ratio should be multiplied.
-    */	
-    Double mto=null;
 
     /** MTO orders, if any, are sent to this source. */
-    BatchProvider2 mtoSource=null;
-    Channel mtoChannel=null;
+    //BatchProvider2 mtoSource=null;
+    //Channel mtoChannel=null;
     
     final ParaSet para;
     
@@ -399,6 +390,7 @@ class InputStore extends sim.des.Queue {
 	}*/
    
 
+    /*
     void linkUp(HashMap<String,Steppable> knownPools) throws IllegalInputException {
 
 	if (para!=null) {
@@ -420,5 +412,8 @@ class InputStore extends sim.des.Queue {
 	    safety.linkUp(knownPools);
 	}
     }
+    */
+
+
 }
 
