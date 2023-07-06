@@ -119,7 +119,7 @@ public class OnOrder {
     }
 
     public String toString() {
-	String s = "" + (long)sum() + " u";
+	String s = "" + (long)sum();
 	Vector<String> v = new Vector<>();
 	if (totalRemoved>0) v.add(""+(long)totalRemoved+" in expired orders");
 	if (totalLateArrivals>0) v.add(""+(long)totalLateArrivals+" late arrivals (avg "+(delaySum/totalLateArrivals)+" days late)");

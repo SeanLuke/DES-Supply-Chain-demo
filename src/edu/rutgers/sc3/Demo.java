@@ -185,6 +185,7 @@ public class Demo extends SimState {
 		add(substrateProd[j]);
 	    }
 
+	    addFiller("   --- CELL ---");
 
 	    cellProd =  new Production(this, "cellProd", config,
 				       new Resource[] {cellRMBatch},
@@ -204,12 +205,12 @@ public class Demo extends SimState {
 	    
 	    //prepregProd.setQaReceiver(substrateProd[0].getEntrance(0), 1.0);
 	   
- 	    addFiller("   --- ASSEMBLY ---");
+ 	    addFiller("   --- ARRAY ASSEMBLY ---");
 
 	    for(int j=0; j<M; j++) {
 		Batch out = arrayBatch[j];
 		String name = out.getUnderlyingName() + "Assembly";
-		Resource[] inputs = {arrayBatch[0],arrayBatch[1], cellBatch, adhesiveBatch, diodeBatch};
+		Resource[] inputs = {substrateBatch[0],substrateBatch[1], cellBatch, adhesiveBatch, diodeBatch};
 		arrayAssembly[j] = new Production(this,
 						  name,
 						  config,
@@ -219,6 +220,7 @@ public class Demo extends SimState {
 	    }
 
 	    //-- End customers
+	    addFiller("   --- END CUSTOMER ---");
 	    EndCustomer[] endCustomer = new EndCustomer[2];
 
 	    for(int j=0; j<M; j++) {

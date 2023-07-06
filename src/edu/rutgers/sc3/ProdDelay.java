@@ -87,6 +87,7 @@ public class ProdDelay extends SimpleDelay
 	faultRateIncrease.setValueUntil(x,_untilWhen);
     }
 
+    
     private double everReleased = 0;
     private double ot0 = -2;
 

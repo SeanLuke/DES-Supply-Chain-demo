@@ -87,10 +87,6 @@ class Production extends AbstractProduction
     Receiver getTransEntrance() { return needTrans!=null? needTrans: transDelay; }
 	
 
-    /** This may be inserted if QA induces a split, in order to
-	put the two streams together again. */
-    private Filter postQaJoin = null;
-
     //public ProdDelay getProdDelay() { return prodDelay; }
 
     /** Returns the last existing stage of this production unit. Typically
@@ -102,8 +98,9 @@ class Production extends AbstractProduction
     */
     public Provider getTheLastStage() {
 	return
-	    postQaJoin != null?  postQaJoin:
-	    qaDelay!=null? qaDelay:
+	    qaDelay!=null? (qaDelay.postQaJoin != null?  qaDelay.postQaJoin:
+
+			    qaDelay):
 	    transDelay!=null? transDelay: prodStage();
     }
 
@@ -132,7 +129,7 @@ class Production extends AbstractProduction
     private final Recipe recipe; // [];
 	
    /** What is the "entry point" for input No. j? */
-    Receiver getEntrance(int j) {
+    InputStore  getEntrance(int j) {
 	return inputStore[j];
     }
 
@@ -234,7 +231,7 @@ class Production extends AbstractProduction
 
 	double cap = (outResource instanceof Batch) ? 1:  recipe.outBatchSize;	
 
-	qaDelay = QaDelay.mkQaDelay( config, para, state, outResource);
+	qaDelay = QaDelay.mkQaDelay( config, para, state, this,  outResource);
 	if (qaDelay != null) {
 	    if (this instanceof Macro)  addProvider(qaDelay, false);
 	    if ( qaIsThrottled) {
@@ -299,16 +296,6 @@ class Production extends AbstractProduction
 	}	
 
 	    
-	if (qaDelay !=null) {
-	    if (qaDelay.reworkStage!=null) {
-		postQaJoin = new Filter(state, outResource);
-		qaDelay.addReceiver(postQaJoin);
-		qaDelay.reworkStage.setQaReceiver(postQaJoin, 1.0);
-	    } else  if (qaDelay.reworkProb >0) {
-		qaDelay.setRework( prodStage());
-	    }
-	}
-
 	stolenShipmentSink = new MSink(state, outResource);
 	stolenShipmentSink.setName("StolenShipmentsFrom." + getName());
 
@@ -546,6 +533,11 @@ class Production extends AbstractProduction
     void doAddToPlan(Order order) {
 	if (order==null || order.amount<0) throw new IllegalArgumentException(getName() +".addToPlan(" + order+")");
 	if (order.amount==0) return;
+
+	
+	System.out.println("DEBUG: " +getName() + ", at "+now()+" planning "+ order.amount);
+
+	
 	everPlanned += order.amount;
 	//	if (startPlan != null) x += startPlan;
 	//startPlan = x;
@@ -781,7 +773,7 @@ class Production extends AbstractProduction
 	Vector<String> v= new Vector<>();
 	int j=0;
 	for(InputStore input: inputStore) {	    
-	    v.add( input.report(showBatchSize));
+	    v.add( "\n\t" +input.report(showBatchSize));
 	    j++;
 	}
 	return "[" + String.join(", ",v) + "]";
@@ -811,7 +803,7 @@ class Production extends AbstractProduction
 
 	String s = "[" + cname()+"."+getName();
 	if (inputStore.length>0) {
-	    s += "; stored inputs=("+ reportInputs() +")";
+	    s += "; stored inputs=("+ reportInputs() +")\n";
 	}
 	s += noPlan?
 	    ". No planning (driven by input)" :
@@ -826,12 +818,16 @@ class Production extends AbstractProduction
 	//s +="  in QA=" +   needQa.hasBatches() +")";
 	} else {
 	}
-	    
+
+
+	
 	//	s += "\n" + prodStage().report();
 
 	//if (stolenShipmentSink.getEverConsumed()>0) s+="\n" + stolenShipmentSink.report();
-	if (everStolen>0) s+="\nLost in shipment " + everStolen + " u";
-	
+	if (everStolen>0) s+="\nLost in shipment " + everStolen;
+
+	s+= ". Released " + getReleased();
+
 	if (sm.outputSplitter !=null) 	s += "\n" + sm.outputSplitter.report();
 
 	s+="]";
@@ -875,12 +871,23 @@ class Production extends AbstractProduction
 	if (output != null) {
 	    if (output.size()!=3) throw new  IllegalInputException("Expected 3 values for " + getName() + ",output");
 	    String name = output.get(0);
+
+	    final String suff = ".safety";
+	    boolean thruSafety = name.endsWith(suff);
+	    if (thruSafety) name = name.substring(0, name.length()-suff.length());
+	    
 	    Steppable _to =  knownPools.get(name);
 	    if (_to==null || !(_to instanceof Production)) throw new  IllegalInputException("There is no Production unit named '" + name +"', in " + getName() + ",output");
 	    Production to = (Production)_to;
 	    int j = Integer.parseInt(output.get(1));
 	    double f = Double.parseDouble(output.get(2));
-	    setQaReceiver(to.getEntrance(j), f);
+	    InputStore dest0 = to.getEntrance(j);
+	    Receiver dest = dest0;
+	    if (thruSafety) {
+		if (dest0.safety!=null) dest = dest0.safety;
+		else System.out.println("Warning: ignoring the '.safety' suffix in " + getName() + ",output, because " + name + " has no safety stock");
+		setQaReceiver(dest, f);
+	    }
 	}
 
 

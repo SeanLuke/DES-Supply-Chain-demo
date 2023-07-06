@@ -54,6 +54,7 @@ class InputStore extends sim.des.Queue {
     void clearDailyStats() {
 	receivedTodayFromMagic = 0;
 	receivedTodayFromNormal = 0;
+	if (safety!=null) safety.clearDailyStats();
     }
 	
     
@@ -291,6 +292,9 @@ class InputStore extends sim.des.Queue {
 
 	double a = (amount instanceof Batch)? ((Batch)amount).getContentAmount() : amount.getAmount();
 
+	if (!prototype.isSameType(amount)) throw new AssertionError(getName() + " receiving " + amount+ ", from " + provider);
+
+
 	boolean z = super.accept(provider,  amount, atLeast,  atMost);
 	if (!z) throw new AssertionError();
 	currentStock += a;
@@ -356,16 +360,19 @@ class InputStore extends sim.des.Queue {
     String report(boolean showBatchSize)  {
 	Vector<String> v= new Vector<>();
 	v.add(  getTypicalProvided().getName() +":" +
-		(long)getContentAmount() + " u");
+		(long)getContentAmount());
 		//	    (getTypicalProvided() instanceof Batch? 
 		//	     (long)getAvailable() + " ba" :
 		//	     getAvailable() + " u" ));
 
 	if (expiredProductSink!=null) v.add( expiredProductSink.reportShort());
-	if (stolen>0) v.add("(Stolen=" + stolen+ " u = " + stolenBatches + " ba)");
+	if (stolen>0) v.add(" (Stolen=" + stolen +  ")");
 	String s = Util.joinNonBlank(". ", v);
-	s += ". Received (from all sources) " + everReceived + " u";
-	if (everReceivedFromMagic!=0) s += " (incl. "+everReceivedFromMagic+" from SS)";
+
+	if (safety==null || everReceived!=safety.everReceived) {
+	    s += ". Received " + everReceived;
+	    if (everReceivedFromMagic!=0) s += " (incl. "+everReceivedFromMagic+" from SS)";
+	}
 	if (safety!=null) s += ". " + safety.report();			      
 	return s;
     }

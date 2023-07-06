@@ -53,7 +53,20 @@ public class QaDelay extends SimpleDelay
     /** Unit (pill) counts for the 3 directions of flow. */
     double badResource = 0, reworkResource=0, releasedGoodResource=0;
     public double getBadResource() { return badResource; }
-    public double getReleasedGoodResource() { return releasedGoodResource; }
+    public double getReleasedGoodResource() {
+	double x = releasedGoodResource;
+	if (reworkStage != null) x+= reworkStage.getReleased();
+	return x;
+    }
+
+    /*
+    public double getReleasedBatches() {
+	long x = releasedBatches; 
+	if (reworkStage != null) x+= ......
+	return x;
+    }
+    */
+
     public double getReworkResource() { return reworkResource; }
 
     public double getEverReleased()  { return releasedGoodResource; }
@@ -84,11 +97,18 @@ public class QaDelay extends SimpleDelay
     /** If true, the product's expiration date is counted from the
 	QA, rather than from the batch production */
     private boolean resetExpiration=false;
+
+    /** This may be inserted if QA induces a split, in order to
+	put the two streams together again. */
+    Filter postQaJoin = null;
+
     
     /** @param typicalBatch A Batch of the appropriate type (size does not matter), or a CountableResource
 	@param _faultyPortionDistribution If non-null, then _discardProb and double _reworkProb must be zero, and vice versa.
      */
-    public QaDelay(SimState state, Resource typicalBatch,  double _discardProb, double _reworkProb, AbstractDistribution _faultyPortionDistribution, boolean _unitLevel) {
+    public QaDelay(SimState state, Config config, ParaSet para,
+		   Resource typicalBatch, Production whose,
+		   double _discardProb, double _reworkProb, AbstractDistribution _faultyPortionDistribution, boolean _unitLevel) throws IOException, IllegalInputException {
 	super(state, typicalBatch);
 	prototype = typicalBatch;
 	setName("QaDelay("+typicalBatch.getName()+")");
@@ -104,14 +124,47 @@ public class QaDelay extends SimpleDelay
 	
 	if (faultyPortionDistribution!=null) {
 	    if (discardProb!=0 || reworkProb !=0) throw new IllegalArgumentException("Cannot set both faultyPortionDistribution and discardProb/reworkProb on the same QaDelay!");
-	} 
+	}
+
+
+	resetExpiration = para.getBoolean("qaResetExpiration", false);
+	
+
+	String reworkName = para.name + ".rework";
+	ParaSet para2 = config.get(reworkName);
+	if (para2 != null) {
+	    reworkStage = new Production(state, reworkName, config,
+					 new Resource[] {typicalBatch},
+					 (Batch)typicalBatch);
+	    reworkStage.setNoPlan();
+	    setRework(reworkStage.prodStage());
+
+	    postQaJoin = new Filter(state, typicalBatch);
+	    addReceiver(postQaJoin);
+	    reworkStage.setQaReceiver(postQaJoin, 1.0);
+	} else  if (reworkProb >0) {
+	    setRework( whose.prodStage());
+	}
+  
+
+	
+	//qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	//Double delayTime = para.getDouble("qaDelay", null);
+	//if (delayTime==null) throw new IllegalInputException("Missing value for " + para.name +".qaDelay in config file!");
+	//System.out.println("Creating QaDelay." + para.name + "(" + delayTime+")");
+	//qaDelay.setDelayTime(delayTime);
+
+
+	
     }
 
     /** Creates a QaDelay based on the parameters from a specified ParaSet.
 	@return a new QaDelay object, or null if the para set contains no 
 	parameters for one.
      */
-    static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state, Resource outResource) throws IllegalInputException, IOException {	
+static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
+				Production whose, Resource outResource)
+    throws IllegalInputException, IOException {	
 	// See if "faulty" in the config file is a number or
 	// a distribution....
 	double faultyProb=0;	
@@ -132,26 +185,8 @@ public class QaDelay extends SimpleDelay
 	unitLevel = para.getBoolean("qaUnitLevel", unitLevel);
 	if (faultyPortionDistribution !=null && unitLevel) throw new IllegalInputException("In " + para.name +", cannot have both faulty portion distribution and qaUnitLevel=true");
 	
-	QaDelay qaDelay = new QaDelay(state, outResource, faultyProb, reworkProb, faultyPortionDistribution, unitLevel);
+	QaDelay qaDelay = new QaDelay(state, config, para, outResource, whose, faultyProb, reworkProb, faultyPortionDistribution, unitLevel);
 
-	qaDelay.resetExpiration = para.getBoolean("qaResetExpiration", false);
-	
-
-	String reworkName = para.name + ".rework";
-	ParaSet para2 = config.get(reworkName);
-	if (para2 != null) {
-	    qaDelay.reworkStage = new Production(state, reworkName, config,
-						 new Resource[0],
-						 (Batch)outResource);
-	    qaDelay.reworkStage.setNoPlan();
-	    qaDelay.setRework(qaDelay.reworkStage.prodStage());
-	}
-	
-	//qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
-	//Double delayTime = para.getDouble("qaDelay", null);
-	//if (delayTime==null) throw new IllegalInputException("Missing value for " + para.name +".qaDelay in config file!");
-	//System.out.println("Creating QaDelay." + para.name + "(" + delayTime+")");
-	//qaDelay.setDelayTime(delayTime);
 	return qaDelay;
     }
 
@@ -175,7 +210,7 @@ public class QaDelay extends SimpleDelay
 	probability of a lot experiencing this outcome.
 	@param  _sentBackTo Where to send some of the faulty products for rework.
      */
-    void setRework( Receiver _sentBackTo) {
+    private void setRework( Receiver _sentBackTo) {
 	sentBackTo=_sentBackTo;
     }
 
@@ -257,7 +292,7 @@ public class QaDelay extends SimpleDelay
     protected boolean offerReceiver(Receiver receiver, double atMost) {
 
 	if (Demo.verbose)   System.out.println(getName() + ".offerReceiver(" +receiver+", " + atMost+")");
-
+ 
 	boolean showAge = false; // !Demo.quiet;
 	boolean z;
 
@@ -295,6 +330,7 @@ public class QaDelay extends SimpleDelay
 		}
 		
 	    } else {
+		if (entities.isEmpty()) return false;
 						
 		Batch e = (Batch)entities.getFirst();
 		LotInfo li = e.getLot();
@@ -335,6 +371,7 @@ public class QaDelay extends SimpleDelay
 	} else {  // Entire-lot discard, using discardProb (with unitLevel=false)
 	    if (unitLevel) throw new AssertionError("unitLevel");
 	    if (entities == null) throw new IllegalArgumentException("pharma3.QaDelay with faultyProb only works with Batches!");
+	    if (entities.isEmpty()) return false;
 
 	    Batch b = (Batch)entities.getFirst();
 	    double amt = b.getContentAmount();
@@ -407,10 +444,15 @@ public class QaDelay extends SimpleDelay
 
 	String s = "(in QA= " +  hasBatches() +	" ba; discarded="+(long)badResource  +
 	" ("+badBatches+" ba)";
-	if (reworkProb>0) s+= "; rework="+(long)reworkResource +
-				      " ("+reworkBatches+" ba)";
+	if (reworkProb>0) {
+	    s+= "; rework="+(long)reworkResource;
+	    if (reworkBatches>0) s+= " ("+reworkBatches+" ba)";
+	}
 
-	s += "; good=" + (long)releasedGoodResource+" ("+releasedBatches+" ba))";
+	s += "; good=" + (long)getReleasedGoodResource();
+	//	if (getReleasedBatches()>0) {
+	//	    s += " ("+getReleasedBatches()+" ba))";
+	//	}
 	return s;
 	
     }
@@ -437,6 +479,5 @@ public class QaDelay extends SimpleDelay
 	
     }
 
-  
     
 }

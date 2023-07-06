@@ -27,11 +27,9 @@ ApiProduction.safety.RawMaterial,reorderPoint,...
 
 <p>The "extends Probe" part is here so that we can have the supplier
 send resources to the SafetyStock... which will immediately offer them to
-the InputStore whom it serves.
+the InputStore whom it serves, while adjusting the onOrder table.
  */
-public class SafetyStock // extends Pool
-extends Probe implements Reporting
-{
+public class SafetyStock extends Probe implements Reporting {
 
     double now() {
 	return  state.schedule.getTime();
@@ -384,8 +382,9 @@ extends Probe implements Reporting
     /** This is called from a supplier (or the associated Delay) when
 	a batched shipped to this pool arrives.
 
-	Every piece of resource getting into this pool goes through this method;
-	this is why we have currentStock increment done in here.
+	Every piece of resource getting into this pool goes through
+	this method; this is why we have currentStock increment done
+	in here.
 	@param amount a Batch object
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
@@ -434,17 +433,16 @@ extends Probe implements Reporting
 
     public String report() {
 
-
 	String ba = whose.getTypicalProvided() instanceof Entity? " ba": " u";
 	
-	String s = "[" + getName()+
-	    " has ordered " + (long)everOrdered + " u, " +
-	    " has received " + (long)everReceived + " u. " +
+	String s = //"[" + getName()+
+	    " Ordered " + (long)everOrdered + "," +
+	    " received " + (long)everReceived + ". " +
 	    "On order=" + onOrder;
 	if (refillDelay!=null) s += "; in transit " + refillDelay.getDelayedPlusAvailable() + ba;
 
-	s += "]";
-       return wrap(s);
+	//s += "]";
+	return s; //wrap(s);
    }
 
 
@@ -516,12 +514,23 @@ extends Probe implements Reporting
      */
     void placeMtoOrder(int j, Production.Recipe recipe, double baseAmount) {
 	if (mto==null) return;
+
 	double need = (recipe.inBatchSizes[j]* baseAmount*mto) / recipe.outBatchSize;
+
+	System.out.println("DEBUG: " +getName() + ", at "+now()+" placing MTO order, size="+ need);
+
 	Order mtoOrder = new Order(now(), magicChannel, need);
 	mySource.request(mtoOrder);
+	orderedToday += need; 	
+	onOrder.add(mtoOrder);
+	everOrdered += need;
+
 	// FIXME: could add everOrdered, onOrder etc bookkeeping, like in Pool.java
 	// Probably encapsulating this bookeeping functionality into a separate class, also to be used by Safety.java
     }
 
+    void clearDailyStats() {
+	orderedToday=0;
+    }
 
 }

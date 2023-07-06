@@ -48,8 +48,10 @@ public class EndCustomer extends MSink implements Reporting {
     /** Similar to typical, but with storage. In this case, it's batches of packaged drug  */
     private final Batch prototype;
     
-    final ParaSet para;
+    private final ParaSet para;
     
+    private double everOrdered = 0;
+
     /** 
 	@param resource The batch resource consumed here
      */
@@ -107,7 +109,8 @@ public class EndCustomer extends MSink implements Reporting {
 
     
     /** Consumes product out of the Hospital/Pharmacy pool on a certain schedule */
-    public void step​(sim.engine.SimState state) {
+    public void step(sim.engine.SimState state) {
+	try {
 	boolean hasOrder = state.random.nextBoolean(orderProbability);
 
 	if (hasOrder) {
@@ -116,6 +119,8 @@ public class EndCustomer extends MSink implements Reporting {
 	    if (Math.round(demand)!=demand) throw new AssertionError("Non-integer demand");
 	
 	    Order order = new Order(now(), channel, demand);
+	    everOrdered += demand;
+	    
 	    double reduceBy = Math.min(hasExtra,order.amount);
 	    order.amount -= reduceBy;
 	    hasExtra -= reduceBy;
@@ -136,16 +141,20 @@ public class EndCustomer extends MSink implements Reporting {
 	    totalUnsatisfiedDemand  += (demand - sent);
 	}
   	*/
+	} finally {
+	    dailyChart();
+	}
     }
 
 
     public double getEverReceived() {
-	return everReceived;
+    	return everConsumed;
     }
 
     /** The amount ever received by the pool
      */
-    double everReceived=0, receivedToday=0;
+    double// everReceived=0,
+	receivedToday=0;
     
     /** This is triggered when the Production nodes sends ordered
 	product here */
@@ -161,7 +170,7 @@ public class EndCustomer extends MSink implements Reporting {
 	}
 
 		
-	everReceived += a;
+	//	everReceived += a;
 	receivedToday += a;
 
 	
@@ -172,13 +181,54 @@ public class EndCustomer extends MSink implements Reporting {
 
     
     public String report() {
-	return "";
+	return getName() + ": Ordered=" + everOrdered + ", received=" + everConsumed;
 	//super.report() + "\n" +
 	//  "Received bad units=" + 	everReceivedBad + ". " +
 	//	    "Total unfulfilled demand=" + totalUnsatisfiedDemand + " u";
     }
-	   
 
+
+    
+    /** Writes this days' time series values to the CSV file. 
+	Does that for the safety stocks too, if they exist.
+	Here we also check for the inflow anomalies in all
+	buffers.  This method needs to be called from Production.step(),
+	to ensure daily execution.
+    */
+    private void dailyChart() {
+	/*
+	double releasedAsOfToday =getReleased();
+
+	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
+	releasedAsOfYesterday = releasedAsOfToday;
+	
+	//double[] data = new double[2 + 2*inputStore.length];
+	double[] data = new double[2 + 3*inputStore.length];
+	int k=0;
+	data[k++] = releasedToday;
+	data[k++] = sumNeedToSend(); // (startPlan==null)? 0 : startPlan;
+	for(int j=0; j<inputStore.length; j++) {
+	    data[k++] = inputStore[j].getContentAmount();
+	    data[k++] = inputStore[j].receivedTodayFromNormal;
+	    data[k++] = inputStore[j].receivedTodayFromMagic;
+	    inputStore[j].clearDailyStats();
+	}	
+	
+	//for(int j=0; j<inputStore.length; j++) {
+	//    data[k++] = inputStore[j].detectAnomaly()? 1:0;
+	//}
+   
+	charter.print(data);
+		
+	//for(InputStore p: inputStore) {
+	//    if (p.safety!=null) p.safety.doChart(new double[0]);
+	//}
+
+	*/
+	//	orderedToday=0;
+	//	receivedToday = 0;
  
+    }
+     
     
 }
