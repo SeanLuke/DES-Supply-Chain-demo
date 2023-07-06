@@ -33,18 +33,20 @@ public class ProdDelay extends SimpleDelay
     /** Statistics used for reporting utilization rate */
     double totalUsedTime = 0;
 
-    /** @param resource Whatever we produce.
+    /** @param resource Whatever we produce. In SC3, this must be an Entity (i.e. Batch) because we only override offerReceiver(...Entity...) and want that specific method to be triggered, and not the more general (...double...) one.
      */
-    ProdDelay(SimState state,  Production whose, Resource resource) {
+    ProdDelay(SimState state,  Production whose, Resource resource, String suff) {
 	super(state, resource);
-	setName(whose.getName() + ".prodDelay");
+	setName(whose.getName() + ".prodDelay" + suff);
 	// 2023-03-31: try to prevent disappearance
 	setDropsResourcesBeforeUpdate(false);
+	if (!(resource instanceof Entity)) throw new IllegalArgumentException();
     }
 
     /** A wrapper on super.accept() that also does some statistics.	
      */
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
+	double now = state.schedule.getTime();
 	double amt = Batch.getContentAmount(r);
 	batchCnt++;
 	totalStarted+=amt;
@@ -54,11 +56,12 @@ public class ProdDelay extends SimpleDelay
 	double t = state.schedule.getTime();
 
 	boolean z = super.accept( provider, r, atLeast, atMost);
-
+	if (!z) throw new AssertionError("Unexpected rejection of accept ny " + getName());
 	if (!Demo.quiet) {
 	    if (r instanceof Batch) {
 		((Batch)r).addToMsg("[ProdDelay.acc@"+t+", hb="+hasBatches()+"]");
 	    }
+	    System.out.println("DEBUG: at "+ now +", "+ getName() + " accepted a batch; now has " + hasBatches() +"; everReleased=" + getEverReleased());
 	}
 	
 	return z;
@@ -76,7 +79,7 @@ public class ProdDelay extends SimpleDelay
     public String report() {
 	double t = state.schedule.getTime();
 	double util = (t==0)? 1.0 : totalUsedTime/t;
-	return "["+getName()+": accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; utilization="+df.format(util*100)+"%]";
+	return "["+getName()+": accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; released "+getEverReleased()+" ; utilization="+df.format(util*100)+"%]";
     }
 
        
@@ -106,15 +109,21 @@ public class ProdDelay extends SimpleDelay
 	
 	Batch b  = (Batch)entity;
 	double r = faultRateIncrease.getValue(t);
-	//	if (r!=0) System.out.println("DEBUG: at " +t +", "+ getName() + " creates a batch with dr=" + r);
+	//	if (r!=0) System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver creates a batch with dr=" + r);
+
+	double a = b.getContentAmount();
+	
 	b.getLot().setIncreaseInFaultRate( r );
 	boolean z=super.offerReceiver( receiver, entity);
 	double ot = getLastOfferTime();
-	if (z && ot > ot0) {
-	    everReleased += Batch.getContentAmount(  getLastAcceptedOffers());
+	if (z) {
+	    everReleased += a;
+	    
+	    //if (ot > ot0)   everReleased += Batch.getContentAmount(  getLastAcceptedOffers());
 	    ot0 = ot;
 	}
 
+	System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver offers a batch, size=" +a +"; z="+z+", everReleased=" + everReleased);
 	return z; 
     }
 

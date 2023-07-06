@@ -33,6 +33,7 @@ public class Pipeline extends MultiStage {
 
     
     void addStage(Middleman _nextStage) {
+	if (!stages.isEmpty()) lastStage().addReceiver(_nextStage);
 	stages.add(_nextStage);
     }
 
@@ -59,5 +60,21 @@ public class Pipeline extends MultiStage {
 	return (firstStage() instanceof NeedsPriming) &&
 	    ((NeedsPriming)firstStage()).needsPriming();
     }
+
+    public String report() {
+	double t = state.schedule.getTime();
+
+	Vector<String> v = new Vector<>();
+	int j=0;
+	for(Middleman stage: stages) {
+	    j++;
+	    v.add("\n\tStage[" + j+ "] " +
+		  ((stage instanceof Reporting)? ((Reporting)stage).report(): "???"));
+	}
+	
+
+	return "["+getName()+": " + String.join("", v)+"]";
+    }
+
     
 }

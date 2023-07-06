@@ -13,13 +13,13 @@ import edu.rutgers.util.*;
 import edu.rutgers.supply.Disruptions.Disruption;
 import edu.rutgers.sc3.Production.NeedsPriming;
 
-/** A ThrottleQueue + ProdDelay combo, packaged into a Middleman. This can be an entire production
-    stage, or a stage of the production pipeline.
+/** A ThrottleQueue + ProdDelay combo, packaged into a Middleman. This
+    can be an entire production stage, or a stage of the production
+    pipeline.
 */
-public class ThrottledStage extends MultiStage {
+public class ThrottledStage extends MultiStage  {
     final ThrottleQueue needProd;
     final ProdDelay prod;
-
 
     Middleman firstStage() { return needProd; }
     Middleman lastStage() { return prod; }
@@ -50,4 +50,9 @@ public class ThrottledStage extends MultiStage {
 	return needProd.hasBatches();
     }
 
+   public String report() {
+       return "Queued(+prod): "+hasBatches()+
+	   "; " +prod.report();
+    }
+    
 }

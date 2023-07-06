@@ -36,7 +36,7 @@ class Production extends AbstractProduction
 
     /** This could be a ProdDelay, a ThrottledStage, or a Pipeline, as needed */
     private Middleman _prodStage;
-    <T extends Middleman & NeedsPriming & Reporting.HasBatches> T  prodStage() {
+    <T extends Middleman & NeedsPriming & Reporting.HasBatches & Reporting> T  prodStage() {
 	return (T)_prodStage;
     }
     //    private ProdDelay prodDelay;
@@ -287,6 +287,7 @@ class Production extends AbstractProduction
 	    _prodStage = mkProdDelay(".1");
 	} else if ( nProdStages > 1) {
 	    Pipeline p = new Pipeline(state, outResource);
+	    p.setName( getName() + ".pipeline");
 	    for(int j=0; j<nProdStages; j++) {
 		p.addStage( mkProdDelay("."+(j+1)));
 	    }
@@ -329,10 +330,10 @@ class Production extends AbstractProduction
     }
 
     /** Creates the prod delay (throttled, if needed)
-	@param suff Either "", or ".1" etc
+	@param suff Either "", or ".1" etc, to be used in names. This is also controls who will get the auto-reloading feature: only the first stage needs it, because only the first stage needs to trigger mkBatch()
     */
     Middleman mkProdDelay(String suff) throws IllegalInputException {
-	ProdDelay prodDelay = new ProdDelay(state,this,outResource);
+	ProdDelay prodDelay = new ProdDelay(state,this,outResource, suff);
 
 	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
 	if (w!=null) prodDelay.addReceiver(w);
@@ -349,7 +350,7 @@ class Production extends AbstractProduction
 	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap, d, unit);
 
 	    needProd.setWhose(this);
-	    needProd.setAutoReloading(true);
+	    if (suff.equals("")) needProd.setAutoReloading(true);
 	    return new ThrottledStage(state, needProd, prodDelay);
 	} else {
 	    // Production delay is not specified; thus we assumed that
@@ -804,24 +805,26 @@ class Production extends AbstractProduction
 	String s = "[" + cname()+"."+getName();
 	if (inputStore.length>0) {
 	    s += "; stored inputs=("+ reportInputs() +")\n";
+	} else {
+	    s += ". ";
 	}
 	s += noPlan?
-	    ". No planning (driven by input)" :
-	    ". Ever planned: "+(long)everPlanned + "; still to do "+sumNeedToSend();
+	    "No planning (driven by input)" :
+	    "Ever planned: "+(long)everPlanned + "; still to do "+sumNeedToSend();
 	s +=
 	    ". Ever started: "+(long)everStarted + " ("+batchesStarted+" ba)";
 
 	s += " = (in prod=" + prodStage().hasBatches() + ba +")";
 	if (qaDelay!=null) {
 	    if (needQa!=null) s += " (Waiting for QA=" + (long)needQa.getAvailable() +")";
-	    s += " " + qaDelay.report();	    
+	    s += "{QA: " + qaDelay.report() + "}";	    
 	//s +="  in QA=" +   needQa.hasBatches() +")";
 	} else {
 	}
 
 
 	
-	//	s += "\n" + prodStage().report();
+	s += "\n" + prodStage().report() + "\n";
 
 	//if (stolenShipmentSink.getEverConsumed()>0) s+="\n" + stolenShipmentSink.report();
 	if (everStolen>0) s+="\nLost in shipment " + everStolen;

@@ -10,14 +10,13 @@ import sim.des.*;
 
 import edu.rutgers.supply.*;
 import edu.rutgers.util.*;
-//import edu.rutgers.supply.Disruptions.Disruption;
 import edu.rutgers.sc3.Production.NeedsPriming;
 import edu.rutgers.supply.Reporting.HasBatches;
 
 /** The base for two classes ThrottledStage and Pipeline) which both
     consist of a series of stages throw which product batches go.
 */
-abstract class MultiStage extends Middleman implements NeedsPriming, HasBatches {
+abstract class MultiStage extends Middleman implements NeedsPriming, HasBatches, Reporting {
 
     abstract Middleman firstStage();
     abstract Middleman lastStage();
