@@ -61,7 +61,7 @@ prepregProd,faulty,0.05
 
 prepregProd,outputDelay,Uniform,5,10
 #-- 100% of the output goes to substrateProd.input[0]
-prepregProd,output,substrateSmallProd,0,1.0
+prepregProd,output,substrateSmallProd.safety,0,1.0
 
 #----------------------------------
 #-- We have 2 parallel production lines, SubstrateSmallProd and
@@ -129,18 +129,26 @@ cellProd.safety.cellRM,reorderPoint,27760
 cellProd.safety.cellRM,delay,Triangular,60,84,140
 #cellProd.safety.cellRM,orderExpiration,141
 
-#--- Cell Prod; inputs: cellRM
+#--- Cell Prod; inputs: cellRM, cell,coverglass.
+#--- Only he first buffer is used; the other two are for sharing with cellAssembly
 cellProd,orderDelay,Uniform,7,60
-cellProd,inBatch,2776
+cellProd,inBatch,2776,0,0
 cellProd,batch,2776
+#--- the recipe for placing MTO orders (when applicable)
+cellProd,inBatch.mto,2776,0,2776
+cellProd,batch.mto,2776
 cellProd,prodStages,2
 cellProd,prodDelay.1,Uniform,7,10
 cellProd,prodDelay.2,Triangular,7,14,21
 cellProd,outputDelay,Uniform,2,4
-cellProd,output,cellAssembly,0,1.0
+#cellProd,output,cellAssembly,0,1.0
+#-- sending output to my own buffer, for sharing with cellAssembly
+cellProd,output,cellProd,1,1.0
 
 #---- Solar Cell Assembly; inputs: cell, coverglass
-cellAssembly,inBatch,2776,2776
+cellAssembly,noPlan,true
+cellAssembly,useInputsOf,cellProd
+cellAssembly,inBatch,0,2776,2776
 cellAssembly,batch,2776
 cellAssembly,prodDelay,Triangular,7,10,14
 cellAssembly,transDelay,Uniform,1,2
@@ -149,14 +157,9 @@ cellAssembly,faulty,0.05
 cellAssembly,output,cellPackaging,0,1.0
 cellAssembly,outputDelay,Uniform,1,2
 
-#---coverglass FIXME
-#cellAssembly.safety.coverglass,initial,22224	
-#cellAssembly.safety.coverglass,targetLevel,?
-#cellAssembly.safety.coverglass,reorderPoint,?
-#cellAssembly.safety.coverglass,delay,Triangular,120,180,240
-#--- FIXME: coverglass is MTO, not MTS!
-#cellAssembly.safety.coverglass,orderExpiration,?
-
+#---coverglass (MTO from a magic source) ---
+cellProd.safety.coverglass,mto,1.0
+cellProd.safety.coverglass,delay,Triangular,120,180,240
 
 #----- Solar cell packaging
 
@@ -168,6 +171,7 @@ cellPackaging.safety.cellPM,delay,Triangular,30,45,60
 #cellPackaging.safety.cellPM,orderExpiration,61
 
 #-- inputs: cell, cellPM
+cellPackaging,noPlan,true
 cellPackaging,inBatch,2776,2776
 cellPackaging,batch,2776
 cellPackaging,prodDelay,Uniform,1,2
@@ -215,7 +219,7 @@ arraySmallAssembly,prodDelay.7,Uniform,1,3
 arraySmallAssembly,qaDelay,Uniform,12,22
 arraySmallAssembly,faulty,0.00
 arraySmallAssembly,rework,0.10
-# arraySmallAssembly,output,?
+arraySmallAssembly,output,arraySmallCustomer,0,1.0
 arraySmallAssembly,outputDelay,Uniform,10,15
 
 

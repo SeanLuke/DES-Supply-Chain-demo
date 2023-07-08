@@ -127,6 +127,25 @@ public class ProdDelay extends SimpleDelay
 	return z; 
     }
 
+    /*
+    protected boolean offerReceivers() {
+	double t = state.schedule.getTime();
+	boolean z = super.offerReceivers();
+	System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceivers(), z="+z+", everReleased=" + everReleased +
+			   ", receivers are: " + Util.joinNonBlank("| ",  getReceivers())
+			   );
+	return z;
+    }
+        
+    protected boolean offerReceiver(Receiver receiver, double amount) {
+	double t = state.schedule.getTime();
+	boolean z = super.offerReceiver(receiver, amount);
+	System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver("+receiver.getName()+"), z="+z+", everReleased=" + everReleased);
+	return z;
+    }
+    */
+
+    
     public double getEverReleased()  { return everReleased; }
 
     //  protected boolean offerReceivers() { //ArrayList<Receiver> receivers) {

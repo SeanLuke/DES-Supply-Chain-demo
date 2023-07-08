@@ -113,9 +113,9 @@ class Production extends AbstractProduction
 	/** How big is the output batch? */
 	final double outBatchSize;
 
-	Recipe(ParaSet para) throws  IllegalInputException { //, CountableResource underlying, boolean useDefault) {
+	Recipe(ParaSet para, String suff) throws  IllegalInputException { //, CountableResource underlying, boolean useDefault) {
 
-	    final String suff = ""; //useDefault ? "" : "." + underlying.getName();
+	    //final String suff = ""; //useDefault ? "" : "." + underlying.getName();
 
 	    outBatchSize = para.getDouble("batch" + suff);
 	    
@@ -124,9 +124,20 @@ class Production extends AbstractProduction
 	}	
     }
 
+    private Recipe readRecipe(ParaSet para, String suff) throws  IllegalInputException {
+	if (para.getDouble("batch" + suff, null)==null) return null;
+	return new Recipe(para, suff);
+    }
+	
+
+
+
     /** The number of input commodities */
-    final int nin; 
+    final int nin;
+    /** The recipe for making output from inputs */
     private final Recipe recipe; // [];
+    /** The recipe for MTO orders  */
+    private Recipe recipeMto; 
 	
    /** What is the "entry point" for input No. j? */
     InputStore  getEntrance(int j) {
@@ -193,6 +204,8 @@ class Production extends AbstractProduction
 	para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 
+	if (para.getBoolean("noPlan", false)) setNoPlan();
+	
 	manual = para.getBoolean("manual", false);
 
 	AbstractDistribution od = para.getDistribution("orderDelay" ,state.random);
@@ -205,7 +218,10 @@ class Production extends AbstractProduction
 	//CountableResource [] oru = outResource.listUnderlying();
 	//nout = oru.length;
 
-	recipe = new Recipe(para);
+	recipe = new Recipe(para, "");
+
+	recipeMto = readRecipe(para, ".mto");
+	if (recipeMto==null) recipeMto=recipe;
 	
 	//for(int j=0; j<nout; j++) {
 	//    recipe[j] = new Recipe(para, oru[j], false);
@@ -294,7 +310,15 @@ class Production extends AbstractProduction
 	    _prodStage = p;
 	} else {
 	    throw new IllegalInputException("Unexpected number of stages: " + nProdStages);
-	}	
+	}
+
+	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
+	if (w!=null) {
+	    prodStage().addReceiver(w);
+	    if (!Demo.quiet) System.out.println( "INNER_LINK: " + prodStage().getName() + " sends to "+ w.getName());
+	}
+
+
 
 	    
 	stolenShipmentSink = new MSink(state, outResource);
@@ -335,9 +359,6 @@ class Production extends AbstractProduction
     Middleman mkProdDelay(String suff) throws IllegalInputException {
 	ProdDelay prodDelay = new ProdDelay(state,this,outResource, suff);
 
-	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
-	if (w!=null) prodDelay.addReceiver(w);
-
 	AbstractDistribution d0 = para.getDistribution("prodDelay"+suff,state.random);
 	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)recipe.outBatchSize);
 
@@ -350,8 +371,10 @@ class Production extends AbstractProduction
 	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap, d, unit);
 
 	    needProd.setWhose(this);
-	    if (suff.equals("")) needProd.setAutoReloading(true);
-	    return new ThrottledStage(state, needProd, prodDelay);
+	    if (suff.equals("") || suff.equals(".1")) needProd.setAutoReloading(true);
+	    ThrottledStage q = new ThrottledStage(state, needProd, prodDelay);
+	    q.setName( getName() + ".prodThrottledStage" + suff);
+	    return q;
 	} else {
 	    // Production delay is not specified; thus we assumed that
 	    // production is (nearly) instant, as it's the case for
@@ -380,10 +403,21 @@ class Production extends AbstractProduction
     
   /** Do we have enough input materials of each kind to make a batch? 
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
+	@param ratio Usually {1,1}, but can represent some ratio (say {1,3} for 1/3) for prorating lots
      */
-    private boolean hasEnoughInputs() {
+    private boolean hasEnoughInputs(double[] ratio) {
+
+	boolean debug = getName().equals("cellProd");	
 	for(int j=0; j<nin; j++) {
-	    if (!inputStore[j].hasEnough(recipe.inBatchSizes[j])) return false;
+	    double ne = (ratio[0]*recipe.inBatchSizes[j])/ratio[1];
+	    if (!inputStore[j].hasEnough(ne)) {
+		if (debug) {
+		    System.out.println(inputStore[j].getName() +
+				       ", ratio="+Util.joinNonBlank("/",ratio)+", not enough " + 
+				       "; need " + ne);
+		}
+		return false;
+	    }
 	}
 	return true;
     }
@@ -476,6 +510,16 @@ class Production extends AbstractProduction
      */
     private Vector<Order> needToSend = new Vector<>();
 
+    /** @return the sum of the sizes of outstanding orders. This
+	of course will be 0 if this Production unit is input-driven,
+	rather than plan-driven */
+    double sumNeedToSend() {
+	double sum = 0;
+	for(Order e: needToSend) sum += e.amount;
+	return sum;
+    }
+ 
+    
     /** Tell this production unit to fill orders that some other
 	unit has on file. This is used in SC2 ver. 2.* when this
 	is a backup unit meant to substitute for another unit.
@@ -485,12 +529,6 @@ class Production extends AbstractProduction
     }
 	
     
-    double sumNeedToSend() {
-	double sum = 0;
-	for(Order e: needToSend) sum += e.amount;
-	return sum;
-    }
- 
     private boolean noPlan = false;
     
     /** If this is not null, it indicates how many units of the product we
@@ -546,7 +584,10 @@ class Production extends AbstractProduction
 
 	for(int j=0; j<nin; j++) {	    
 	    InputStore p = inputStore[j];
-	    if (p.safety!=null) p.safety.placeMtoOrder(j, recipe, order.amount);
+	    if (p.safety!=null) {
+		boolean z = p.safety.placeMtoOrder(j, recipeMto, order.amount);
+		//System.out.println("DEBUG: " +getName() + ", at "+now()+" mto from " + p.safety.getName() + " ="+z);
+	    }
 	}
 
     }
@@ -632,11 +673,11 @@ class Production extends AbstractProduction
 	    }
    
 	    
-	    if (!hasEnoughInputs()) {
-		if (Demo.verbose)
-		    System.out.println("At t=" + now + ", "+ getName() + " production is starved. Input stores: " + reportInputs(true));
-		return;
-	    }
+	    //	    if (!hasEnoughInputs()) {
+	    //	if (Demo.verbose)
+	    //	    System.out.println("At t=" + now + ", "+ getName() + " production is starved. Input stores: " + reportInputs(true));
+	    //	return;
+	    //}
 
 
 	    if (prodStage().unconstrained()) {
@@ -707,9 +748,9 @@ class Production extends AbstractProduction
 	have a different input:output ratio than 1:1.
      */
     private boolean canProrateLots() {
-	for(double x: recipe.inBatchSizes) {
-	    if (x!=recipe.outBatchSize) return false;
-	}
+	//	for(double x: recipe.inBatchSizes) {
+	//  if (x!=recipe.outBatchSize) return false;
+	//}
 	return true;
     }
 
@@ -719,13 +760,10 @@ class Production extends AbstractProduction
 	@return true if a batch was made; false if not enough input resources
 	was there to make one, or the current plan does not call for one
 
+	FIXME: with noPlan, just set need = the smallest input size
     */
     public boolean mkBatch() {
-
-	double need=sumNeedToSend();
-	// (startPlan == null)? 0: startPlan;
-	if (!noPlan && need <= 0) return false;
-
+		
 	double now = state.schedule.getTime();
 
 	
@@ -733,13 +771,32 @@ class Production extends AbstractProduction
 	    //System.out.println(getName()+ " H");
 	    return false;
 	}
-	//boolean debug = getName().equals("dsCmoBackupProd");
-	//if (debug) System.out.println(getName()+ ", t="+t+", has inputs=" + hasEnoughInputs());
-	if (!hasEnoughInputs()) return false;
+
+	double need=recipe.outBatchSize;
+	if (!noPlan) {
+	    need = Math.min( need, sumNeedToSend());
+	}
+	if (need <= 0) return false;
+
+	//boolean prorate = !noPlan && (need < recipe.outBatchSize) &&   canProrateLots();
+
+	boolean prorate = (need < recipe.outBatchSize);
+	double ratio[] = {1,1};
+	if (prorate) ratio = new double[] { need, recipe.outBatchSize};
+
+
+	boolean debug = getName().equals("cellProd");
+	if (debug) System.out.println(getName()+ ", t="+now+", has inputs=" + hasEnoughInputs(ratio));
+	if (!hasEnoughInputs(ratio)) {
+	    if (debug) {
+		System.out.println(getName()+ ", t="+now+", ratio="+Util.joinNonBlank("/",ratio)+", inputs=" + 
+				    reportInputs(true));
+	    }
+	    return false;
+ 	}
 		
 	Vector<Batch> usedBatches = new Vector<>();
 
-	boolean prorate = !noPlan && (need < recipe.outBatchSize) &&   canProrateLots();
 
 	for(int j=0; j<nin; j++) {
 	    
@@ -768,7 +825,7 @@ class Production extends AbstractProduction
 	
 	return true;
 
-    }
+	}
     
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
@@ -871,6 +928,7 @@ class Production extends AbstractProduction
     */
     void linkUp(HashMap<String,Steppable> knownPools) throws IllegalInputException {
 	Vector<String> output = para.get("output");
+	//System.out.println("DEBUG: Linking " + getName());
 	if (output != null) {
 	    if (output.size()!=3) throw new  IllegalInputException("Expected 3 values for " + getName() + ",output");
 	    String name = output.get(0);
@@ -880,17 +938,28 @@ class Production extends AbstractProduction
 	    if (thruSafety) name = name.substring(0, name.length()-suff.length());
 	    
 	    Steppable _to =  knownPools.get(name);
-	    if (_to==null || !(_to instanceof Production)) throw new  IllegalInputException("There is no Production unit named '" + name +"', in " + getName() + ",output");
-	    Production to = (Production)_to;
-	    int j = Integer.parseInt(output.get(1));
-	    double f = Double.parseDouble(output.get(2));
-	    InputStore dest0 = to.getEntrance(j);
-	    Receiver dest = dest0;
-	    if (thruSafety) {
-		if (dest0.safety!=null) dest = dest0.safety;
-		else System.out.println("Warning: ignoring the '.safety' suffix in " + getName() + ",output, because " + name + " has no safety stock");
-		setQaReceiver(dest, f);
+	    if (_to==null) throw new  IllegalInputException("There is no unit named '" + name +"', in " + getName() + ",output");
+
+	    Receiver r=null;
+	    if (_to instanceof Production) {
+		Production to = (Production)_to;
+		int j = Integer.parseInt(output.get(1));
+		InputStore dest0 = to.getEntrance(j);
+		r = dest0;
+		if (thruSafety) {
+		    if (dest0.safety!=null) r = dest0.safety;
+		    else System.out.println("Warning: ignoring the '.safety' suffix in " + getName() + ",output, because " + name + " has no safety stock");
+		}
+	    } else if (_to instanceof Receiver) {
+		r = (Receiver)_to;
+	    } else {
+		throw new  IllegalInputException("There is no Receiver unit of any kind named '" + name +"', in " + getName() + ",output");
 	    }
+	    double f = Double.parseDouble(output.get(2));
+
+	    if (!Demo.quiet) System.out.println( "OUTER_LINK: " + getName() + " sends to "+ r.getName());
+	    
+	    setQaReceiver(r, f);
 	}
 
 
@@ -899,7 +968,16 @@ class Production extends AbstractProduction
 	    if (p.safety!=null) p.safety.linkUp(knownPools);
 	}
 
-
+	//-- Do we use some other production node's input buffers? 
+	String name = para.getString("useInputsOf", null);
+	if (name!=null) {	
+	    Steppable other =  knownPools.get(name);
+	    if (other!=null && other instanceof Production) {
+		shareInputStore((Production)other);
+	    } else {
+		throw new IllegalInputException(getName() + " cannot use input buffers of " + name + ", because the latter is not a Production node");
+	    }
+	}
     }
 
     

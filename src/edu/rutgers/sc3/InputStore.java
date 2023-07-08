@@ -158,7 +158,7 @@ class InputStore extends sim.des.Queue {
 	@param batchSize How much to consume
     */
     Batch consumeOneBatch(final double batchSize) {
-	
+	if (batchSize==0) return null;
 	if (getTypicalProvided() instanceof Batch) {
 	    //z = p.provide(p.sink, 1);
 
@@ -222,8 +222,11 @@ class InputStore extends sim.des.Queue {
 	a SafetyStock is available, check on that as well.
 
 	FIXME: Here we have a simplifying assumption that all batches are same size. This will be wrong if the odd lots are allowed.
+
+	@param inBatchSize The needed amount. Sometimes can be zero (as in shared input buffers, where some recipes have 0 amount)
     */
     boolean hasEnough(double inBatchSize) {
+	if (inBatchSize==0) return true; 
 	if (getTypicalProvided() instanceof Batch) {
 	    double expiredAmt[]={0};
 	    double t = state.schedule.getTime();
@@ -372,8 +375,10 @@ class InputStore extends sim.des.Queue {
 	if (safety==null || everReceived!=safety.everReceived) {
 	    s += ". Received " + everReceived;
 	    if (everReceivedFromMagic!=0) s += " (incl. "+everReceivedFromMagic+" from SS)";
+	} else {
+	    s += ". " + safety.report();
 	}
-	if (safety!=null) s += ". " + safety.report();			      
+	
 	return s;
     }
 

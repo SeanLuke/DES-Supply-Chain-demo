@@ -505,19 +505,22 @@ public class SafetyStock extends Probe implements Reporting {
 	    mySource = (BatchProvider2)_from;
 	}
 	magicChannel = new Channel(mySource, refillDelay!=null?refillDelay:this, getName());
+
+
+	if (!Demo.quiet) System.out.println(getName() + " is set up with source=" + mySource.getName() +", mto="  + mto);
     }
     
     /** Places an MTO order, if needed for this buffer.
 	@param j which ingredient this buffer is responsible for
-	@param baseAmount how much product will be made out of this input
+	@param baseAmount how much output product will be made out of this input
 	material
      */
-    void placeMtoOrder(int j, Production.Recipe recipe, double baseAmount) {
-	if (mto==null) return;
+    boolean placeMtoOrder(int j, Production.Recipe recipe, double baseAmount) {
+	if (mto==null) return false;
 
 	double need = (recipe.inBatchSizes[j]* baseAmount*mto) / recipe.outBatchSize;
 
-	System.out.println("DEBUG: " +getName() + ", at "+now()+" placing MTO order, size="+ need);
+	//System.out.println("DEBUG: " +getName() + ", at "+now()+" placing MTO order, size="+ need);
 
 	Order mtoOrder = new Order(now(), magicChannel, need);
 	mySource.request(mtoOrder);
@@ -527,6 +530,9 @@ public class SafetyStock extends Probe implements Reporting {
 
 	// FIXME: could add everOrdered, onOrder etc bookkeeping, like in Pool.java
 	// Probably encapsulating this bookeeping functionality into a separate class, also to be used by Safety.java
+
+
+	return true;
     }
 
     void clearDailyStats() {

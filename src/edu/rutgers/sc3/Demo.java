@@ -39,7 +39,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.000";
+    public String version = "1.001";
 
     
     /** Set this to true to print a lot of stuff */
@@ -186,14 +186,14 @@ public class Demo extends SimState {
 	    }
 
 	    addFiller("   --- CELL ---");
-
+	    //-- shared input buffers; see config file for details
 	    cellProd =  new Production(this, "cellProd", config,
-				       new Resource[] {cellRMBatch},
+				       new Resource[] {cellRMBatch, cellBatch, coverglassBatch},
 				       cellBatch);
 	    add(cellProd);
 
 	    cellAssembly =  new Production(this, "cellAssembly", config,
-					   new Resource[] {cellBatch, coverglassBatch},
+					   new Resource[] {cellRMBatch, cellBatch, coverglassBatch},
 					   cellBatch);
 	    add(cellAssembly);
 

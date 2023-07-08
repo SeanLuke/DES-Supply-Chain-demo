@@ -120,7 +120,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	//	if (para==null) throw new  IllegalInputException("No config parameters specified for product named '" + uname +"'");
 	if (para==null) {
 	    //if (!Demo.quiet)
-	    System.out.println("Warning: No config parameters specified for product named '" + uname +"'");
+	    //System.out.println("Warning: No config parameters specified for product named '" + uname +"'");
 	    para = new ParaSet(uname);
 	}
 

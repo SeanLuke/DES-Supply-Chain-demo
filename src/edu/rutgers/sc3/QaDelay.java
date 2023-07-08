@@ -140,6 +140,7 @@ public class QaDelay extends SimpleDelay
 	    setRework(reworkStage.prodStage());
 
 	    postQaJoin = new Filter(state, typicalBatch);
+	    postQaJoin.setName(getName() + ".join");
 	    addReceiver(postQaJoin);
 	    reworkStage.setQaReceiver(postQaJoin, 1.0);
 	} else  if (reworkProb >0) {
@@ -305,7 +306,7 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 	    //if (faultyPortionDistribution!=null) {
 	    // Discarding part of the batch based on a percentage
 	    // drawn from a random distribution. 
-	    double amt, discard=0, rework=0;
+	    double amt, discard=0, rework=0, good=0;
 	    
 	    if (entities == null) {
 		CountableResource cr = resource;
@@ -315,6 +316,7 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 		double[] dr = unitLevelDiscard(amt, null);
 
 		discard = dr[0];
+		good = amt - discard;
 		if (dr[1]>0) throw new AssertionError("No support for rework");
 		// The faulty product is destroyed, so we decrease the resource now
 		cr.decrease(discard);
@@ -340,32 +342,49 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 		}
 				       		
 		amt = e.getContentAmount();
+		if (amt<=0) throw new AssertionError("QA on an empty batch!");
 		double[] dr = unitLevelDiscard(amt, li);
 				
 		discard = dr[0];
 		rework = dr[1];
+		good = amt - discard - rework;
 
-		if (rework>0) {
-		    Batch rb =e.split(rework);
-		    z = super.offerReceiver(sentBackTo, rb);
-		    reworkResource += rework;
-		    reworkBatches++;
+		z = false;
+		if (discard>0) {
+		    e.getContent().decrease( discard);
+		    z = true;
 		}
-		
-		e.getContent().decrease( discard);
-		if (resetExpiration) e.resetExpiration(now);
-		z = super.offerReceiver(receiver, e);
+		if (rework>0) {
+		    Batch rb = (rework==e.getContentAmount())? e: e.split(rework);
+		    z = super.offerReceiver(sentBackTo, rb);
+		    if (!z) throw new AssertionError("offerReceiver(rework) failed");
+		}
+
+		if (good>0) {
+		    if (resetExpiration) e.resetExpiration(now);
+		    z = super.offerReceiver(receiver, e);
+		}
 		entities.remove(e);	// manually remove e from entities?
 	    }
 	    
-	    if (!z) throw new IllegalArgumentException("QaDelay cannot be used with a receiver ("+receiver.getName()+") that refuses offers.  amt="+amt+", atMost=" +atMost+", discard="+discard);
+	    if (!z) {
+		String s = receiver.getName();
+		if (receiver instanceof Middleman) {
+		    s += " who provides to ";
+		    for(Receiver r: ((Middleman)receiver).getReceivers()) {
+			s += " " +r.getName();
+		    }
+		}
+		throw new IllegalArgumentException("QaDelay "+getName()+" cannot be used with a receiver ("+s+") that refuses offers.  amt="+amt+", atMost=" +atMost+", discard="+discard);
+	    }
 	    
 	    badResource +=  discard;
-	    releasedGoodResource += (amt-discard);
+	    releasedGoodResource += good;
+	    reworkResource += rework;
 
-	    if (discard>0) 	    badBatches++;
-	    if (discard<amt)	    releasedBatches ++;
-	    
+	    if (discard>0)    badBatches++;
+	    if (good>0)	 releasedBatches++;   
+	    if (rework>0) reworkBatches++;
 	    //System.out.println("F=" + faulty +", G=" + (amt-faulty));
 	    
 	} else {  // Entire-lot discard, using discardProb (with unitLevel=false)
