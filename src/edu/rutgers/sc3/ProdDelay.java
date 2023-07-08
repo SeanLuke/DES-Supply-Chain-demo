@@ -57,7 +57,7 @@ public class ProdDelay extends SimpleDelay
 
 	boolean z = super.accept( provider, r, atLeast, atMost);
 	if (!z) throw new AssertionError("Unexpected rejection of accept ny " + getName());
-	if (!Demo.quiet) {
+	if (Demo.verbose) {
 	    if (r instanceof Batch) {
 		((Batch)r).addToMsg("[ProdDelay.acc@"+t+", hb="+hasBatches()+"]");
 	    }
@@ -123,7 +123,7 @@ public class ProdDelay extends SimpleDelay
 	    ot0 = ot;
 	}
 
-	System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver offers a batch, size=" +a +"; z="+z+", everReleased=" + everReleased);
+	// System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver offers a batch, size=" +a +"; z="+z+", everReleased=" + everReleased);
 	return z; 
     }
 

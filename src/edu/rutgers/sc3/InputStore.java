@@ -277,12 +277,20 @@ class InputStore extends sim.des.Queue {
     /** Performs certain auxiliary operation piggy-backed on acceptance
      */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	//	if (whose.getName().equals("eeCmoProd")) {
-//	    System.out.println("DEBUG: " + getName() + ".accept(" + amount +
-//			       ") from " + provider);
-//	}
+	if (Demo.verbose && whose.getName().equals("prepregProd")) {
+	    System.out.println("DEBUG: " + getName() + ".accept(" + amount +
+			       ") from " + provider);
+	}
 	double now = state.schedule.getTime();
-	if (resetExpiration) ((Batch)amount).resetExpiration(now);
+	if (resetExpiration) {
+	    ((Batch)amount).resetExpiration(now);
+	    if (Demo.verbose && whose.getName().equals("prepregProd")) {
+		LotInfo li = ((Batch)amount).getLot();
+		System.out.println("DEBUG: " + getName() + ".accept(" + amount +
+				   ") from " + provider + ", reset expiration; lot="+ li);
+
+	    }
+	}
 	
 	return doAccept(provider,  amount, atLeast, atMost, false);
     }
@@ -375,7 +383,9 @@ class InputStore extends sim.des.Queue {
 	if (safety==null || everReceived!=safety.everReceived) {
 	    s += ". Received " + everReceived;
 	    if (everReceivedFromMagic!=0) s += " (incl. "+everReceivedFromMagic+" from SS)";
-	} else {
+	}
+
+	if (safety!=null) {
 	    s += ". " + safety.report();
 	}
 	

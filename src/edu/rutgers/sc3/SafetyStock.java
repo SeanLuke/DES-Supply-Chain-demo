@@ -507,7 +507,7 @@ public class SafetyStock extends Probe implements Reporting {
 	magicChannel = new Channel(mySource, refillDelay!=null?refillDelay:this, getName());
 
 
-	if (!Demo.quiet) System.out.println(getName() + " is set up with source=" + mySource.getName() +", mto="  + mto);
+	if (Demo.verbose) System.out.println(getName() + " is set up with source=" + mySource.getName() +", mto="  + mto);
     }
     
     /** Places an MTO order, if needed for this buffer.

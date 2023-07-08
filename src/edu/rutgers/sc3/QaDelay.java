@@ -23,6 +23,10 @@ public class QaDelay extends SimpleDelay
     implements Reporting, Reporting.HasBatches
 {
 
+    double now() {
+	return  state.schedule.getTime();
+    }
+
     /** This is non-null if we have item-by-item testing, with only
 	same units discarded from each batch. If it is present, then
 	discardProb and reworkProb must both be zeros. It is expected
@@ -382,7 +386,10 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 	    releasedGoodResource += good;
 	    reworkResource += rework;
 
-	    if (discard>0)    badBatches++;
+	    if (discard>0)  {
+		badBatches++;
+		if (replan!=null) doReplan(discard);
+	    }
 	    if (good>0)	 releasedBatches++;   
 	    if (rework>0) reworkBatches++;
 	    //System.out.println("F=" + faulty +", G=" + (amt-faulty));
@@ -434,6 +441,9 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 	    } else if (willDiscard) {
 		badResource +=  amt;
 		badBatches++;
+		if (replan!=null) {
+		    doReplan(amt);
+		}
 	    } else {
 		releasedGoodResource += amt;
 		releasedBatches++;
@@ -498,5 +508,24 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 	
     }
 
-    
+    /** If some units are discarded as faulty, this production node is told to make replacements.
+	This is essentil in SC3, to ensure that orders are filled. */
+    private Production replan = null;
+    private Channel replanChannel = null;
+    void setReplan(Production _replan) {
+	replan = _replan;
+	if (reworkStage != null &&
+	    reworkStage instanceof Production &&
+	    ((Production)reworkStage).qaDelay!=null) {
+	    ((Production)reworkStage).qaDelay.setReplan(replan);
+	    replanChannel = new Channel(replan, this, getName());
+
+	}
+    }
+
+    /** Sends an order back to production to make some units to replace discarded ones. */
+    private void doReplan(double amt) {
+	Order order = new Order(now(), replanChannel, amt);
+	replan.doAddToPlan(order);
+    }
 }

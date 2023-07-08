@@ -32,7 +32,7 @@ abstract class MultiStage extends Middleman implements NeedsPriming, HasBatches,
 
     /** This can only be used ater the pipeline has been fully assembled */
     public boolean addReceiver(Receiver receiver) {
-	System.out.println( lastStage().getName() + " sends to "+ receiver.getName());
+	if (Demo.verbose) System.out.println( lastStage().getName() + " sends to "+ receiver.getName());
 	
 	return lastStage().addReceiver(receiver);
     }

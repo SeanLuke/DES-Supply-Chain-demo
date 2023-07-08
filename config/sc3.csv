@@ -1,13 +1,5 @@
 #-- FIXME: parts to fill in later
 
- #      batch.substrateSmall:28. Received 28.0.  Ordered 374, received 0. On order=374, 
- # Sometimes it's OK for "regularly arriving" supplies in InputBuffer to be subtracted from safety.onOrder
-
-
-# Substrate Contract Negotiation parameters:
-# Substrate Contract Negotiation Delay: Unif(7,60) days
-
-
 #-- need backend processing for
 # substrateSmallProd.safety.prepreg,source,prepregProd
 
@@ -54,10 +46,11 @@ prepregProd.safety.resin,delay,Triangular,14,21,28
 # (fiber,resin)
 prepregProd,inBatch,600*0.041,600*0.027
 prepregProd,batch,600
-prepregProd,delay,Triangular,14,17,21
+prepregProd,prodDelay,Triangular,14,17,21
 prepregProd,qaDelay,Uniform,20,40
 prepregProd,qaResetExpiration,true
 prepregProd,faulty,0.05
+prepregProd,replan,prepregProd
 
 prepregProd,outputDelay,Uniform,5,10
 #-- 100% of the output goes to substrateProd.input[0]
@@ -98,6 +91,8 @@ substrateSmallProd,prodDelay.5,Uniform,7,12
 substrateSmallProd,qaUnitLevel,true
 substrateSmallProd,qaDelay,Uniform,7,12
 substrateSmallProd,faulty,0.05
+substrateSmallProd,rework,0.10
+substrateSmallProd,replan,substrateSmallProd
 
 
 substrateSmallProd.rework,inBatch,1
@@ -154,6 +149,7 @@ cellAssembly,prodDelay,Triangular,7,10,14
 cellAssembly,transDelay,Uniform,1,2
 cellAssembly,qaDelay,Uniform,5,10
 cellAssembly,faulty,0.05
+cellAssembly,replan,cellProd
 cellAssembly,output,cellPackaging,0,1.0
 cellAssembly,outputDelay,Uniform,1,2
 
@@ -175,7 +171,7 @@ cellPackaging,noPlan,true
 cellPackaging,inBatch,2776,2776
 cellPackaging,batch,2776
 cellPackaging,prodDelay,Uniform,1,2
-cellPackaging,output,arraySmallAssembly,2,1.0
+cellPackaging,output,arraySmallAssembly.safety,2,1.0
 cellPackaging,outputDelay,Uniform,5,10
 
 #-------------------------
@@ -212,7 +208,7 @@ arraySmallAssembly,prodDelay.2,Uniform,1.2,2.3
 arraySmallAssembly,prodDelay.3,Uniform,1.2,2.3
 arraySmallAssembly,prodDelay.4,Uniform,1.2,2.3
 arraySmallAssembly,prodDelay.5,Uniform,1.2,2.3
-arraySmallAssembly,prodDelay.6,Uniform,1.2,23.
+arraySmallAssembly,prodDelay.6,Uniform,1.2,2.3
 
 # inspection/rework
 arraySmallAssembly,prodDelay.7,Uniform,1,3
@@ -233,7 +229,13 @@ arraySmallAssembly.rework,qaDelay,Uniform,7,22
 #=============================
 
 arraySmallCustomer,orderProbability,12/365
-arraySmallCustomer,orderSize,EmpiricalWalker,0,0,0,0,0,0,0.25,0,0,0,0.75
+arraySmallCustomer,orderSize,EmpiricalWalker,0,0,0,0,0.27,0,0.73
 arraySmallCustomer,source,arraySmallAssembly
 #arraySmallCustomer,orderExpiration,+Infinity
+
+
+arrayLargeCustomer,orderProbability,12/365
+arrayLargeCustomer,orderSize,EmpiricalWalker,0,0,0,0,0,0,0.25,0,0,0,0.75
+arrayLargeCustomer,source,arrayLargeAssembly
+#arrayLargeCustomer,orderExpiration,+Infinity
 

@@ -417,6 +417,8 @@ public class Demo extends SimState {
 		String a = argv[j];
 		if (a.equals("-verbose")) {
 		    verbose = true;
+		} else 	if (a.equals("-quiet")) {
+		    quiet = true;
 		} else if (a.equals("-config") && j+1<argv.length) {
 		    confPath= argv[++j];
 		} else if (a.equals("-disrupt") && j+1<argv.length) {

@@ -315,7 +315,7 @@ class Production extends AbstractProduction
 	Receiver w = (getTransEntrance()!=null) ? getTransEntrance(): getQaEntrance();
 	if (w!=null) {
 	    prodStage().addReceiver(w);
-	    if (!Demo.quiet) System.out.println( "INNER_LINK: " + prodStage().getName() + " sends to "+ w.getName());
+	    if (Demo.verbose) System.out.println( "INNER_LINK: " + prodStage().getName() + " sends to "+ w.getName());
 	}
 
 
@@ -573,11 +573,13 @@ class Production extends AbstractProduction
 	if (order==null || order.amount<0) throw new IllegalArgumentException(getName() +".addToPlan(" + order+")");
 	if (order.amount==0) return;
 
-	
-	System.out.println("DEBUG: " +getName() + ", at "+now()+" planning "+ order.amount);
+	everPlanned += order.amount;
+
+	if (Demo.verbose) System.out.println("DEBUG: " +getName() + ", at "+now()+" added to plan "+ order.amount +", everPlanned=" + everPlanned);
 
 	
-	everPlanned += order.amount;
+
+	
 	//	if (startPlan != null) x += startPlan;
 	//startPlan = x;
 	needToSend.add(order.copy()); // use a copy, to enable later subtractions
@@ -785,7 +787,7 @@ class Production extends AbstractProduction
 	if (prorate) ratio = new double[] { need, recipe.outBatchSize};
 
 
-	boolean debug = getName().equals("cellProd");
+	boolean debug = false; //getName().equals("cellProd");
 	if (debug) System.out.println(getName()+ ", t="+now+", has inputs=" + hasEnoughInputs(ratio));
 	if (!hasEnoughInputs(ratio)) {
 	    if (debug) {
@@ -957,7 +959,7 @@ class Production extends AbstractProduction
 	    }
 	    double f = Double.parseDouble(output.get(2));
 
-	    if (!Demo.quiet) System.out.println( "OUTER_LINK: " + getName() + " sends to "+ r.getName());
+	    if (Demo.verbose) System.out.println( "OUTER_LINK: " + getName() + " sends to "+ r.getName());
 	    
 	    setQaReceiver(r, f);
 	}
@@ -978,6 +980,18 @@ class Production extends AbstractProduction
 		throw new IllegalInputException(getName() + " cannot use input buffers of " + name + ", because the latter is not a Production node");
 	    }
 	}
+
+	//-- the "replan" link in QA
+	name = para.getString("replan", null);
+	if (name!=null) {	
+	    Steppable other =  knownPools.get(name);
+	    if (other!=null && other instanceof Production) {
+		qaDelay.setReplan((Production)other);
+	    } else {
+		throw new IllegalInputException(getName() + " cannot trigger replan at " + name + ", because the latter is not a Production node");
+	    }
+	}
+	
     }
 
     
