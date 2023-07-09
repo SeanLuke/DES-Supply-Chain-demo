@@ -165,10 +165,11 @@ public class EndCustomer extends MSink implements Reporting {
 	double a = b.getContentAmount();
 
 	double late = onOrder.subtract(now(), a);
+	filledOrders.addAll(onOrder.getLastFilled());
 	if (late>0) {
 	    //System.out.println("DEBUG: "+getName()+", at=" + now+", just processed a late shipment of " + late);
 	}
-
+	
 		
 	//	everReceived += a;
 	receivedToday += a;
@@ -180,7 +181,7 @@ public class EndCustomer extends MSink implements Reporting {
     }
 
     /** Overall stats on spacecraft waiting for their panels */
-    public static class Stats {
+    public static class Stats implements Cloneable {
 	public long sumN = 0;
 	public double sumT = 0;
 	public double avgT = Double.NaN;
@@ -189,13 +190,19 @@ public class EndCustomer extends MSink implements Reporting {
 	public Stats(Vector<Order> orders, double now) {	    
 	    for(Order order: orders) {
 		double t = now;
-		if (t==Double.NaN) {
+		if (Double.isNaN(t)) {
 		    if (order.filledDate==Double.NaN) throw new AssertionError("No filled date");
 		    t = order.filledDate;
+		    if (Double.isNaN(t)) throw new AssertionError("Unfilled order: "+ order);
 		}
-		sumT += t-order.date;
+		if (Double.isNaN(order.date)) throw new AssertionError("No order date");
+		double x = t-order.date;
+		sumT += x*order.amount0;
+		if (order.amount0==0) throw new AssertionError("Empty order: "+ order);
 		sumN += order.amount0;
 		cnt++;
+
+		if (sumN>0) avgT = sumT/sumN;
 	    }
 	    if (sumN>0) avgT = sumT/sumN;
 	}
@@ -206,6 +213,20 @@ public class EndCustomer extends MSink implements Reporting {
 	    sumN += o.sumN;
 	    sumT += o.sumT;
 	    if (sumN>0) avgT = sumT/sumN;
+	}
+
+	protected Object clone()                throws CloneNotSupportedException {
+	    return super.clone();
+	}
+
+	public Stats copy() {
+	    try {
+		return (Stats)clone();
+	    } catch(CloneNotSupportedException ex) { throw new AssertionError(); }
+	}
+	
+	public String toString() {
+	    return "" + sumT + "/" + sumN + "=" + avgT + " on " + cnt + " orders";
 	}
     }
 
@@ -221,16 +242,32 @@ public class EndCustomer extends MSink implements Reporting {
 	return new Stats(onOrder.data, now());
     }
 
+    /** The average weighted waiting time for all orders, filled (from creation to filling) and
+	unfilled (from creation to now).
+    */
+    public Stats avgWaitingAll() {
+	Stats aw=avgWaitingFilled(), awu=avgWaitingUnfilled();
+	aw.add(awu);
+	return aw;
+    }
+
     
     public String report() {
 	String s = getName() + ": Ordered=" + everOrdered + ", received=" + everConsumed;
 	Stats awf=avgWaitingFilled(), awu=avgWaitingUnfilled();
+	Stats aw = avgWaitingAll();
+
 	Vector<String> v = new Vector<>();
 
 	
-	if (awf.cnt>0) 	v.add( " for "+awf.cnt+" filled orders " + awf.avgT + " days");
-	if (awu.cnt>0) 	v.add( " for "+awu.cnt+" unfilled orders " + awf.avgT + " days so far");
-
+	if (awf.cnt>0) 	v.add( " for "+awf.cnt+" filled orders " + awf.avgT
+			       + " days");
+	if (awu.cnt>0) 	v.add( " for "+awu.cnt+" unfilled orders " + awu.avgT
+			       + " days so far");
+	
+	if (aw.cnt>0) 	v.add( " for all "+aw.cnt+" orders " + aw.avgT
+			       + " days so far");
+	
 
 	if (v.size()>0) s += ". Avg waiting time" + String.join(",", v) + ".";
 	return s;

@@ -51,13 +51,27 @@ public class OnOrder {
 	data.add(e);
     }
 
+    /** Returns the list of orders that became "filled" amd removed
+	from the unfilled order list during the most recent subtract()
+	call
+     */
+    public Vector<Order> getLastFilled() {
+	return lastFilled;
+    }
+
+    private Vector<Order> lastFilled = new Vector<>();
+
     /** @param amt the size of the newly arrived shipment, to be subtracted from the oldest outstanding (unexpired) orders.
 	@return the part of amt that could not be applied to the outstanding (unexpired) orders, and had to be matched against the expired ones. (This does not include the amount that  corresponded to no order at all)
     */
     public double subtract(double now, double amt) {
+	lastFilled.clear();
 	while( amt>0 && data.size()>0) {
-	    double x = data.get(0).amount;
+	    Order e = data.get(0);
+	    double x = e.amount;
 	    if (x <= amt) {
+		e.filledDate = now;
+		lastFilled.add(e);
 		data.removeElementAt(0);
 		amt -= x;		    
 	    } else {
@@ -73,6 +87,8 @@ public class OnOrder {
 	    double x = e.amount;
 	    double r =0;
 	    if (x <= amt) {
+		e.filledDate = now;
+		lastFilled.add(e);
 		expired.removeElementAt(0);
 		r = x;
 	    } else {		

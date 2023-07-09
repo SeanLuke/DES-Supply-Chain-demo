@@ -161,8 +161,8 @@ cellProd.safety.coverglass,delay,Triangular,120,180,240
 
 #-- Uniform,0,22224
 cellPackaging.safety.cellPM,initial,22224	
-cellPackaging.safety.cellPM,targetLevel,11112
-cellPackaging.safety.cellPM,reorderPoint,22224
+cellPackaging.safety.cellPM,targetLevel,22224
+cellPackaging.safety.cellPM,reorderPoint,11112
 cellPackaging.safety.cellPM,delay,Triangular,30,45,60
 #cellPackaging.safety.cellPM,orderExpiration,61
 

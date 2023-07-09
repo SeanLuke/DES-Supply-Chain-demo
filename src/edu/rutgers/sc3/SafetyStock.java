@@ -158,6 +158,8 @@ public class SafetyStock extends Probe implements Reporting {
 
 	if (mto==null) {
 	    if (reorderPoint==null || targetLevel==null)  throw new  IllegalInputException("Element named '" + whose.getName() +"', which is not MTO, has no reorderPoint or no targetLevel");
+	    if (reorderPoint > targetLevel) throw new  IllegalInputException("Element named '" + whose.getName() +"', has reorderPoint > targetLevel");
+	    
 	} else {
 	    if (reorderPoint!=null || targetLevel!=null) throw new  IllegalInputException("Element named '" + whose.getName() +"' has both MTS (reorderPoint and targetLevel) and MTO.");
 	}

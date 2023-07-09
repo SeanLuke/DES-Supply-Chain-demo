@@ -19,7 +19,7 @@ public class Order implements Cloneable {
     final public long id;
     /** When this order was placed */
     final public double date;
-    /** This is sometimes used for statistics */
+    /** This is set when the order is closed; sometimes used for statistics */
     public double filledDate=Double.NaN;
     /** The original order size (before any reduction due to filling) */
     final public double amount0;
@@ -52,7 +52,7 @@ public class Order implements Cloneable {
     }
 
     public String toString() {
-	return "(" + channel.name+ "," + date + "," + amount + ")";
+	return "(" + channel.name+ "," + date + " to "+filledDate+"," + amount + " of " + amount0+")";
     }
 
     public void filled(double now) {
