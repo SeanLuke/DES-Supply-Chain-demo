@@ -407,7 +407,7 @@ class Production extends AbstractProduction
      */
     private boolean hasEnoughInputs(double[] ratio) {
 
-	boolean debug = getName().equals("cellProd");	
+	boolean debug = false; //getName().equals("cellProd");	
 	for(int j=0; j<nin; j++) {
 	    double ne = (ratio[0]*recipe.inBatchSizes[j])/ratio[1];
 	    if (!inputStore[j].hasEnough(ne)) {
