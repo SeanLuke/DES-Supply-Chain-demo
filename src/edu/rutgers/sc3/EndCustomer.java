@@ -179,9 +179,61 @@ public class EndCustomer extends MSink implements Reporting {
 	return z;
     }
 
+    /** Overall stats on spacecraft waiting for their panels */
+    public static class Stats {
+	public long sumN = 0;
+	public double sumT = 0;
+	public double avgT = Double.NaN;
+	public int cnt=0;
+	
+	public Stats(Vector<Order> orders, double now) {	    
+	    for(Order order: orders) {
+		double t = now;
+		if (t==Double.NaN) {
+		    if (order.filledDate==Double.NaN) throw new AssertionError("No filled date");
+		    t = order.filledDate;
+		}
+		sumT += t-order.date;
+		sumN += order.amount0;
+		cnt++;
+	    }
+	    if (sumN>0) avgT = sumT/sumN;
+	}
+
+	/** Adds the other set of stats to this one */
+	void add(Stats o) {
+	    cnt += o.cnt;
+	    sumN += o.sumN;
+	    sumT += o.sumT;
+	    if (sumN>0) avgT = sumT/sumN;
+	}
+    }
+
+
+    /** Computes the avg waiting time for filled orders.
+	@return  the avg waiting time for filled orders, or NaN if none has been filled yet
+     */
+    public Stats avgWaitingFilled() {
+	return new Stats(filledOrders, Double.NaN);
+    }
+
+    public Stats avgWaitingUnfilled() {
+	return new Stats(onOrder.data, now());
+    }
+
     
     public String report() {
-	return getName() + ": Ordered=" + everOrdered + ", received=" + everConsumed;
+	String s = getName() + ": Ordered=" + everOrdered + ", received=" + everConsumed;
+	Stats awf=avgWaitingFilled(), awu=avgWaitingUnfilled();
+	Vector<String> v = new Vector<>();
+
+	
+	if (awf.cnt>0) 	v.add( " for "+awf.cnt+" filled orders " + awf.avgT + " days");
+	if (awu.cnt>0) 	v.add( " for "+awu.cnt+" unfilled orders " + awf.avgT + " days so far");
+
+
+	if (v.size()>0) s += ". Avg waiting time" + String.join(",", v) + ".";
+	return s;
 	//super.report() + "\n" +
 	//  "Received bad units=" + 	everReceivedBad + ". " +
 	//	    "Total unfulfilled demand=" + totalUnsatisfiedDemand + " u";

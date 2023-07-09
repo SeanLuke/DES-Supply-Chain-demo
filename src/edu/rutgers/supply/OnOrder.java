@@ -32,7 +32,7 @@ public class OnOrder {
     
 
     /** Assumed to be ordered chronologically (by construction) */
-    Vector<Order> data = new Vector<>();
+    public Vector<Order> data = new Vector<>();
     /** Expired ordered that weren't fulfilled even with a delay. */
     Vector<Order> expired = new Vector<>();
 
