@@ -187,6 +187,7 @@ public class EndCustomer extends MSink implements Reporting {
 	public double avgT = Double.NaN;
 	public int cnt=0;
 	
+	public Stats() {}	    
 	public Stats(Vector<Order> orders, double now) {	    
 	    for(Order order: orders) {
 		double t = now;

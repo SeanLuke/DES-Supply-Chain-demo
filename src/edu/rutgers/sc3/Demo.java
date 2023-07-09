@@ -39,7 +39,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.003";
+    public String version = "1.004";
 
     
     /** Set this to true to print a lot of stuff */
@@ -120,6 +120,12 @@ public class Demo extends SimState {
     Batch[] substrate = new Batch[2], array = new Batch[2];
     Batch cellBatch, packagedCellBatch, cellRMBatch, coverglassBatch, coverglassAssemblyBatch, diodeBatch, adhesiveBatch;
 
+    EndCustomer[] endCustomer = new EndCustomer[2];
+
+    /** 1 means just have Small; 2 means have both Small and Large */
+    final int M = 1; // FIXME 2
+	    
+    
     private Batch batch(String name) throws IllegalInputException {
 	CountableResource r = new CountableResource(name, 1);
 	Batch b = Batch.mkPrototype(r, config);
@@ -173,8 +179,6 @@ public class Demo extends SimState {
 	    add(prepregProd);
 
 
-	    final int M = 1; // FIXME 2
-	    
 	    for(int j=0; j<M; j++) { 
 	    
 		substrateProd[j] = new Production(this,
@@ -221,7 +225,6 @@ public class Demo extends SimState {
 
 	    //-- End customers
 	    addFiller("   --- END CUSTOMER ---");
-	    EndCustomer[] endCustomer = new EndCustomer[2];
 
 	    for(int j=0; j<M; j++) {
 		endCustomer[j] = new EndCustomer(this, 
@@ -472,6 +475,26 @@ public class Demo extends SimState {
 	return String.join("\n", v);
     }
 
+    /** Computes wating-time statistics for a complete run *
+       @return {statsForFilled, statsForUnfilled, statsForAll }
+     */
+    public EndCustomer.Stats[] getWaitingStats() {
+	EndCustomer.Stats[] results = new EndCustomer.Stats[3];
+	for(int i=0; i<results.length; i++) {
+	    results[i] = new  EndCustomer.Stats();
+	}
+	
+	for(int j=0; j<M; j++) {
+	    EndCustomer ec = endCustomer[j];
+	    results[0].add(ec.avgWaitingFilled());
+	    results[1].add(ec.avgWaitingUnfilled());
+	    results[2].add(ec.avgWaitingAll());
+	}
+
+	return results;
+    }
+
+    
     public static class MakesDemo implements  MakesSimState {
    
 	/** The Config object contains the parameters for
@@ -556,6 +579,8 @@ public class Demo extends SimState {
 	}
     }
 
+
+    
     /** Extracts a few command-line options we understand, and leaves
 	the rest of them to MASON.
     */
