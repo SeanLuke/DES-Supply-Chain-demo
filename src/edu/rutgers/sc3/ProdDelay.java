@@ -16,12 +16,23 @@ import edu.rutgers.sc3.Production.NeedsPriming;
 /** The actual "production stage" within a MaterialSuppler or
     a Production unit. 
 
+    <p>
     Among other things, it can modify properties of lots it 
     offers to the receiver on certain days. This ability is controlled
     via the disruption schedule.
 
+    <p>Until SC-3, this was a SimpleDelay, since every production stage is
+    throttled with capacity=1. However, in SC-3 there are some production stage
+    with unlimited capacity (concurrent processing of any number of batches),
+    which made it necessary to convert this class to a Delay, without much
+    difference to its code.
+
+    <p>Instead of setting a delay distribution, we override this class' method
+    getDelay, because there are a variety of ways in which the batch processing
+    time may change.
+    
 */
-public class ProdDelay extends SimpleDelay 
+public class ProdDelay extends CustomDelay 
     implements Reporting, Reporting.HasBatches, NeedsPriming {
     /** Total batches started */
     int batchCnt=0;
@@ -33,36 +44,44 @@ public class ProdDelay extends SimpleDelay
     /** Statistics used for reporting utilization rate */
     double totalUsedTime = 0;
 
-    /** @param resource Whatever we produce. In SC3, this must be an Entity (i.e. Batch) because we only override offerReceiver(...Entity...) and want that specific method to be triggered, and not the more general (...double...) one.
-     */
-    ProdDelay(SimState state,  Production whose, Resource resource, String suff) {
-	super(state, resource);
+    final Production whose;
+
+
+    /** @param _whose The Production unit whose part this ProdDelay is. In particular, whose.outResource Whatever we produce. In SC3, this must be an Entity (i.e. Batch) because we only override offerReceiver(...Entity...) and want that specific method to be triggered, and not the more general (...double...) one.
+	@param suff Either "", or something like ".1", ".2" etc. This is used
+	to form the name of this node.
+    */
+    ProdDelay(SimState state,  Production _whose, //Resource resource,
+	      String suff) {
+	super(state, _whose.outResource);
+	whose = _whose;
 	setName(whose.getName() + ".prodDelay" + suff);
+	
 	// 2023-03-31: try to prevent disappearance
 	setDropsResourcesBeforeUpdate(false);
-	if (!(resource instanceof Entity)) throw new IllegalArgumentException();
+	if (!(whose.outResource instanceof Entity)) throw new IllegalArgumentException();
     }
 
-    /** A wrapper on super.accept() that also does some statistics.	
+
+    /** A wrapper on super.accept() that sets the individually-computed delay time and
+	also does some statistics.	
      */
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
 	double now = state.schedule.getTime();
 	double amt = Batch.getContentAmount(r);
+	
 	batchCnt++;
 	totalStarted+=amt;
-
-	totalUsedTime += getDelayTime();
-	
-	double t = state.schedule.getTime();
 
 	boolean z = super.accept( provider, r, atLeast, atMost);
 	if (!z) throw new AssertionError("Unexpected rejection of accept ny " + getName());
 	if (Demo.verbose) {
 	    if (r instanceof Batch) {
-		((Batch)r).addToMsg("[ProdDelay.acc@"+t+", hb="+hasBatches()+"]");
+		((Batch)r).addToMsg("[ProdDelay.acc@"+now+", hb="+hasBatches()+"]");
 	    }
 	    System.out.println("DEBUG: at "+ now +", "+ getName() + " accepted a batch; now has " + hasBatches() +"; everReleased=" + getEverReleased());
 	}
+	totalUsedTime += getDelayTime();
 	
 	return z;
     }

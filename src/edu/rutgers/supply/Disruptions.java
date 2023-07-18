@@ -40,12 +40,12 @@ public class Disruptions {
     public enum Type {
 	/** This was introduced to code for specified-length delays of
 	    all shipments sent on a given date; but since in SC-1 we're using
-	    Ben's "forklift model", rather than "containter ship" model,
+	    Ben's "forklift model", rather than the "containter ship" model,
 	    we are not actually using this disruption type in SC-1.	    
 	*/
 	Delay,
 	/** All shipments sent during a certain time period (given by
-	   "magnitued") will be lost in transit.
+	   "magnitude" in SC-1/SC-2, "duratiokn" since SC-3) will be lost in transit.
 	 */
 	ShipmentLoss,
 	/** The quality of goods produced on this day will be lower
@@ -65,20 +65,64 @@ public class Disruptions {
 	/** Orders get lost during 
 	    a specified number of days. (SC-2) */
 	StopInfoFlow,
+	/** Increases the production delay by a specified factor (typically,
+	    greater than 1.0 if one wants to slow down things)
+	*/
+	ProdDelayFactor,
+	/** Increases the testing delay by a specified factor (typically,
+	    greater than 1.0 if one wants to slow down things)
+	*/
+	TransDelayFactor,
+	/** Increases the transportation delay by a specified factor (typically,
+	    greater than 1.0 if one wants to slow down things)
+	*/
+	QaDelayFactor,
 	/** This is not a disruption at all, but a command to turn
 	    on a manually controlled production node for a specified
 	    number of days.
 	*/
-	On,
-	   
+	On;
+
+	/** Disruptions which in SC-1 and/or SC-2 contained the duration value
+	    in the magnitude field. */
+	public boolean oldDurational() {
+	    return (this == Halt ||
+		   this == DisableTrackingSafetyStock ||
+		   this == StopInfoFlow ||
+		   this == On);
+	}
     };
 
-    /** A single disruption event. A disruption may take place of a momentary
-	even (Depletion), a modification of the production process in effect
-	for one day (Adulteration), or a phenomenon that last for several
-	days (Halt).
+    /** This is set to true (default) if we want this class' functionality
+	to be compatible with SC-1/SC-2 expectations; set to true in SC-3.
+    */
+    private static boolean sc2BackwardCompatible=true;
+    
+    public static void setSc2BackwardCompatible(boolean x) {
+	sc2BackwardCompatible=x;
+    }
 
-	
+    public static boolean getSc2BackwardCompatible() {
+	return sc2BackwardCompatible;
+    }
+
+
+    /** A single disruption event. A disruption may take place of a
+	momentary even (Depletion) which is thought to happen at the
+	beginning of the day, or a modification of the production
+	process which is in effect for one or several days (Adulteration, Halt).
+
+	<p>In SC-1 and SC-2 there was a distinction between events
+	that were ineffect for 1 day (Adulteration), and those that
+	would last for for several days (Halt). This is because there
+	was just one numerical field ("magnitude" in the Java class,
+	aka "amount" in CSV files), which had the "intensity"
+	semantics for the former and the "duration" semantics for the
+	latter.  Since SC-3, this distinction does not exist anymore,
+	because each Disruption instance has a dedicated "duration"
+	field for the duration.
+
+	<p>
 	FIXME: Ought to replace "public" fields with getter methods
      */
     public static class Disruption {
@@ -104,15 +148,48 @@ public class Disruptions {
 	    the stoppage will last for.
 	 */
 	final public double magnitude;
+	/** For how many day the disruption lasts. The default value is 1  */
+	final public double duration;
+
+	public double end() {
+	    return time + duration;
+	}
+	
 	Disruption(Type _type, String _unitName, double _time, double _magnitude) {
+	    this(_type, _unitName, _time, 1, _magnitude);
+	}
+
+	Disruption(Type _type, String _unitName, double _time, double _duration, double _magnitude) {
 	    type = _type;
 	    unitName = _unitName;
 	    time = _time;
+
+	    // For backward compatibility with SC-1 and SC-2, where the duration
+	    // value was provided via the magnitude field
+	    if (sc2BackwardCompatible && type.oldDurational()) {
+		if (_magnitude < 1) throw new IllegalArgumentException("Magnitude<1 is not supported for type=" + type);
+		else if (_magnitude > 1 && _duration==1) {	       
+		    // So that SC-3 would still work with old-style scenario file
+		    _duration = _magnitude;
+		} else if (_magnitude== 1 && _duration>1) {
+		    // So that SC-1 and SC-2 apps still would run with the SC-3 disrupton code
+		    _magnitude=_duration;
+		} else {
+		    throw new IllegalArgumentException("Magnitude>1 is not supported for type=" + type);
+		}
+	    }
+	    
 	    magnitude = _magnitude;
+	    duration = _duration;
+
+
+	    if (duration < 1.0) throw new IllegalArgumentException("Illegal duration="+duration+" in disruption ("+this+"). Each disruption must be at least 1 day long");
+
+
 	}
 
-	public String toString() {
-	    return "At " + time + ", " + type + "@" + unitName + ", magnitude=" + magnitude;
+	public String toString() { 
+	    return "At " + time + ", " + type + "@" + unitName + ", magnitude=" + magnitude + ", lasts " + duration + " days";
 	}
    
     }
@@ -121,17 +198,23 @@ public class Disruptions {
     private Vector<Disruption> data = new Vector<>();
 
     /** Are there any disruptions of the specified king scheduled for today?
-	For simplicity, both the current time and the scheduled disruption
-	time are rounded to integers; i.e. we have 1-day granularity.
+
+	<p>In SC-2 and before, 
+	for simplicity, both the current time and the scheduled disruption
+	time were rounded to integers; i.e. we had 1-day granularity
+	(Math.round(d.time) == Math.round(time)). In SC-3, when disruptions may
+	have arbitrary duration, the disruption is considered to be "on" a given
+	day if the beginning of the day falls within the range [t, t+duration).
+
 	@param type Matching disruptions have to be of this type
 	@param unitName Matching disruptions have to affect this unit
-	@param time Matching disruptions have to happen during this day.
+	@param time Matching disruptions have to happen during this day. This is the beginning-of-the day timepoint, i.e. an integer.
      */
     public Vector<Disruption> hasToday(Type type, String unitName, double time) {
 	Vector<Disruption> v = new Vector<>();
 	for(Disruption d: data) {
 	    if (d.type == type &&
-		Math.round(d.time) == Math.round(time) &&
+		time >= d.time && time < d.end() &&
 		d.unitName.equals(unitName)		) v.add(d);
 
 	}
@@ -141,10 +224,16 @@ public class Disruptions {
 
     /** Adds a Disruption event to this Disruptions object. This can be
 	used e.g. by an optimization program as it assembles a disruption
-	scenario to test in a simulation run.
+	scenario to test in a simulation run. This is the standard
+	method since SC-3.
      */
+    public void add(Type _type, String _unitName, double _time, double _duration, double _magnitude) {
+	data.add(new Disruption(_type, _unitName,  _time, _duration, _magnitude));
+    }
+    
+    /** Exists for compatibility with SC-1 and SC-2 */
     public void add(Type _type, String _unitName, double _time, double _magnitude) {
-	data.add(new Disruption(_type, _unitName,  _time, _magnitude));
+    	add(_type, _unitName,  _time, 1.0, _magnitude);
     }
 
     public String toString() {
@@ -162,6 +251,7 @@ public class Disruptions {
        
     /** Reads a CSV file with a list of disruption events (one disruption per line). Line format:
 <pre>
+#time,unit,type,duration,amount
 time,unit,type,amount
 </pre>
 or
@@ -170,6 +260,15 @@ timeStart-timeEnd,unit,type,amount
 </pre>
 In the latter case, the disruption repears every day, with the same type and magnitude, from timeStart to timeEnd, inclusively.  E.g. 10-20 will have the disruption repeat 11 times, from day 10 thru day 20.
 
+
+<p>Since SC-3, the default format is 
+<pre>
+#time,unit,type,duration,amount
+time,unit,type,duration,amount
+</pre>
+
+<p>
+The method determines the format based on the header line, i.e. the first line of the file, staring with the '#' character.
 
 @param f The disruption scenario CSV file to read
 @return The new disruption scenario based on the CSV file
@@ -182,11 +281,26 @@ In the latter case, the disruption repears every day, with the same type and mag
 	if (!f.canRead()) throw new IOException("Cannot read file: " + f);
 	CsvData csv = new CsvData(f, true, false, null);
 	
-	int j = 0;
+	int j = 0, lineNo=0;
+	boolean hasDuration=true;
 	for(CsvData.LineEntry _e: csv.entries) {
+	    if (lineNo==0 && _e instanceof CsvData.CommentEntry) {
+		CsvData.CommentEntry header = (CsvData.CommentEntry)_e;
+		final String h0= "time,unit,type,amount",
+		    h1= "time,unit,type,duration,amount";
+		if (header.text.equals(h0)) hasDuration = false;
+		else if (header.text.equals(h1)) hasDuration = true;
+		else {
+		    String msg="Don't know how to interpret the header line\n#" + header.text +
+			"\nThe only supported formats are\n" + h0 +
+			"\nand\n" + h1;
+		    throw new IllegalArgumentException(msg);
+		}
+	    }
+	    final int nExpect = hasDuration? 5:4;
 	    j++;
 	    CsvData.BasicLineEntry e = (CsvData.BasicLineEntry)_e;
-	    if (e.nCol()!=4) throw new  IllegalInputException("Illegal number of columns in file "+h.readFrom+": " + e.nCol() +". Expected 4. Data line no. " + j);
+	    if (e.nCol()!=nExpect) throw new  IllegalInputException("Illegal number of columns in file "+h.readFrom+": " + e.nCol() +". Expected "+nExpect+". Data line no. " + j);
 	    Double[] tt = {null, null};
 
 	    //	    Double time = e.getColDouble(0);
@@ -198,10 +312,11 @@ In the latter case, the disruption repears every day, with the same type and mag
 		    tt[k] = Double.parseDouble(ss[k]);
 		} catch(Exception ex) {}
 	    }
-	    
-	    String unit = e.getCol(1);
-	    String typeString = e.getCol(2);
-	    Double magnitude = e.getColDouble(3);
+	    int k=1;
+	    String unit = e.getCol(k++);
+	    String typeString = e.getCol(k++);
+	    Double duration = hasDuration? e.getColDouble(k++): 1;
+	    Double magnitude = e.getColDouble(k++);
 	    if (tt[0]==null || magnitude==null || unit==null || unit.length()==0) throw new IllegalInputException("Illegal data in data line no. " + j + ". Data=" + e);
 	    Type type;
 	    try {
@@ -210,10 +325,10 @@ In the latter case, the disruption repears every day, with the same type and mag
 		throw new IllegalInputException("Invalid disruption type ("+ typeString+") in file "+h.readFrom+", data line no. " + j);
 	    }
 	    
-	    h.add(type, unit, tt[0], magnitude);
+	    h.add(type, unit, tt[0], duration, magnitude);
 	    if (tt[1]!=null) {
 		for(double time=tt[0]+1; time<=tt[1]; time += 1) {
-		    h.add(type, unit, time, magnitude);
+		    h.add(type, unit, time, duration, magnitude);
 		}
 	    }
 	}

@@ -182,12 +182,12 @@ public class CsvData {
   
     /** Stores a comment line from the CSV file. We may choose to store the
         comment lines so that we can read in a CSV file, do some modification 
-	to each data line, and then wriet out the modified data lines along 
+	to each data line, and then write out the modified data lines along 
 	with all the comment lines that appear here and there between the data
-	lines.
+	lines. Or we can even interpret the first comment line as a header.
     */
     public static class CommentEntry implements LineEntry {
-	/** The entire text of the comment line */
+	/** The entire text of the comment line, without the leading '#' */
 	public final String text;
 	CommentEntry(String _text) { text = _text; }
 	/** Returns null, as comment lines don't have keys */

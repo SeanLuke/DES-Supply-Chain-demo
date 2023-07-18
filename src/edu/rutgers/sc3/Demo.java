@@ -90,6 +90,8 @@ public class Demo extends SimState {
     
     public Demo(long seed)    {
 	super(seed);
+	Disruptions.setSc2BackwardCompatible(false);
+
 	if (verbose) System.out.println("sc3.Demo()");
     }
 

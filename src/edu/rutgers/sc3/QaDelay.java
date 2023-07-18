@@ -19,7 +19,7 @@ import  edu.rutgers.util.*;
     before it's offered to the downstream consumer. Optionally, it
     can also direct some portion of the input to the "rework" receiver.
  */
-public class QaDelay extends SimpleDelay
+public class QaDelay extends CustomDelay
     implements Reporting, Reporting.HasBatches
 {
 
@@ -163,6 +163,7 @@ public class QaDelay extends SimpleDelay
 	
     }
 
+    
     /** Creates a QaDelay based on the parameters from a specified ParaSet.
 	@return a new QaDelay object, or null if the para set contains no 
 	parameters for one.
@@ -528,4 +529,5 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 	Order order = new Order(now(), replanChannel, amt);
 	replan.doAddToPlan(order);
     }
+
 }

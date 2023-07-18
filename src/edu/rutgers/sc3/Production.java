@@ -46,7 +46,7 @@ class Production extends AbstractProduction
 	exist in some tracks. It is null if transportation takes no time
 	in the model.
     */
-    private SimpleDelay transDelay = null;
+    private CustomDelay transDelay = null;
     
     /** These only exist if the respective stages are throttled (FIFO,
 	capacity-1), rather than "parallel" (infinite capacity) */
@@ -248,32 +248,38 @@ class Production extends AbstractProduction
 	double cap = (outResource instanceof Batch) ? 1:  recipe.outBatchSize;	
 
 	qaDelay = QaDelay.mkQaDelay( config, para, state, this,  outResource);
+	
 	if (qaDelay != null) {
+
+	    AbstractDistribution d=para.getDistribution("qaDelay",state.random);
+	    boolean unit = (d==null);
+	    if (unit)  d = para.getDistribution("qaDelayUnit",state.random);
+	    if (d==null) throw new IllegalInputException("No qaDelay or qaDelayUnit in param set for " + getName());
+	    DelayRules dr = new DelayRules(d, unit, qaDelayFactorUntil);
+	    qaDelay.setDelayRules(dr);
+
 	    if (this instanceof Macro)  addProvider(qaDelay, false);
-	    if ( qaIsThrottled) {
-		AbstractDistribution d = para.getDistribution("qaDelay",state.random);
-		boolean unit = (d==null);
-		if (unit)  d = para.getDistribution("qaDelayUnit",state.random);
-		if (d==null) throw new IllegalInputException("No qaDelay or qaDelayUnit in param set for " + getName()); 
-		needQa =new ThrottleQueue(qaDelay, cap, d, unit);
+	    if ( qaIsThrottled) {		
+		needQa =new ThrottleQueue(qaDelay, cap);
 		needQa.setWhose(this);
 	    } else {
 		needQa = null;
 	    }
-	} else { //-- no QA step
+	} else { //-- no QA step at all
 	    needQa = null;
 	}
 
 	if (para.get("transDelay")!=null) {
-	    AbstractDistribution d =  para.getDistribution("transDelay",state.random);
 	    
+	    AbstractDistribution d =  para.getDistribution("transDelay",state.random);
+	    // if there is a trans delay, its cost is  always batch-based (not unit-based) cost
+	    DelayRules dr = new DelayRules(d, false, transDelayFactorUntil);
+	    transDelay = new CustomDelay(state, outResource);
+	    transDelay.setDelayRules(dr);
+
 	    if (transIsThrottled) {
-		transDelay = new SimpleDelay(state, outResource);
-		// if there is a trans delay, its cost is  always batch-based (not unit-based) cost
-		needTrans = new ThrottleQueue(transDelay, cap, para.getDistribution("transDelay",state.random), false);
+		needTrans = new ThrottleQueue(transDelay, cap);
 	    } else {
-		transDelay = new Delay(state, outResource);
-		((Delay)transDelay).setDelayDistribution(  d);		
 		needTrans = null;
 	    }
 	    transDelay.setName(getName() + ".TransDelay");// + outResource.getName());
@@ -353,37 +359,44 @@ class Production extends AbstractProduction
 	
     }
 
-    /** Creates the prod delay (throttled, if needed)
+    /** Creates the prod delay (throttled, if needed).
+
+	<p>If the production delay time is not specified in the config
+	file, we assumed that // production is (nearly) instant, as
+	it's the case for // RM EE supplier in SC-2. Therefore it's
+	not throttled...  // A kludge for nearly-instant production
+
+	
 	@param suff Either "", or ".1" etc, to be used in names. This is also controls who will get the auto-reloading feature: only the first stage needs it, because only the first stage needs to trigger mkBatch()
     */
     Middleman mkProdDelay(String suff) throws IllegalInputException {
-	ProdDelay prodDelay = new ProdDelay(state,this,outResource, suff);
 
-	AbstractDistribution d0 = para.getDistribution("prodDelay"+suff,state.random);
-	AbstractDistribution dn = (d0==null)? null: new CombinationDistribution(d0, (int)recipe.outBatchSize);
+	ProdDelay prodDelay = new ProdDelay(state, this, suff);
+
 
 	AbstractDistribution d = para.getDistribution("prodDelay"+suff,state.random);
 	boolean unit = (d==null);
 	if (unit)  d = para.getDistribution("prodDelayUnit"+suff,state.random);
-
-	if (d!=null) {
+	DelayRules dr = (d!=null) ?
+	    new DelayRules(d, unit, prodDelayFactorUntil):
+	    new DelayRules(0.0001);
+	
+	prodDelay.setDelayRules(dr);
+	
+	boolean throttled = para.getBoolean("prodThrottled"+suff, d!=null);
+	
+	if (throttled) { // throttled, i.e. 1 batch at a time
 	    final double cap = 1;
-	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap, d, unit);
-
+	    ThrottleQueue needProd = new ThrottleQueue(prodDelay, cap);
+	    
 	    needProd.setWhose(this);
 	    if (suff.equals("") || suff.equals(".1")) needProd.setAutoReloading(true);
 	    ThrottledStage q = new ThrottledStage(state, needProd, prodDelay);
 	    q.setName( getName() + ".prodThrottledStage" + suff);
 	    return q;
-	} else {
-	    // Production delay is not specified; thus we assumed that
-	    // production is (nearly) instant, as it's the case for
-	    // RM EE supplier in SC-2. Therefore it's not throttled...
-	    // A kludge for nearly-instant production
-	    prodDelay.setDelayTime(0.0001);
+	} else { //concurrent (with no cap), i.e. multiple batches at a time
 	    return prodDelay;
 	}
-
 
     }
 
@@ -473,13 +486,14 @@ class Production extends AbstractProduction
 	    vd = ((Demo)state).hasDisruptionToday(type, dname);
 	    if (vd.size()==1) {
 		// stop SS level tracking for a while
-		double days = vd.get(0).magnitude;
+		//double days = vd.get(0).duration;
+		double end = vd.get(0).end();
 
 		if (p.safety==null) {
 		    throw new IllegalArgumentException("It is impossible to disable the safety stock (disruption " + vd.get(0) +" on input buffer " + p + "), because that input buffer has no safety stock to begin with");
 		}
-		if (!Demo.quiet) System.out.println("Input buffer " + dname + ": at "+now+", disruption stops SS level tracking for " + days + " days");
-		p.safety.haltUntil( now+days );
+		if (!Demo.quiet) System.out.println("Input buffer " + dname + ": at "+now+", disruption stops SS level tracking until t=" + end);
+		p.safety.haltUntil( end );
 		
 	    } else if (vd.size()>1) {
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
@@ -492,6 +506,12 @@ class Production extends AbstractProduction
 
     /** Indicates whether the node has been halted by a disruption */
     private Timed haltedUntil = new Timed();
+
+    /** Slowdown factors for various stages, as may be caused by disruptions. */
+    Timed prodDelayFactorUntil = new Timed(),
+	transDelayFactorUntil = new Timed(),
+	qaDelayFactorUntil = new Timed();
+    
     /** For manually controlled nodes, this timer is used to
 	indicate that the node has been turned on */
     private Timed manualOnUntil = new Timed();
@@ -657,23 +677,40 @@ class Production extends AbstractProduction
 		// reduce quality of newly produced lots, in effect for 1 day
 		//double r = 0.1 * d.magnitude;
 		double r = d.magnitude;
-		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" increasing failure rate by " + r +", until " + (now+1));
-		prodStage().setFaultRateIncrease(r, now+1);
+		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" increasing failure rate by " + r +", until " + d.end());
+		prodStage().setFaultRateIncrease(r, d.end());
 	    }
 
+	    //-- Which disruption type affects which timer
+	    Disruptions.Type[] types = {
+		Disruptions.Type.Halt,
+		Disruptions.Type.ProdDelayFactor,
+		Disruptions.Type.TransDelayFactor,
+		Disruptions.Type.QaDelayFactor,
+		Disruptions.Type.On
+	    };
 
-	    Disruptions.Type type = Disruptions.Type.Halt;
-	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) { 
-		haltedUntil.enableUntil( now+d.magnitude );
-		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" started disruption '"+type+"' until " + (now+d.magnitude));
+	    Timed[] timers = {
+		haltedUntil,
+		prodDelayFactorUntil,
+		transDelayFactorUntil,
+		qaDelayFactorUntil,
+		manualOnUntil,
+	    };
+    
+	    for(int j=0; j<types.length; j++) {
+		Disruptions.Type type = types[j];
+		for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) {
+		    timers[j].setValueUntil(d.magnitude, d.end());
+		    if (Demo.verbose) {
+			String msg = "At t=" + now + ", Production unit "+ getName() + " has " +
+			    (type==Disruptions.Type.On?"command":"disruption")+
+			    " '"+type+"', mag="+d.magnitude+", until " + d.end()
+			    +"; timer=" + timers[j].report(now());
+			System.out.println(msg);
+		    }
+		}
 	    }
-
-	    type = Disruptions.Type.On;
-	    for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) { 
-		manualOnUntil.enableUntil( now+d.magnitude );
-		if (!Demo.quiet)  System.out.println("At t=" + now + ", Production unit "+ getName() +" received command '"+type+"' until " + (now+d.magnitude));
-	    }
-   
 	    
 	    //	    if (!hasEnoughInputs()) {
 	    //	if (Demo.verbose)
@@ -770,7 +807,7 @@ class Production extends AbstractProduction
 
 	
 	if (!isOpenForBusiness(now)) {
-	    //System.out.println(getName()+ " H");
+	    //System.out.println(getName()+ ":" + now + " H");
 	    return false;
 	}
 
@@ -827,7 +864,7 @@ class Production extends AbstractProduction
 	
 	return true;
 
-	}
+    }
     
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();

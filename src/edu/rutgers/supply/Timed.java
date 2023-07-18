@@ -19,6 +19,8 @@ package  edu.rutgers.supply;
 */
 public class Timed {
     private Double onUntil = null;
+    /** The optional (only used for some disruption types) magnitude (strength)
+	of the disruption) */
     private double value;
 
     /** Deactivates the timer. */
@@ -63,5 +65,9 @@ public class Timed {
 	return value;
     }
 
+    public String report(double now) {
+	if (isOn(now)) return "on until " + onUntil + ", val="+value;
+	else return "off";
+    }
 }
 

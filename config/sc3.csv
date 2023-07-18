@@ -134,6 +134,8 @@ cellProd,inBatch.mto,2776,0,2776
 cellProd,batch.mto,2776
 cellProd,prodStages,2
 cellProd,prodDelay.1,Uniform,7,10
+#--- the 2nd stage is concurrent (not throttled)
+cellProd,prodThrottled.2,false
 cellProd,prodDelay.2,Triangular,7,14,21
 cellProd,outputDelay,Uniform,2,4
 #cellProd,output,cellAssembly,0,1.0

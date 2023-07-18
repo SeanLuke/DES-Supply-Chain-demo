@@ -56,25 +56,12 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
     void setWhose(  Production  _whose) {whose = _whose;}
     Production 	getWhose() { return whose; }
 
-    /** This is interpreted as either the distribution from which the time of 
-	 processing a batch is drawn (if unit==false), or the time of processing
-	 a single unit is drawn (if unit==true). In the latter case, n values
-	 are drawn from this distribution to obtain a time for processing a batch
-	 of n units.
-    */
-    private AbstractDistribution delayDistribution=null;
-    //    private AbstractDistribution delayDistributionUnit=null;
-
-    //    public AbstractDistribution getDelayDistribution() {
-    //	return delayDistribution;
-    //    }
-
-    /** If true, the delayDistribution contains unit cost, rather than batch cost */
-    private final boolean unit;
     
-    /** The capacity-1 SimpleDelay for which the ThrottleQueue serves as an
-	input buffer */
-    final private SimpleDelay delay;
+    /** A ProdDelay object (which in SC-3 is designed as a Delay class,
+	for compatibility with other uses), which uses as if it was just 
+	a capacity-1 SimpleDelay for which the ThrottleQueue
+	serves as an input buffer.   */
+    final private Delay delay;
 
 /** Creates a Queue to be attached in front of the Delay, and links it
     up appropriately. This is done so that we can model a production
@@ -85,17 +72,15 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
     can put any number of "raw" batches, where they will sit and wait
     for the production facility to grab them whenever it's ready.
 
-	
-    @param delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
-	
+    @param _delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
+
     @param cap The max number of batches that the production unit (the Delay object) can physically handle simultaneously. (Usually, 1).
 
      */
-    public  ThrottleQueue(SimpleDelay _delay, double cap, AbstractDistribution _delayDistribution, boolean _unit) {
+    public  ThrottleQueue(Delay _delay, double cap)
+{
 	super(_delay.getState(), _delay.getTypicalProvided());
 	delay = _delay;
-	delayDistribution = _delayDistribution;
-	unit = _unit;
 	setOffersImmediately(true);
 	setName("TQ for " + delay.getName());
 	if (delay.getTypicalProvided() instanceof Entity) {
@@ -143,10 +128,6 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 
 	if (!whose.isOpenForBusiness(now)) return false; // Halt disruption in effect
 
-	long n = unit? (long)Math.round(((Batch)entities.getFirst()).getContentAmount()): 1;
-	double delayTime = computeDelayTime( n );
-	
-	delay.setDelayTime( delayTime);
 			    
 	//double t = state.schedule.getTime();       
 
@@ -156,14 +137,6 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
     }
 
 
-    private double computeDelayTime(long n) {
-	double sum=0;
-	if (!unit) n = 1;
-	for(int j=0; j<n; j++) {
-	    sum += delayDistribution.nextDouble();
-	}
-	return Math.abs(sum);
-    }
 
     
     /** How many batches are there waiting for processing, and
