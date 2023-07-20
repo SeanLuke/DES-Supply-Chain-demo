@@ -17,8 +17,8 @@ class MSink extends Sink implements Reporting {
     /** How much stuff has this Sink consumed since it's been created? */
     double everConsumed = 0;
 	
-    public MSink(SimState state, Resource typical) {
-	super(state,typical);
+    public MSink(SimState _state, Resource typical) {
+	super(_state,typical);
     }
     public boolean accept(Provider provider, Resource resource, double atLeast, double atMost) {
 	String name = "?";

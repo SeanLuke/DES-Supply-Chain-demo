@@ -57,32 +57,32 @@ public class Test extends SimState {
 
 	Source source;
 	
-	Prod(SimState state)     {
+	Prod(SimState _state)     {
 	    
 	    Resource outResource = new CountableResource("Pills", 0);
 	
-	    prodDelay = new Delay(state,outResource);
-	    AbstractDistribution dist = new Uniform(10,12, state.random);	
+	    prodDelay = new Delay(_state,outResource);
+	    AbstractDistribution dist = new Uniform(10,12, _state.random);	
 	    prodDelay.setDelayDistribution( dist);
 	    
-	    Sink sink = new Sink(state,outResource);
+	    Sink sink = new Sink(_state,outResource);
 	    prodDelay.addReceiver(sink);
-	    source = new Source(state, outResource);
+	    source = new Source(_state, outResource);
 	}
 
 	int batchesStarted=0;
 	double everStarted = 0;
 	
-	public void step​(SimState state) {
+	public void step​(SimState _state) {
 	    
 	    batchesStarted++;
 	    everStarted += outBatchSize;
 	    
-	    //if (verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production about to start on batch no. "+batchesStarted+"; in the works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	    //if (verbose) System.out.println("At t=" + _state.schedule.getTime() + ", Production about to start on batch no. "+batchesStarted+"; in the works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 	    Resource onTheTruck = new CountableResource((CountableResource)prodDelay.getTypicalProvided(), outBatchSize);
 	    Provider provider = source; //null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, outBatchSize, outBatchSize);
-	    if (verbose) System.out.println("At t=" + state.schedule.getTime() + ", Production has started  on batc no. "+batchesStarted+"; in the works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	    if (verbose) System.out.println("At t=" + _state.schedule.getTime() + ", Production has started  on batc no. "+batchesStarted+"; in the works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 	}
 	
     }

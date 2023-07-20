@@ -133,7 +133,12 @@ public class QaDelay extends CustomDelay
 
 	resetExpiration = para.getBoolean("qaResetExpiration", false);
 	
-
+	// In SC-3, the post-QA rework sometimes is carried out as if
+	// on a separate dedicated production line with its own
+	// parameters, rather than the main production line.
+	// We schedule the rework stage from here, rather than
+	// via Demo.add(), because we don't want it to clutter
+	// the final report.
 	String reworkName = para.name + ".rework";
 	ParaSet para2 = config.get(reworkName);
 	if (para2 != null) {
@@ -142,6 +147,7 @@ public class QaDelay extends CustomDelay
 					 (Batch)typicalBatch);
 	    reworkStage.setNoPlan();
 	    setRework(reworkStage.prodStage());
+	    IterativeRepeat ir = state.schedule.scheduleRepeating(reworkStage);
 
 	    postQaJoin = new Filter(state, typicalBatch);
 	    postQaJoin.setName(getName() + ".join");

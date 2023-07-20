@@ -2,15 +2,11 @@ package  edu.rutgers.sc3;
 
 import java.util.*;
 
-//import sim.engine.*;
-//import sim.util.*;
 import sim.util.distribution.*;
-//import sim.des.*;
 
 import edu.rutgers.supply.*;
 import edu.rutgers.util.*;
-//import edu.rutgers.supply.Disruptions.Disruption;
-//import edu.rutgers.sc3.Production.NeedsPriming;
+
 
 /** This is an auxiliary class used to compute the time that a
     particular batch will take to go through a production or QA
@@ -50,7 +46,17 @@ class DelayRules {
 	delayFactor = null;
     }
     
-    
+    /** @param  _delayDistribution The delay distribution on which this set
+	of DelayRules is built
+       @param _unit If true, the total time of processing a batch of n units is computed
+       as the sum of n values drawn from the _delayDistribution. If false
+       (the usual situation), the time of processing of a batch of any size
+       is drawn directly from that distribiution _delayDistribution.
+
+       @param _delayFactor If it is not null, it serves as a channel
+       through which disruptions can slow down the processing
+       time. The slowdown factor is pulled from this object.
+     */
     DelayRules(AbstractDistribution _delayDistribution, boolean _unit, Timed _delayFactor) {
 	fixedT = null;
     	myDelayDistribution = _delayDistribution;

@@ -36,10 +36,11 @@ import sim.des.portrayal.*;
 Demo demo = ....;
 run simulation
 </pre>
+
  */
 public class Demo extends SimState {
 
-    public String version = "1.004";
+    public String version = "1.005";
 
     
     /** Set this to true to print a lot of stuff */

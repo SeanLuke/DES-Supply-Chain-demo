@@ -336,16 +336,17 @@ class Production extends AbstractProduction
 	sm = new SplitManager(this, outResource, getTheLastStage());
 
 	charter=new Charter(state.schedule, this);
-	//	String moreHeaders[] = new String[2 + 2*inResources.length];
-	String moreHeaders[] = new String[2 + 3*inResources.length];
+	String moreHeaders[] = new String[2 + 2*inResources.length];
+	//String moreHeaders[] = new String[2 + 3*inResources.length];
 	int k = 0;
 	moreHeaders[k++] = "releasedToday";
 	moreHeaders[k++] = "outstandingPlan";
 	for(int j=0; j<inputStore.length; j++) {
 	    String rn = inputStore[j].getUnderlyingName();
 	    moreHeaders[k++] = "Stock." + rn;
-	    moreHeaders[k++] = "ReceivedTodayFromNormal." + rn;
-	    moreHeaders[k++] = "ReceivedTodayFromMagic." + rn;
+	    moreHeaders[k++] = "ReceivedToday." + rn;
+	    //moreHeaders[k++] = "ReceivedTodayFromNormal." + rn;
+	    //moreHeaders[k++] = "ReceivedTodayFromMagic." + rn;
 	}
 	//for(int j=0; j<inputStore.length; j++) {
 	//    moreHeaders[k++] = "Anomaly." + inputStore[j].getUnderlyingName();
@@ -481,12 +482,10 @@ class Production extends AbstractProduction
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
 	    }
 
-	    type = Disruptions.Type.DisableTrackingSafetyStock;
-	    
+	    type = Disruptions.Type.DisableTrackingSafetyStock;	    
 	    vd = ((Demo)state).hasDisruptionToday(type, dname);
 	    if (vd.size()==1) {
 		// stop SS level tracking for a while
-		//double days = vd.get(0).duration;
 		double end = vd.get(0).end();
 
 		if (p.safety==null) {
@@ -494,6 +493,24 @@ class Production extends AbstractProduction
 		}
 		if (!Demo.quiet) System.out.println("Input buffer " + dname + ": at "+now+", disruption stops SS level tracking until t=" + end);
 		p.safety.haltUntil( end );
+		
+	    } else if (vd.size()>1) {
+		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
+	    }
+
+
+	    type = Disruptions.Type.TransDelayFactor;	    
+	    vd = ((Demo)state).hasDisruptionToday(type, dname);
+	    if (vd.size()==1) {
+		// Slow down the stream of supplies
+		Disruption d = vd.get(0);
+		double end = d.end();
+
+		if (p.safety==null) {
+		    throw new IllegalArgumentException("It is impossible to slow down supplies of stock (disruption " + d +" on input buffer " + p + "), because that input buffer has no suitable supply mechanism to begin with");
+		}
+		if (!Demo.quiet) System.out.println("Input buffer " + dname + ": at "+now+", supply slow down by factor="+d.magnitude+" until t=" + end);
+		p.safety.transDelayFactorUntil.setValueUntil(d);
 		
 	    } else if (vd.size()>1) {
 		throw new IllegalArgumentException("Multiple disruptions of the same type in one day -- not supported. Data: "+ Util.joinNonBlank("; ", vd));
@@ -701,7 +718,7 @@ class Production extends AbstractProduction
 	    for(int j=0; j<types.length; j++) {
 		Disruptions.Type type = types[j];
 		for(Disruption d: ((Demo)state).hasDisruptionToday(type, getName())) {
-		    timers[j].setValueUntil(d.magnitude, d.end());
+		    timers[j].setValueUntil(d);
 		    if (Demo.verbose) {
 			String msg = "At t=" + now + ", Production unit "+ getName() + " has " +
 			    (type==Disruptions.Type.On?"command":"disruption")+
@@ -762,8 +779,12 @@ class Production extends AbstractProduction
 	data[k++] = sumNeedToSend(); // (startPlan==null)? 0 : startPlan;
 	for(int j=0; j<inputStore.length; j++) {
 	    data[k++] = inputStore[j].getContentAmount();
-	    data[k++] = inputStore[j].receivedTodayFromNormal;
-	    data[k++] = inputStore[j].receivedTodayFromMagic;
+	    //data[k++] = inputStore[j].receivedTodayFromNormal;
+	    //data[k++] = inputStore[j].receivedTodayFromMagic;
+
+	    data[k++] = inputStore[j].receivedTodayFromNormal +
+		inputStore[j].receivedTodayFromMagic;
+
 	    inputStore[j].clearDailyStats();
 	}	
 	
@@ -943,9 +964,16 @@ class Production extends AbstractProduction
     */
     Delay mkOutputDelay(Receiver rcv)  throws IllegalInputException {
 
+
 	AbstractDistribution distr = para.getDistribution("outputDelay", state.random); 
-	Delay delay = new Delay(state, outResource);
-	delay.setDelayDistribution(distr);
+	CustomDelay delay = new CustomDelay(state, outResource);
+	//delay.setDelayDistribution(distr);
+	DelayRules dr = new DelayRules(distr, false, transDelayFactorUntil);
+	delay.setDelayRules(dr);
+	delay.setName("OutputDelay." + getName());
+
+	//System.out.println("DEBUG: " + getName() + ", created " + delay.getName());
+	
 	delay.addReceiver(rcv);
 	return delay;
     }
@@ -997,8 +1025,9 @@ class Production extends AbstractProduction
 	    double f = Double.parseDouble(output.get(2));
 
 	    if (Demo.verbose) System.out.println( "OUTER_LINK: " + getName() + " sends to "+ r.getName());
-	    
-	    setQaReceiver(r, f);
+
+	    Receiver h = (para.get("outputDelay")!=null)? mkOutputDelay(r): r;
+	    setQaReceiver(h, 1.0);	
 	}
 
 

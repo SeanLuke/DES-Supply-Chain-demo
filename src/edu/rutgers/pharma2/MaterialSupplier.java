@@ -54,20 +54,20 @@ public class MaterialSupplier extends Sink //Delay
     
     /**
      */
-    MaterialSupplier(SimState state, String name, Config config, CountableResource resource) 
+    MaterialSupplier(SimState _state, String name, Config config, CountableResource resource) 
 	throws IllegalInputException {
-	super(state, resource);
+	super(_state, resource);
 
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	//setCapacity(para.getDouble("capacity"));
 
-	delay = new Delay(state, resource);
-	delay.setDelayDistribution(para.getDistribution("delay",state.random));
+	delay = new Delay(getState(), resource);
+	delay.setDelayDistribution(para.getDistribution("delay",getState().random));
 	delay.addReceiver( this );
 
-	faultyPortionDistribution = para.getDistribution("faulty",state.random);
+	faultyPortionDistribution = para.getDistribution("faulty",getState().random);
 	
     }
 

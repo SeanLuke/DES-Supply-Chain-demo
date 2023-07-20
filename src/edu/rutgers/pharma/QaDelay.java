@@ -19,8 +19,8 @@ class QaDelay extends Delay {
     
 
     
-    public QaDelay(SimState state, Resource typical, AbstractDistribution _faultyPortionDistribution) {
-	super(state, typical);
+    public QaDelay(SimState _state, Resource typical, AbstractDistribution _faultyPortionDistribution) {
+	super(_state, typical);
 	faultyPortionDistribution = _faultyPortionDistribution;
     }
 

@@ -26,9 +26,9 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
     final double threshold, restock;
 
     
-    IngredientStorage(SimState state, String name, Config config,
+    IngredientStorage(SimState _state, String name, Config config,
 		      CountableResource resource) throws IllegalInputException {
-	super(state, resource);	
+	super(_state, resource);	
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
@@ -37,8 +37,8 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	threshold = para.getDouble("threshold");
 	restock = para.getDouble("restock");
 	
-	supplierDelay = new Delay(state,resource);
-	supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",state.random));
+	supplierDelay = new Delay(getState(),resource);
+	supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",getState().random));
 	supplierDelay.addReceiver(this);
     }
 
@@ -61,14 +61,14 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 	on the way already, the storage orders another supply truck
 	(thru supplierDelay).
      */
-    public void step​(sim.engine.SimState state) {
+    public void step​(sim.engine.SimState _state) {
 	// FIXME: Abhisekh likes to "over-order" (asking for 800 units),
 	// but I am not doing it because I don't have proper support for
 	// a possible overflow. 
 	if (nothingInSupplyQueue() &&
 	    resource.getAmount() < threshold) {
 	    double neededAmount = Math.min(restock, getCapacity() - resource.getAmount());
-	    if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypicalProvided());
+	    if (Demo.verbose) System.out.println("At t=" + getState().schedule.getTime() + ", " +  getName()+ " ordering " +  neededAmount + " units of " + getTypicalProvided());
 	    Resource onTheTruck = new CountableResource((CountableResource)getTypicalProvided(), neededAmount);
 	    Provider provider = null;  // FIXME: replace with a bottomless Source
 	    supplierDelay.accept(provider, onTheTruck, neededAmount, neededAmount);
@@ -77,14 +77,14 @@ class IngredientStorage extends sim.des.Queue implements Reporting {
 
 	
 	//  the Queue.step() call resource offers to registered receivers
-	super.step(state);
+	super.step(getState());
     }
 
     double everReceieved = 0;
     
     /** This is called by the Delay when the truck arrives */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " receiving "+
+	if (((Demo)getState()).verbose) System.out.println("At t=" + getState().schedule.getTime() + ", " +  getName()+ " receiving "+
 			   atLeast + " to " +  atMost + " units of " + amount +
 					      ", while delay.ava=" + supplierDelay.getAvailable());
 	double s0 = getAvailable();

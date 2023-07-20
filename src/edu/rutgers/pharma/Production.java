@@ -34,12 +34,12 @@ class Production extends sim.des.Queue
     /** Dummy receivers used for the consumption of ingredients */
     final Sink[] sink;
 
-    Production(SimState state, String name, Config config,
+    Production(SimState _state, String name, Config config,
 	       PreprocStorage[] _preprocStore,
 	       sim.des.Queue _postprocStore,
 	       Resource outResource ) throws IllegalInputException
     {
-	super(state, outResource);
+	super(_state, outResource);
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
@@ -54,20 +54,20 @@ class Production extends sim.des.Queue
 	//outBatchSize = _outBatchSize;
 	outBatchSize = para.getDouble("batch");
 			   
-	qaDelay = new QaDelay(state,resource, para.getDistribution("faulty",state.random));
-	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	qaDelay = new QaDelay(getState(),resource, para.getDistribution("faulty",getState().random));
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",getState().random));
 	qaDelay.addReceiver(postprocStore);
 	qaDelay.addReceiver(this);
 	qaDelay.setOfferPolicy​(Provider.OFFER_POLICY_FORWARD);
 	
-	prodDelay = new Delay(state,resource);
-	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
+	prodDelay = new Delay(getState(),resource);
+	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",getState().random));
 				       
 	prodDelay.addReceiver(qaDelay);
 
 	sink = new Sink[preprocStore.length];
 	for(int j=0; j<sink.length; j++) {
-	    sink[j] = new MSink(state,preprocStore[j].getTypicalProvided());
+	    sink[j] = new MSink(getState(),preprocStore[j].getTypicalProvided());
 	}
   
     }
@@ -84,7 +84,7 @@ class Production extends sim.des.Queue
     int batchesStarted=0;
     double everStarted = 0;
     
-    public void step​(SimState state) {
+    public void step​(SimState _state) {
 	double haveNow = getAvailable() + prodDelay.getDelayed() +
 	    qaDelay.getDelayed();
 	if (haveNow  + outBatchSize < getCapacity() &&	    
@@ -95,10 +95,10 @@ class Production extends sim.des.Queue
 		double s0 =	preprocStore[j].getAvailable();
 		preprocStore[j].provide(sink[j], inBatchSizes[j]);
 		double s1 =	preprocStore[j].getAvailable();
-		//		System.out.println("At t=" + state.schedule.getTime() + ", Production took " + inBatchSizes[j] + " from " + preprocStore[j].getName() + "; changed from " +s0 + " to " + s1);
+		//		System.out.println("At t=" + getState().schedule.getTime() + ", Production took " + inBatchSizes[j] + " from " + preprocStore[j].getName() + "; changed from " +s0 + " to " + s1);
 	    }
 	    
-	    //	    System.out.println("At t=" + state.schedule.getTime() + ", Production starts on a batch; pp0 still has "+ preprocStore[0].getAvailable()+", pp1 still has "+ preprocStore[1].getAvailable() );
+	    //	    System.out.println("At t=" + getState().schedule.getTime() + ", Production starts on a batch; pp0 still has "+ preprocStore[0].getAvailable()+", pp1 still has "+ preprocStore[1].getAvailable() );
 	    Resource onTheTruck = new CountableResource((CountableResource)getTypicalProvided(), outBatchSize);
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, onTheTruck, outBatchSize, outBatchSize);
@@ -107,7 +107,7 @@ class Production extends sim.des.Queue
 	}
 	
 	//  the Queue.step() call resource offers to registered receivers
-	super.step(state);
+	super.step(getState());
     }
 
     public String report() {

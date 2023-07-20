@@ -36,10 +36,10 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
     final double batchSize;
 
     
-    PreprocStorage(SimState state, String name, Config config,
+    PreprocStorage(SimState _state, String name, Config config,
 		   IngredientStorage _ingStore) throws IllegalInputException {
     
-	super(state, _ingStore.getTypicalReceived() );
+	super(_state, _ingStore.getTypicalReceived() );
 
 	setName(name);
 	ParaSet para = config.get(name);
@@ -50,8 +50,8 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
 	
 	ingStore = _ingStore;
 
-	qaDelay = new QaDelay(state,resource, para.getDistribution("faulty",state.random));
-	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	qaDelay = new QaDelay(getState(),resource, para.getDistribution("faulty",getState().random));
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",getState().random));
 	qaDelay.addReceiver(this);
     }
 
@@ -65,32 +65,32 @@ class PreprocStorage extends sim.des.Queue implements Reporting {
     /** If our storage is not full (taking into account the batches
 	that are currently been checked), get a batch into checking
      */
-    public void step​(sim.engine.SimState state) {
+    public void step​(sim.engine.SimState _state) {
 	boolean hasSpace = resource.getAmount() + qaDelay.getDelayed() <= getCapacity() - batchSize;
 	if (hasSpace &&    ingStore.getAvailable() >=  batchSize	    ) {
 	    double neededAmount = batchSize;
-	    //System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " requesting QA on " +  neededAmount + " units of " + getTypicalProvided());
+	    //System.out.println("At t=" + getState().schedule.getTime() + ", " +  getName()+ " requesting QA on " +  neededAmount + " units of " + getTypicalProvided());
 	    //Resource onTheTruck = new CountableResource((CountableResource)getTypicalProvided(), neededAmount);
 	    //	    qaDelay.accept(ingStore, ingStore.getResource(), neededAmount, neededAmount);
 	    ingStore.provide( qaDelay, neededAmount);
 	    
 	    batchesOrdered++;
 	} else if (!hasSpace) {
-	    //   System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " is full already"); 
+	    //   System.out.println("At t=" + getState().schedule.getTime() + ", " +  getName()+ " is full already"); 
 	} else {
-	    //	    System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " cannot order (no supply available)"); 
+	    //	    System.out.println("At t=" + getState().schedule.getTime() + ", " +  getName()+ " cannot order (no supply available)"); 
 	}
 
 	
 	//  the Queue.step() call resource offers to registered receivers
-	super.step(state);
+	super.step(getState());
     }
 
     /** Overriding accept() in order to print statistics */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 	double s0=getAvailable();
 
-	String msg = "At t=" + state.schedule.getTime() + ", " +  getName()+ " receiving "+
+	String msg = "At t=" + getState().schedule.getTime() + ", " +  getName()+ " receiving "+
 	    atLeast + " to " +  atMost + " units of " + amount +
 	    ", while qa.ava=" + qaDelay.getAvailable();
 

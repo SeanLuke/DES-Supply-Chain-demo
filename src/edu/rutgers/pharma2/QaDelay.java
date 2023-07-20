@@ -29,8 +29,8 @@ public class QaDelay extends Delay {
     public double getReleasedGoodResource() { return releasedGoodResource; }
     public double getReworkResource() { return reworkResource; }
  
-    public QaDelay(SimState state, Resource typical, double _batchSize, AbstractDistribution _faultyPortionDistribution) {
-	super(state, typical);
+    public QaDelay(SimState _state, Resource typical, double _batchSize, AbstractDistribution _faultyPortionDistribution) {
+	super(_state, typical);
 	batchSize = _batchSize;
 	faultyPortionDistribution = _faultyPortionDistribution;
     }
@@ -93,7 +93,7 @@ public class QaDelay extends Delay {
 		a -= b;
 		double r = faultyPortionDistribution.nextDouble();
 		if (r>0.5) {
-		    if (state.random.nextBoolean(reworkFraction)) {
+		    if (getState().random.nextBoolean(reworkFraction)) {
 			rework += b;
 		    } else {
 			faulty += b;

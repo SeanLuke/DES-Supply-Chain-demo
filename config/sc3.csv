@@ -68,7 +68,7 @@ substrateLarge,expiration,+Infinity
 substrateSmallProd.safety.prepreg,initial,1836	
 substrateSmallProd.safety.prepreg,targetLevel,1836	
 substrateSmallProd.safety.prepreg,reorderPoint,918
-substrateSmallProd.safety.prepreg,delay,Triangular,60,75,90
+# substrateSmallProd.safety.prepreg,delay,Triangular,60,75,90
 #substrateSmallProd.safety.prepreg,orderExpiration,91
 substrateSmallProd.safety.prepreg,source,prepregProd
 

@@ -79,7 +79,8 @@ public class SafetyStock extends Probe implements Reporting {
     double orderedToday = 0, receivedToday=0;
 
     private Timed haltedUntil = new Timed();    
-
+    Timed transDelayFactorUntil = new Timed();
+    
     /** Checks if there is a safety-stock disruption in effect, which
 	stops the SS level check until a certain point.
     */
@@ -118,10 +119,14 @@ public class SafetyStock extends Probe implements Reporting {
     /** Used for replenishing the safety stock from the magic supplier.
 	The null value means "no delay".
      */
-    private Delay refillDelay = null;
+    private CustomDelay refillDelay = null;
 
     /** The destination of "magic source shipments" (i.e. the InputStore)
 	can use this method to find out if this is one of the magic shipments.
+	In SC3, "magic" simply means "ordered by us", as opposed to "sent by
+	someone on its own volition"; with the extensive MTS and MTO ordering
+	system, this means that most supplies are counted as "magic".
+	
      */
     boolean comesFromMagicSource(Provider p) {
 	//return p==refillDelay;
@@ -175,9 +180,14 @@ public class SafetyStock extends Probe implements Reporting {
 	    refillDelay = null;
 	} else {
 	    AbstractDistribution refillDistr = para.getDistribution("delay", state.random); 
-	    refillDelay = new Delay(state,prototype);
-	    refillDelay.setDelayDistribution(refillDistr);
-	    refillDelay.setName("RefillDelay." + name);
+	    //refillDelay = new Delay(state,prototype);
+	    //refillDelay.setDelayDistribution(refillDistr);
+
+	    refillDelay = new CustomDelay(state,prototype);
+	    DelayRules dr = new DelayRules(refillDistr, false, transDelayFactorUntil);
+	    refillDelay.setDelayRules(dr);
+
+	    refillDelay.setName("RefillDelay." + name);	   
 	    refillDelay.addReceiver(this);
 	}
 	this.addReceiver(whose);

@@ -191,6 +191,12 @@ public class Disruptions {
 	public String toString() { 
 	    return "At " + time + ", " + type + "@" + unitName + ", magnitude=" + magnitude + ", lasts " + duration + " days";
 	}
+
+	/** #time,unit,type,duration,amount  */
+	public String toCsv() {
+	    Object [] v = {time, unitName, type, duration, magnitude};
+	    return Util.join(",", v);
+	}
    
     }
 
@@ -248,7 +254,11 @@ public class Disruptions {
 	(e.g. in an optimization program), without a scenario file.
      */
     private File readFrom = null;
-       
+
+    final static String header0= "time,unit,type,amount",
+	header1= "time,unit,type,duration,amount";
+
+    
     /** Reads a CSV file with a list of disruption events (one disruption per line). Line format:
 <pre>
 #time,unit,type,duration,amount
@@ -286,14 +296,13 @@ The method determines the format based on the header line, i.e. the first line o
 	for(CsvData.LineEntry _e: csv.entries) {
 	    if (lineNo==0 && _e instanceof CsvData.CommentEntry) {
 		CsvData.CommentEntry header = (CsvData.CommentEntry)_e;
-		final String h0= "time,unit,type,amount",
-		    h1= "time,unit,type,duration,amount";
-		if (header.text.equals(h0)) hasDuration = false;
-		else if (header.text.equals(h1)) hasDuration = true;
+
+		if (header.text.equals(header0)) hasDuration = false;
+		else if (header.text.equals(header1)) hasDuration = true;
 		else {
 		    String msg="Don't know how to interpret the header line\n#" + header.text +
-			"\nThe only supported formats are\n" + h0 +
-			"\nand\n" + h1;
+			"\nThe only supported formats are\n" + header0 +
+			"\nand\n" + header1;
 		    throw new IllegalArgumentException(msg);
 		}
 	    }
@@ -336,4 +345,15 @@ The method determines the format based on the header line, i.e. the first line o
 	return h;
     }
 
+    /** Writes out the scenario in the same CSV file format that can
+	be read in. */
+    public String toCsv() {
+	Vector<String> v = new Vector<>();
+	v.add("#" + header1);
+	for(Disruption d: data) {
+	    v.add( d.toCsv());
+	}
+	return String.join("\n", v);
+    }
+    
 }

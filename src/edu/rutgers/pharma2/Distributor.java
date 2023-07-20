@@ -21,9 +21,9 @@ public class Distributor extends sim.des.Queue
     
     Delay shipOutDelay;
     
-    Distributor(SimState state, String name, Config config,
+    Distributor(SimState _state, String name, Config config,
 		      CountableResource resource) throws IllegalInputException {
-	super(state, resource);	
+	super(_state, resource);	
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
@@ -31,8 +31,8 @@ public class Distributor extends sim.des.Queue
 	batchSize = para.getDouble("batch");
 	interval = (int)para.getLong("interval");
 
-	shipOutDelay = new Delay( state,  resource);
-	shipOutDelay.setDelayDistribution(para.getDistribution("shipOutDelay",state.random));				       
+	shipOutDelay = new Delay( getState(),  resource);
+	shipOutDelay.setDelayDistribution(para.getDistribution("shipOutDelay",getState().random));				       
 
     }
 
@@ -59,9 +59,9 @@ public class Distributor extends sim.des.Queue
     public int getLoadsShipped() { return loadsShipped; }
 
     /** Ships product out on a certain schedule */
-    public void step​(sim.engine.SimState state) {
+    public void step​(sim.engine.SimState _state) {
 
-	double t = state.schedule.getTime();
+	double t = getState().schedule.getTime();
 	double month = Math.floor(t/interval);
 
 	//-- How many batches can we form?
@@ -81,7 +81,7 @@ public class Distributor extends sim.des.Queue
 	    }
 	    
 	    if (shouldShip>0) {
-		if (Demo.verbose) System.out.println("At t=" + state.schedule.getTime() + ", Distro has " +  getAvailable() +", stillNeeded="+stillNeeded +
+		if (Demo.verbose) System.out.println("At t=" + getState().schedule.getTime() + ", Distro has " +  getAvailable() +", stillNeeded="+stillNeeded +
 				   ". Shipping " +  shouldShip);
 	
 		offerReceiver( shipOutDelay, shouldShip);

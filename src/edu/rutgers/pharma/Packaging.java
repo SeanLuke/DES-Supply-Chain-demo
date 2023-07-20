@@ -32,12 +32,12 @@ class Packaging extends sim.des.Queue implements Reporting {
     //Source packagingMachine;
     double batchSize;
     
-    Packaging(SimState state, String name, Config config,
+    Packaging(SimState _state, String name, Config config,
 	      sim.des.Queue _postprocStore,
 	      PreprocStorage _testedPackmatStore,
 	      Resource outResource) throws IllegalInputException
     {
-	super(state, outResource);
+	super(_state, outResource);
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
@@ -47,17 +47,17 @@ class Packaging extends sim.des.Queue implements Reporting {
 	testedPackmatStore = _testedPackmatStore;
 	batchSize = para.getDouble("batch");
 	
-	qaDelay = new QaDelay(state,resource,  para.getDistribution("faulty",state.random));
-	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",state.random));
+	qaDelay = new QaDelay(getState(),resource,  para.getDistribution("faulty",getState().random));
+	qaDelay.setDelayDistribution(para.getDistribution("qaDelay",getState().random));
 	qaDelay.setOfferPolicy​(Provider.OFFER_POLICY_FORWARD);
 	
-	prodDelay = new Delay(state,resource);
-	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",state.random));
+	prodDelay = new Delay(getState(),resource);
+	prodDelay.setDelayDistribution(para.getDistribution("prodDelay",getState().random));
 	prodDelay.addReceiver(qaDelay);
 
 	
-	sinkProduct = new Sink(state,  _postprocStore.getTypicalProvided());
-	sinkPackaging = new Sink(state, _testedPackmatStore.getTypicalProvided());
+	sinkProduct = new Sink(getState(),  _postprocStore.getTypicalProvided());
+	sinkPackaging = new Sink(getState(), _testedPackmatStore.getTypicalProvided());
 
 	addReceiver(dispatchStore);
     }
@@ -84,7 +84,7 @@ class Packaging extends sim.des.Queue implements Reporting {
     int batchesStarted=0;
 
     
-    public void step​(sim.engine.SimState state) {
+    public void step​(sim.engine.SimState _state) {
 	double workedUpon = prodDelay.getDelayed() +  qaDelay.getDelayed() + batchSize;
 	boolean haveSpace = (getAvailable() + workedUpon  <=getCapacity()) ||
 	    (dispatchStore.getAvailable() +  workedUpon  <= dispatchStore.getCapacity());
@@ -93,7 +93,7 @@ class Packaging extends sim.des.Queue implements Reporting {
 	    postprocStore.provide( sinkProduct, batchSize);
 	    testedPackmatStore.provide( sinkPackaging, batchSize);
 	    
-	    //	    System.out.println("At t=" + state.schedule.getTime() + ", Packaging starts on a batch");
+	    //	    System.out.println("At t=" + getState().schedule.getTime() + ", Packaging starts on a batch");
 	    Resource batch = new CountableResource((CountableResource)getTypicalProvided(), batchSize);
 	    Provider provider = null;  // why do we need it?
 	    prodDelay.accept(provider, batch, batchSize, batchSize);
@@ -101,7 +101,7 @@ class Packaging extends sim.des.Queue implements Reporting {
 	}
 	
 	//  the Queue.step() call resource offers to registered receivers
-	super.step(state);
+	super.step(getState());
     }
 
     public String report() {

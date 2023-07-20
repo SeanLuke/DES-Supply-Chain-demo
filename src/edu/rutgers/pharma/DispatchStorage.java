@@ -24,7 +24,7 @@ class DispatchStorage extends sim.des.Queue implements Reporting {
 	/** This is triggered when the empty truck comes to take
 	    the entire content of the warehouse
 	 */
-	public void step(SimState state) {
+	public void step(SimState _state) {
 	    DispatchStorage.this.truckIsHere();
 	}
     }
@@ -36,32 +36,32 @@ class DispatchStorage extends sim.des.Queue implements Reporting {
     AbstractDistribution  outDelayDistribution;
     final double threshold;
     
-    DispatchStorage(SimState state, String name, Config config,
+    DispatchStorage(SimState _state, String name, Config config,
 	      Resource outResource ) throws IllegalInputException
     {
-	super(state, outResource);
+	super(_state, outResource);
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
 	setCapacity(para.getDouble("capacity"));
 	threshold = para.getDouble("threshold");
 	       
-	outDelayDistribution = para.getDistribution("delay",state.random);
-	consumer = new MSink( state,  outResource);
+	outDelayDistribution = para.getDistribution("delay",getState().random);
+	consumer = new MSink( getState(),  outResource);
     }
 
     /** If there is enough stuff to call for a truck, and a truck
 	has not been called yet, call it now.
      */
-    public void step​(SimState state) {
+    public void step​(SimState _state) {
 
 	if (getAvailable()>threshold && emptyTruckTimer==null) {
 
-	    double nextTime = state.schedule.getTime() +  Math.abs(outDelayDistribution.nextDouble());
+	    double nextTime = getState().schedule.getTime() +  Math.abs(outDelayDistribution.nextDouble());
 	    
 	    emptyTruckTimer = new EmptyTruckTimer();
-	    state.schedule.scheduleOnce(nextTime, emptyTruckTimer);
-	    if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " calls for a truck; ETA=" + nextTime);
+	    getState().schedule.scheduleOnce(nextTime, emptyTruckTimer);
+	    if (((Demo)getState()).verbose) System.out.println("At t=" + getState().schedule.getTime() + ", " + getName() + " calls for a truck; ETA=" + nextTime);
 	}
     }
 
@@ -71,7 +71,7 @@ class DispatchStorage extends sim.des.Queue implements Reporting {
 	it can be turned on again when needed.
     */
     void truckIsHere() {
-	if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " + getName() + " loading to a customer's truck; available="+getAvailable());
+	if (((Demo)getState()).verbose) System.out.println("At t=" + getState().schedule.getTime() + ", " + getName() + " loading to a customer's truck; available="+getAvailable());
 	provide( consumer);
 	emptyTruckTimer=null;
     }

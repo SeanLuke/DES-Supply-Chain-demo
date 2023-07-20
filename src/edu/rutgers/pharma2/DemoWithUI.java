@@ -17,7 +17,7 @@ public class DemoWithUI extends GUIState    {
 
     public DemoWithUI() { super(new Demo(System.currentTimeMillis())); }
     
-    public DemoWithUI(SimState state) { super(state); }
+    public DemoWithUI(SimState _state) { super(_state); }
     
     public static String getName() { return "Pharma2 demo"; }
 
@@ -55,8 +55,8 @@ public class DemoWithUI extends GUIState    {
         c.setVisible(true);
     }
     
-    public void load(SimState state)        {
-        super.load(state);
+    public void load(SimState _state)        {
+        super.load(_state);
     }
 
     public Object getSimulationInspectedObject() { return state; }  // non-volatile

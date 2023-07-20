@@ -66,8 +66,8 @@ public class Demo extends SimState {
     }
 
     static class Reporter implements Steppable {
-	public void step(SimState state) {
-	    ((Demo)state).doReport("Report at t=" + state.schedule.getTime());
+	public void step(SimState _state) {
+	    ((Demo)_state).doReport("Report at t=" + _state.schedule.getTime());
 	}  
     }
 

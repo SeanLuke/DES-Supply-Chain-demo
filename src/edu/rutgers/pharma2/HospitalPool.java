@@ -31,9 +31,9 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
     final double intervalBetweenOrders;
     double orderSize;// = 1.9e6;
    
-    HospitalPool(SimState state, String name, Config config,
+    HospitalPool(SimState _state, String name, Config config,
 		 CountableResource resource) throws IllegalInputException {
-	super(state, resource);	
+	super(_state, resource);	
 	setName(name);
 	ParaSet para = config.get(name);
 	if (para==null) throw new  IllegalInputException("No config parameters specified for element named '" + name +"'");
@@ -44,8 +44,8 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
 	//threshold = para.getDouble("threshold");
 	//restock = para.getDouble("restock");
 	
-	//supplierDelay = new Delay(state,resource);
-	//supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",state.random));
+	//supplierDelay = new Delay(getState(),resource);
+	//supplierDelay.setDelayDistribution(para.getDistribution("supplierDelay",getState().random));
 	//supplierDelay.addReceiver(this);
     }
 
@@ -62,9 +62,9 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
     private int batchesOrdered = 0;
 
     /** Every now and then, send an order to the PharmaCompany */
-    public void step​(sim.engine.SimState state) {
+    public void step​(sim.engine.SimState _state) {
 
-	double t = state.schedule.getTime();
+	double t = getState().schedule.getTime();
 
 	if (everOrdered==0 || t- lastOrderedAt >= intervalBetweenOrders) {
 	    lastOrderedAt  = t;
@@ -80,7 +80,7 @@ public class HospitalPool extends sim.des.Queue implements Reporting {
     
     /** This is called by the Delay when the truck arrives */
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
-	if (((Demo)state).verbose) System.out.println("At t=" + state.schedule.getTime() + ", " +  getName()+ " receiving "+
+	if (((Demo)getState()).verbose) System.out.println("At t=" + getState().schedule.getTime() + ", " +  getName()+ " receiving "+
 						      atLeast + " to " +  atMost + " units of " + amount );
 	//+					      ", while delay.ava=" + supplierDelay.getAvailable());
 	double s0 = getAvailable();

@@ -47,8 +47,8 @@ public class PharmaCompany extends Sink // Delay
 
     
     MSink dongle; 
-    PharmaCompany(SimState state, String name, Config config, HospitalPool hospitalPool) throws IllegalInputException {
-	super(state, drugOrderResource);
+    PharmaCompany(SimState _state, String name, Config config, HospitalPool hospitalPool) throws IllegalInputException {
+	super(_state, drugOrderResource);
 	setName(name);
 
 
@@ -60,43 +60,43 @@ public class PharmaCompany extends Sink // Delay
 
 
 	
-	orderDelay = new Delay( state, drugOrderResource);
-	orderDelay.setDelayDistribution(para.getDistribution("orderDelay",state.random));
+	orderDelay = new Delay( getState(), drugOrderResource);
+	orderDelay.setDelayDistribution(para.getDistribution("orderDelay",getState().random));
 	orderDelay.addReceiver(this);
 	
-	rawMatSupplier = new MaterialSupplier(state, "RawMaterialSupplier", config, rawMaterial);
-	pacMatFacility = new MaterialSupplier(state, "PacMatSupplier", config, 	pacMaterial);
-	excipientFacility = new MaterialSupplier(state, "ExcipientSupplier", config, excipient);
+	rawMatSupplier = new MaterialSupplier(getState(), "RawMaterialSupplier", config, rawMaterial);
+	pacMatFacility = new MaterialSupplier(getState(), "PacMatSupplier", config, 	pacMaterial);
+	excipientFacility = new MaterialSupplier(getState(), "ExcipientSupplier", config, excipient);
 
 
-	apiProduction = new Production(state, "ApiProduction",  config,
+	apiProduction = new Production(getState(), "ApiProduction",  config,
 						  new Resource[] {rawMaterial}, api);
 	rawMatSupplier.setQaReceiver(apiProduction.getEntrance(0));
 
 	
-	drugProduction = new Production(state, "DrugProduction",  config,
+	drugProduction = new Production(getState(), "DrugProduction",  config,
 					new Resource[] {api, excipient}, bulkDrug);
 	apiProduction.setQaReceiver(drugProduction.getEntrance(0));
 	excipientFacility.setQaReceiver(drugProduction.getEntrance(1));
 
 
-	packaging = new Production(state, "Packaging",  config,
+	packaging = new Production(getState(), "Packaging",  config,
 					new Resource[] {bulkDrug, pacMaterial}, pacDrug);
 	drugProduction.setQaReceiver(packaging.getEntrance(0));
 	pacMatFacility.setQaReceiver(packaging.getEntrance(1));
 
-	distro = new Distributor(state, "Distributor", config,  pacDrug);
+	distro = new Distributor(getState(), "Distributor", config,  pacDrug);
 	packaging.setQaReceiver(distro);	
 	distro.setDeliveryReceiver(hospitalPool);
 	
-    	//dongle = new MSink(state,pacDrug);
+    	//dongle = new MSink(getState(),pacDrug);
 	//packaging.setQaReceiver(dongle);	
 
 	
-	state.schedule.scheduleRepeating(apiProduction);
-	state.schedule.scheduleRepeating(drugProduction);
-	state.schedule.scheduleRepeating(packaging);
-	state.schedule.scheduleRepeating(distro);
+	getState().schedule.scheduleRepeating(apiProduction);
+	getState().schedule.scheduleRepeating(drugProduction);
+	getState().schedule.scheduleRepeating(packaging);
+	getState().schedule.scheduleRepeating(distro);
 
 
 	
@@ -109,7 +109,7 @@ public class PharmaCompany extends Sink // Delay
     public boolean accept(Provider provider, Resource amount, double atLeast, double atMost) {
 	//double s0=getAvailable();
 
-	String msg = "At t=" + state.schedule.getTime() + ", " +  getName()+ " acting on order for supply of "+
+	String msg = "At t=" + getState().schedule.getTime() + ", " +  getName()+ " acting on order for supply of "+
 	    atLeast + " to " +  atMost + " units of " + amount; // +
 	    //", while qa.ava=" + qaDelay.getAvailable();
 

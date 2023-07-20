@@ -10,7 +10,7 @@ import sim.des.*;
 import   edu.rutgers.util.*;
 
 
-/** An object implementing this interface will be able to tell something about its current state */
+/** An object implementing this interface will be able to tell something about its current getState() */
 interface Reporting {
     public String report();
 

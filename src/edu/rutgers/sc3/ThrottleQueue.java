@@ -207,8 +207,8 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	change in the DES API (see the slack call in SimpleDelay) between
 	2022 and 2023.
     */
-    //     public boolean provide(Receiver receiver) {
-    public boolean offer(Receiver receiver) {
+    public boolean provide(Receiver receiver) {
+	//public boolean offer(Receiver receiver) {
 	double now = state.schedule.getTime();
 	if (Demo.verbose) System.out.println("At t="+now+", " +getName() + ".provide()");
 	if (getAvailable()==0 && autoReloading) {
@@ -216,7 +216,8 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	    whose.mkBatch();
 	}
 	if (getAvailable()==0) return false;
-	return super.offer(receiver);
+	//return super.offer(receiver);
+	return super.provide(receiver);
     }
 
     public double getEverReleased()  {

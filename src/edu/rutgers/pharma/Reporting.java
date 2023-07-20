@@ -8,7 +8,7 @@ import sim.util.*;
 //import sim.field.continuous.*;
 import sim.des.*;
 
-/** An object implementing this interface will be able to tell something about its current state */
+/** An object implementing this interface will be able to tell something about its current getState() */
 interface Reporting {
     public String report();
 }

@@ -37,6 +37,13 @@ public class Timed {
 	}
     }
     /** Activates the timer, and tells it to return a specified
+	value (the disruption's magnitude) in future checks,
+	for the duration of the disruption */
+    public void setValueUntil(Disruptions.Disruption d) {
+	setValueUntil(d.magnitude, d.end());
+    }
+    
+    /** Activates the timer, and tells it to return a specified
 	value in future checks, for as along as it's on */
     public void setValueUntil(double x, double t) {
 	if (onUntil==null || onUntil <  t) {

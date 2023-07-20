@@ -13,7 +13,10 @@ import edu.rutgers.util.*;
 import edu.rutgers.supply.Disruptions.Disruption;
 import edu.rutgers.sc3.Production.NeedsPriming;
 
-/** The base class for ProdDelay, QaDelay, etc.     
+/** The base class for ProdDelay, QaDelay, etc.  This class
+    provides for random delay time that can be
+    influenced by the batch size and/or by disruptions,
+    as encapsulated in the DelayRules object.
 */
 public class CustomDelay extends Delay 
 	    //implements Reporting, Reporting.HasBatches, NeedsPriming
@@ -32,7 +35,12 @@ public class CustomDelay extends Delay
     public boolean accept(Provider provider, Resource r, double atLeast, double atMost) {
 	double now = state.schedule.getTime();
 	double amt = Batch.getContentAmount(r);
+	if (delayRules==null) throw new AssertionError("delayRules not set for CustomDelay " + getName());
 	double delayTime = delayRules.drawDelayTime(now, (long)amt);
+
+	//boolean debug = getName().equals("OutputDelay.arraySmallAssembly");
+	//if (debug) System.out.println("DEBUG: " + getName() + ", t="+now+", set delay=" + delayTime);
+	
 	setDelayTime( delayTime);
 	
 	boolean z = super.accept( provider, r, atLeast, atMost);
