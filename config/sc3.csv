@@ -125,11 +125,12 @@ cellProd.safety.cellRM,delay,Triangular,60,84,140
 #cellProd.safety.cellRM,orderExpiration,141
 
 #--- Cell Prod; inputs: cellRM, cell,coverglass.
-#--- Only he first buffer is used; the other two are for sharing with cellAssembly
+#--- Only the first buffer is used; the other two are for sharing with cellAssembly
+#--- The manufacturing recipe: Use cellRM to make cell
 cellProd,orderDelay,Uniform,7,60
 cellProd,inBatch,2776,0,0
 cellProd,batch,2776
-#--- the recipe for placing MTO orders (when applicable)
+#--- the recipe for placing MTO orders (when applicable): place orders for cellRM and coverglass immediately upon the receipt of an order for cells
 cellProd,inBatch.mto,2776,0,2776
 cellProd,batch.mto,2776
 cellProd,prodStages,2
@@ -177,7 +178,7 @@ cellPackaging,output,arraySmallAssembly.safety,2,1.0
 cellPackaging,outputDelay,Uniform,5,10
 
 #-------------------------
-
+#-- Sources for MTO orders
 arraySmallAssembly.safety.substrateSmall,mto,1.0
 arraySmallAssembly.safety.substrateSmall,source,substrateSmallProd
 
@@ -187,6 +188,7 @@ arraySmallAssembly.safety.substrateSmall,source,substrateSmallProd
 arraySmallAssembly.safety.cell,mto,1.0
 arraySmallAssembly.safety.cell,source,cellProd
 
+#-- Sources for MTS orders
 arraySmallAssembly.safety.adhesive,resetExpiration,true
 arraySmallAssembly.safety.adhesive,reorderPoint,50
 arraySmallAssembly.safety.adhesive,targetLevel,100

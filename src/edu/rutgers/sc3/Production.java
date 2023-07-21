@@ -1,4 +1,4 @@
-package  edu.rutgers.sc3;
+package edu.rutgers.sc3;
 
 import edu.rutgers.supply.*;
 
@@ -32,7 +32,12 @@ class Production extends AbstractProduction
     private InputStore[] inputStore;
     public sim.des.Queue[] getInputStore() { return inputStore;}
 
-    private Charter charter;
+    /** The tool for saving time series files. It is initialized before
+	first use, rather than in the Production constructor, because
+	their formatting depends on whether this Production node has
+	its own input buffers or shares someone else's.
+    */
+    private Charter charter=null;
 
     /** This could be a ProdDelay, a ThrottledStage, or a Pipeline, as needed */
     private Middleman _prodStage;
@@ -335,24 +340,6 @@ class Production extends AbstractProduction
 	
 	sm = new SplitManager(this, outResource, getTheLastStage());
 
-	charter=new Charter(state.schedule, this);
-	String moreHeaders[] = new String[2 + 2*inResources.length];
-	//String moreHeaders[] = new String[2 + 3*inResources.length];
-	int k = 0;
-	moreHeaders[k++] = "releasedToday";
-	moreHeaders[k++] = "outstandingPlan";
-	for(int j=0; j<inputStore.length; j++) {
-	    String rn = inputStore[j].getUnderlyingName();
-	    moreHeaders[k++] = "Stock." + rn;
-	    moreHeaders[k++] = "ReceivedToday." + rn;
-	    //moreHeaders[k++] = "ReceivedTodayFromNormal." + rn;
-	    //moreHeaders[k++] = "ReceivedTodayFromMagic." + rn;
-	}
-	//for(int j=0; j<inputStore.length; j++) {
-	//    moreHeaders[k++] = "Anomaly." + inputStore[j].getUnderlyingName();
-	//}
-	charter.printHeader(moreHeaders);
-
 	//	Vector<String> outputName = para.get("output");
 	//if (outputName!=null) {
 	//    throw new AssertionError("Using outputName (" +outputName+") is not supported yet");
@@ -605,7 +592,10 @@ class Production extends AbstractProduction
 	if (orderDelay==null)   doAddToPlan(order);
 	else orderDelay.enter(order);
     }
-    
+
+    /** The actual addition to the plan is performed here. If necessary,
+	this method also places MTO orders for ingredients.
+     */
     void doAddToPlan(Order order) {
 	if (order==null || order.amount<0) throw new IllegalArgumentException(getName() +".addToPlan(" + order+")");
 	if (order.amount==0) return;
@@ -615,7 +605,6 @@ class Production extends AbstractProduction
 	if (Demo.verbose) System.out.println("DEBUG: " +getName() + ", at "+now()+" added to plan "+ order.amount +", everPlanned=" + everPlanned);
 
 	
-
 	
 	//	if (startPlan != null) x += startPlan;
 	//startPlan = x;
@@ -764,6 +753,13 @@ class Production extends AbstractProduction
 	Here we also check for the inflow anomalies in all
 	buffers.  This method needs to be called from Production.step(),
 	to ensure daily execution.
+
+	<p>
+	Since SC-3 ver  1.006, we don't print input buffer columns
+	in the time series file of a Production node that has no input
+	buffers of its own, but shares somebody else's buffers.
+	(Otherwise, the daily numbers would show as 0 anyway, because
+	they are cleared after printing; so what's the point?)
     */
     private void dailyChart() {
 
@@ -772,12 +768,14 @@ class Production extends AbstractProduction
 	double releasedToday = releasedAsOfToday - releasedAsOfYesterday;
 	releasedAsOfYesterday = releasedAsOfToday;
 	
-	//double[] data = new double[2 + 2*inputStore.length];
-	double[] data = new double[2 + 3*inputStore.length];
+	boolean showInputs = (usingInputsOf == null);
+	int ni = (showInputs? inputStore.length : 0);
+	
+	double[] data = new double[2 + 2*ni];
 	int k=0;
 	data[k++] = releasedToday;
 	data[k++] = sumNeedToSend(); // (startPlan==null)? 0 : startPlan;
-	for(int j=0; j<inputStore.length; j++) {
+	for(int j=0; j<ni; j++) {
 	    data[k++] = inputStore[j].getContentAmount();
 	    //data[k++] = inputStore[j].receivedTodayFromNormal;
 	    //data[k++] = inputStore[j].receivedTodayFromMagic;
@@ -786,20 +784,14 @@ class Production extends AbstractProduction
 		inputStore[j].receivedTodayFromMagic;
 
 	    inputStore[j].clearDailyStats();
-	}	
-	
-	//for(int j=0; j<inputStore.length; j++) {
-	//    data[k++] = inputStore[j].detectAnomaly()? 1:0;
-	//}
-   
-	charter.print(data);
-		
-	//for(InputStore p: inputStore) {
-	//    if (p.safety!=null) p.safety.doChart(new double[0]);
-	//}
-
-
- 
+	}
+	try {
+	    if (charter==null) 	prepareCharter();       
+	    charter.print(data);
+	} catch(IOException ex) {
+	    ex.printStackTrace(System.err);
+	    throw new IllegalArgumentException("IOException happened when saving data: " + ex);
+	}
     }
     
 
@@ -978,11 +970,15 @@ class Production extends AbstractProduction
 	return delay;
     }
 
+    /** This is set to non-null if this Production node does not
+	have its own input buffers, but piggy-backs on somebody else's. */
+    private Production usingInputsOf = null;
+
     /** Connect this Production unit with other elements of the supply chain,
 	in accordance with the config parameters defining these links.
 	This method should be called after all Production units have been
 	created.
-
+	
 	<p>Examples:
 	<pre>
 	#-- 100% of the output goes to substrateProd.input[0]
@@ -993,7 +989,7 @@ class Production extends AbstractProduction
 	substrateSmallProd.safety.prepreg,source,prepregProd
 	</pre>
     */
-    void linkUp(HashMap<String,Steppable> knownPools) throws IllegalInputException {
+    void linkUp(HashMap<String,Steppable> knownPools) throws IOException, IllegalInputException {
 	Vector<String> output = para.get("output");
 	//System.out.println("DEBUG: Linking " + getName());
 	if (output != null) {
@@ -1041,7 +1037,8 @@ class Production extends AbstractProduction
 	if (name!=null) {	
 	    Steppable other =  knownPools.get(name);
 	    if (other!=null && other instanceof Production) {
-		shareInputStore((Production)other);
+		usingInputsOf = (Production)other;
+		shareInputStore(usingInputsOf);
 	    } else {
 		throw new IllegalInputException(getName() + " cannot use input buffers of " + name + ", because the latter is not a Production node");
 	    }
@@ -1057,7 +1054,31 @@ class Production extends AbstractProduction
 		throw new IllegalInputException(getName() + " cannot trigger replan at " + name + ", because the latter is not a Production node");
 	    }
 	}
+
+    }
+
+    /** Initializes the time series headers for the Charter object.
+	Since SC-3 ver. 1.006, the columns for input buffers
+	are only printed in the Production object who owns these buffers,
+	and not in any other Production objects that may share them.
+     */
+    private void prepareCharter() throws IOException {
+	charter=new Charter(state.schedule, this);
+	boolean showInputs = (usingInputsOf == null);
+	int ni = (showInputs? inputStore.length : 0);
 	
+	String moreHeaders[] = new String[2 + 2*ni];
+	int k = 0;
+	moreHeaders[k++] = "releasedToday";
+	moreHeaders[k++] = "outstandingPlan";
+	for(int j=0; j< ni; j++) {
+	    String rn = inputStore[j].getUnderlyingName();
+	    moreHeaders[k++] = "Stock." + rn;
+	    moreHeaders[k++] = "ReceivedToday." + rn;
+	    //moreHeaders[k++] = "ReceivedTodayFromNormal." + rn;
+	    //moreHeaders[k++] = "ReceivedTodayFromMagic." + rn;
+	}
+	charter.printHeader(moreHeaders);
     }
 
     

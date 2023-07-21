@@ -40,7 +40,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.005";
+    public String version = "1.006";
 
     
     /** Set this to true to print a lot of stuff */
