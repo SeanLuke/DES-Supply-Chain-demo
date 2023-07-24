@@ -476,6 +476,21 @@ public class Demo extends SimState {
 	for(Reporting r: reporters) v.add(r.report());
 
 	//	v.add(dsRMSplitter.report());
+
+	EndCustomer.Stats[] stats = getWaitingStats();
+       	EndCustomer.Stats awf=stats[0], awu=stats[1], aw = stats[2];
+	
+	Vector<String> w = new Vector<>();
+	
+	if (awf.cnt>0) 	w.add( " for "+awf.cnt+" filled orders " + awf.avgT   + " days");
+	if (awu.cnt>0) 	w.add( " for "+awu.cnt+" unfilled orders " + awu.avgT  + " days so far");     
+	if (aw.cnt>0) 	w.add( " for all "+aw.cnt+" orders " + aw.avgT     + " days so far");
+	
+	String s = 
+	    (w.size()>0) ? "All customers: Avg waiting time" + String.join(",", w) + ".":
+	    "No orders!";
+	v.add(s);		
+
 	
 	return String.join("\n", v);
     }
