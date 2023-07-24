@@ -40,7 +40,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.006";
+    public String version = "1.007";
 
     
     /** Set this to true to print a lot of stuff */
@@ -48,7 +48,13 @@ public class Demo extends SimState {
 
     /** Set this to true to print less stuff, and turn off all interactive things */
     static boolean quiet=false;
-    public void setQuiet(boolean _quiet) { quiet = _quiet; }
+    static public void setQuiet(boolean _quiet) { quiet = _quiet; }
+
+    /** 1 means just have Small; 2 means have both Small and Large */
+    static int M = 2;
+    static public void setM(int _M) { M = _M; }
+    
+
     
     public DES2D field = new DES2D(200, 200);
 
@@ -125,10 +131,6 @@ public class Demo extends SimState {
 
     EndCustomer[] endCustomer = new EndCustomer[2];
 
-    /** 1 means just have Small; 2 means have both Small and Large */
-    final int M = 1; // FIXME 2
-	    
-    
     private Batch batch(String name) throws IllegalInputException {
 	CountableResource r = new CountableResource(name, 1);
 	Batch b = Batch.mkPrototype(r, config);
@@ -182,7 +184,7 @@ public class Demo extends SimState {
 	    add(prepregProd);
 
 
-	    for(int j=0; j<M; j++) { 
+	    for(int j=M-1; j>=0; j--) { 
 	    
 		substrateProd[j] = new Production(this,
 						  substrateBatch[j].getUnderlyingName() + "Prod",
@@ -214,7 +216,7 @@ public class Demo extends SimState {
 	   
  	    addFiller("   --- ARRAY ASSEMBLY ---");
 
-	    for(int j=0; j<M; j++) {
+	    for(int j=M-1; j>=0; j--) {
 		Batch out = arrayBatch[j];
 		String name = out.getUnderlyingName() + "Assembly";
 		Resource[] inputs = {substrateBatch[0],substrateBatch[1], cellBatch, adhesiveBatch, diodeBatch};
@@ -229,7 +231,7 @@ public class Demo extends SimState {
 	    //-- End customers
 	    addFiller("   --- END CUSTOMER ---");
 
-	    for(int j=0; j<M; j++) {
+	    for(int j=M-1; j>=0; j--) {
 		endCustomer[j] = new EndCustomer(this, 
 						 arrayBatch[j].getUnderlyingName() + "Customer",
 						 config,
@@ -487,7 +489,7 @@ public class Demo extends SimState {
 	    results[i] = new  EndCustomer.Stats();
 	}
 	
-	for(int j=0; j<M; j++) {
+	for(int j=M-1; j>=0; j--) {
 	    EndCustomer ec = endCustomer[j];
 	    results[0].add(ec.avgWaitingFilled());
 	    results[1].add(ec.avgWaitingUnfilled());
@@ -540,6 +542,9 @@ public class Demo extends SimState {
 		    chartsPath= argv[++j];
 		    //} else if (a.equals("-repeat") && j+1<argv.length) {
 		    // repeat = Integer.parseInt(argv[++j]);
+		} else if (a.equals("-M") && j+1<argv.length) {
+		    M =  Integer.parseInt(argv[++j]);
+		    if (M<1 || M>2) throw new IllegalInputException("Illegal M=" + M+"; M may only be 1 or 2");
 		} else {
 		    va.add(a);
 		}

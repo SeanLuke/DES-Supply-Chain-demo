@@ -717,10 +717,10 @@ class Production extends AbstractProduction
 		    }
 		}
 	    }
-	    
-	    //	    if (!hasEnoughInputs()) {
-	    //	if (Demo.verbose)
-	    //	    System.out.println("At t=" + now + ", "+ getName() + " production is starved. Input stores: " + reportInputs(true));
+
+	    //	    boolean debug = !Demo.quiet && getName().equals("arrayLargeAssembly");
+	    //if (!hasEnoughInputs()) {
+	    //	if (debug) System.out.println("At t=" + now + ", "+ getName() + " production is starved. Input stores: " + reportInputs(true));
 	    //	return;
 	    //}
 
@@ -836,12 +836,13 @@ class Production extends AbstractProduction
 	double ratio[] = {1,1};
 	if (prorate) ratio = new double[] { need, recipe.outBatchSize};
 
+	boolean debug = Demo.verbose;
+	//	    (getName().equals("arrayLargeAssembly") || getName().equals("arraySmallAssembly"));
 
-	boolean debug = false; //getName().equals("cellProd");
-	if (debug) System.out.println(getName()+ ", t="+now+", has inputs=" + hasEnoughInputs(ratio));
+
 	if (!hasEnoughInputs(ratio)) {
 	    if (debug) {
-		System.out.println(getName()+ ", t="+now+", ratio="+Util.joinNonBlank("/",ratio)+", inputs=" + 
+		System.out.println(getName()+ " is starved at t="+now+", ratio="+Util.joinNonBlank("/",ratio)+", inputs=" + 
 				    reportInputs(true));
 	    }
 	    return false;
@@ -862,7 +863,7 @@ class Production extends AbstractProduction
 	    if (b!=null) usedBatches.add(b);    
 	}
 
-	//	if (Demo.verbose) System.out.println("At t=" + now + ", " + getName() + " starts a batch; still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
+	if (debug) System.out.println("At t=" + now + ", " + getName() + " starts a batch");// still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());
 
 
 	double outAmt = (prorate)? need: recipe.outBatchSize;
@@ -878,13 +879,22 @@ class Production extends AbstractProduction
 	return true;
 
     }
-    
+
+    /** Reports the state of the input buffers. Only buffers which
+	are actually used in the manufacturing by this Production node
+	are reported. This avoids duplicating the reports in those cases
+	when several stages' buffers are shared (as with cellProd/cellAssembly
+	in SC-3); however, double-reporting still happens when multiple
+	prod units genuinely use material from the same buffers
+	(as with large/small substrate prod).
+     */
     private String reportInputs(boolean showBatchSize) {
 	Vector<String> v= new Vector<>();
-	int j=0;
-	for(InputStore input: inputStore) {	    
-	    v.add( "\n\t" +input.report(showBatchSize));
-	    j++;
+	for(int j=0; j<nin; j++) {
+	    InputStore input = inputStore[j];
+	    if (recipe.inBatchSizes[j]>0) {
+		v.add( "\n\t" +input.report(showBatchSize));
+	    }
 	}
 	return "[" + String.join(", ",v) + "]";
     }
@@ -1049,6 +1059,7 @@ class Production extends AbstractProduction
 	if (name!=null) {	
 	    Steppable other =  knownPools.get(name);
 	    if (other!=null && other instanceof Production) {
+		if (qaDelay==null) throw new IllegalInputException(getName() + " does not need a 'replan' link, because it has no QA step and thus does not discard anything!");
 		qaDelay.setReplan((Production)other);
 	    } else {
 		throw new IllegalInputException(getName() + " cannot trigger replan at " + name + ", because the latter is not a Production node");

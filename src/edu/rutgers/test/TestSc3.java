@@ -184,8 +184,8 @@ public class TestSc3 {
 	    "cellProd", // p-7
 	    "cellAssembly", // p-9
 	    "cellPackaging",
-	    "arraySmallAssembly" // p-11
-	    //"arrayLargeAssembly" // p-11
+	    "arraySmallAssembly", // p-11
+	    "arrayLargeAssembly" // p-11
 	};
 
 	for(int j=0; j< nodes.length; j++) {
@@ -232,10 +232,12 @@ public class TestSc3 {
 	    //-- Affecting output delays from the following production units
 	    "prepregProd", // r-3 and tr-4
 	    "substrateSmallProd", // tr-10
+	    "substrateLargeProd", // tr-10
 	    "cellProd",
 	    "cellAssembly",
 	    "cellPackaging",
 	    "arraySmallAssembly", // tr-12
+	    "arrayLargeAssembly", // tr-12
 	};
 	type = Type.TransDelayFactor;
 	System.out.println("----  Disruption type " + type + " ----");
@@ -254,8 +256,10 @@ public class TestSc3 {
 	String[] nodesC = {
 	    "prepregProd",  // q-1
 	    "substrateSmallProd", // q-2.1
+	    "substrateLargeProd", // q-2.1
 	    "cellAssembly",  // q-3
 	    "arraySmallAssembly", // q-4.1
+	    "arrayLargeAssembly", // q-4.1
 	};
 
 	type = Type.Adulteration;
