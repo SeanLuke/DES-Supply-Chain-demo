@@ -1,0 +1,312 @@
+#-- FIXME: parts to fill in later
+
+
+# Need to accommodate batch size change in substrate prod/QA (2/1)
+
+#--------------------------------------------------------------
+
+
+#-- the notional batch size is very large, so that in real life
+#-- normally proration will happen, and the actual batch size will be equal to
+#-- the order size
+#fiberSupplier,batch,10000
+#fiberSupplier,transDelay,Triangular,180,270,360
+
+
+fiber,expiration,+Infinity
+#-- FIXME: it is days from receipt, not from manufacturing
+resin,expiration,180
+
+
+#--------- Prepreg production ------------
+prepreg,expiration,180
+
+prepregProd.safety.fiber,initial,904
+prepregProd.safety.fiber,targetLevel,904
+prepregProd.safety.fiber,reorderPoint,452
+prepregProd.safety.fiber,delay,Triangular,180,270,360
+#prepregProd.safety.fiber,orderExpiration,361
+
+
+prepregProd.safety.resin,resetExpiration,true
+prepregProd.safety.resin,initial,298
+prepregProd.safety.resin,targetLevel,298
+prepregProd.safety.resin,reorderPoint,149
+prepregProd.safety.resin,delay,Triangular,14,21,28
+#prepregProd.safety.resin,orderExpiration,29
+
+# (fiber,resin)
+prepregProd,inBatch,600*0.041,600*0.027
+prepregProd,batch,600
+prepregProd,prodDelay,Triangular,14,17,21
+prepregProd,qaDelay,Uniform,20,40
+prepregProd,qaResetExpiration,true
+prepregProd,faulty,0.05
+prepregProd,replan,prepregProd
+
+prepregProd,outputDelay,Uniform,5,10
+#-- 100% of the output goes to substrateProd.input[0]
+prepregProd,output,substrateSmallProd.safety,0,1.0
+
+#----------------------------------
+#-- We have 2 parallel production lines, SubstrateSmallProd and
+#-- SubstrateLargeProd. They share their input buffers: the latter
+#-- makes use of the former's buffers
+#--
+substrateSmall,expiration,+Infinity
+substrateLarge,expiration,+Infinity
+
+
+substrateSmallProd.safety.prepreg,initial,1836	
+substrateSmallProd.safety.prepreg,targetLevel,1836	
+substrateSmallProd.safety.prepreg,reorderPoint,918
+# substrateSmallProd.safety.prepreg,delay,Triangular,60,75,90
+#substrateSmallProd.safety.prepreg,orderExpiration,91
+substrateSmallProd.safety.prepreg,source,prepregProd
+
+substrateSmallProd.safety.aluminum,mto,1.0
+substrateSmallProd.safety.aluminum,delay,Triangular,60,75,90
+#substrateSmallProd.safety.aluminum,orderExpiration,91
+
+# (prepreg,aluminum)
+substrateSmallProd,orderDelay,Uniform,7,60
+substrateSmallProd,inBatch,54*2,9*2
+substrateSmallProd,batch,2
+#-- we treat the first 3 stages of QA as if they were production stages,
+#-- in order to avoid coding multi-stage QA
+substrateSmallProd,prodStages,2+3
+substrateSmallProd,prodDelay.1,Triangular,5,7,14
+substrateSmallProd,prodDelay.2,Triangular,5,7,14
+substrateSmallProd,prodDelay.3,Uniform,7,12
+substrateSmallProd,prodDelay.4,Uniform,7,12
+substrateSmallProd,prodDelay.5,Uniform,7,12
+substrateSmallProd,qaUnitLevel,true
+substrateSmallProd,qaDelay,Uniform,7,12
+substrateSmallProd,faulty,0.05
+substrateSmallProd,rework,0.10
+substrateSmallProd,replan,substrateSmallProd
+
+
+substrateSmallProd.rework,inBatch,1
+substrateSmallProd.rework,batch,1
+substrateSmallProd.rework,prodDelay,Uniform,1,14
+substrateSmallProd.rework,qaDelay,Uniform,1,50
+
+substrateSmallProd,outputDelay,Uniform,7,14
+substrateSmallProd,output,arraySmallAssembly.safety,0,1.0
+
+#----------------------------------
+
+
+substrateLargeProd,useInputsOf,substrateSmallProd
+
+#-- Substrate Contract Negotiation Delay: Unif(7,60) days
+substrateLargeProd,orderDelay,Uniform,7,60
+
+# Inputs = (prepreg,aluminum)
+substrateLargeProd,inBatch,432*2,72*2
+substrateLargeProd,batch,2
+#-- we treat the first 3 stages of QA as if they were production stages,
+#-- in order to avoid coding multi-stage QA
+#-- SALP Number of New Substrate Production Stages in Pipeline: 3
+substrateLargeProd,prodStages,3+3
+#-- SALP New Substrate Production Stage Delay: Triangular(10, 15, 20) days per 2 SALP units per stage
+substrateLargeProd,prodDelay.1,Triangular,10,15,20
+substrateLargeProd,prodDelay.2,Triangular,10,15,20
+substrateLargeProd,prodDelay.3,Triangular,10,15,20
+#-- SALP Number of New Substrate Testing Stages in Pipeline: 4
+#-- SALP New Substrate Testing Stage Delay: Unif(7, 12) days per 1 SALP unit per stage
+substrateLargeProd,prodDelay.4,Uniform,7,12
+substrateLargeProd,prodDelay.5,Uniform,7,12
+substrateLargeProd,prodDelay.6,Uniform,7,12
+substrateLargeProd,qaUnitLevel,true
+substrateLargeProd,qaDelay,Uniform,7,12
+#-- SALP New Substrate Testing Percentage Goodput: 85%
+#-- SALP New Substrate Testing Percentage Re-work: 10%
+#-- SALP New Substrate Testing Percentage Badput: 5%
+substrateLargeProd,faulty,0.05
+substrateLargeProd,rework,0.10
+substrateLargeProd,replan,substrateLargeProd
+
+
+substrateLargeProd.rework,inBatch,1
+substrateLargeProd.rework,batch,1
+#-- SALP Reworked Substrate Delay: Unif(1, 60) days
+substrateLargeProd.rework,prodDelay,Uniform,1,60
+#-- SALP Reworked Substrate Testing Delay: Unif(1, 50) days
+substrateLargeProd.rework,qaDelay,Uniform,1,50
+
+#-- SALP Substrate Outgoing Order Transportation Delay to Solar Array Panel Assembly/Rework: Unif(7, 14) days
+substrateLargeProd,outputDelay,Uniform,7,14
+substrateLargeProd,output,arrayLargeAssembly.safety,1,1.0
+
+#--- Solar cell production
+
+
+#-- Uniform,0,66624
+cellProd.safety.cellRM,initial,55520	
+cellProd.safety.cellRM,targetLevel,55520	
+cellProd.safety.cellRM,reorderPoint,27760
+cellProd.safety.cellRM,delay,Triangular,60,84,140
+#cellProd.safety.cellRM,orderExpiration,141
+
+#--- Cell Prod; inputs: cellRM, cell,coverglass.
+#--- Only the first buffer is used; the other two are for sharing with cellAssembly
+#--- The manufacturing recipe: Use cellRM to make cell
+cellProd,orderDelay,Uniform,7,60
+cellProd,inBatch,2776,0,0
+cellProd,batch,2776
+#--- the recipe for placing MTO orders (when applicable): place orders for cellRM and coverglass immediately upon the receipt of an order for cells
+cellProd,inBatch.mto,2776,0,2776
+cellProd,batch.mto,2776
+cellProd,prodStages,2
+cellProd,prodDelay.1,Uniform,7,10
+#--- the 2nd stage is concurrent (not throttled)
+cellProd,prodThrottled.2,false
+cellProd,prodDelay.2,Triangular,7,14,21
+cellProd,outputDelay,Uniform,2,4
+#cellProd,output,cellAssembly,0,1.0
+#-- sending output to my own buffer, for sharing with cellAssembly
+cellProd,output,cellProd,1,1.0
+
+#---- Solar Cell Assembly; inputs: cell, coverglass
+cellAssembly,noPlan,true
+cellAssembly,useInputsOf,cellProd
+cellAssembly,inBatch,0,2776,2776
+cellAssembly,batch,2776
+cellAssembly,prodDelay,Triangular,7,10,14
+cellAssembly,transDelay,Uniform,1,2
+cellAssembly,qaDelay,Uniform,5,10
+cellAssembly,faulty,0.05
+cellAssembly,replan,cellProd
+cellAssembly,output,cellPackaging,0,1.0
+cellAssembly,outputDelay,Uniform,1,2
+
+#---coverglass (MTO from a magic source) ---
+cellProd.safety.coverglass,mto,1.0
+cellProd.safety.coverglass,delay,Triangular,120,180,240
+
+#----- Solar cell packaging
+
+#-- Uniform,0,22224
+cellPackaging.safety.cellPM,initial,22224	
+cellPackaging.safety.cellPM,targetLevel,22224
+cellPackaging.safety.cellPM,reorderPoint,11112
+cellPackaging.safety.cellPM,delay,Triangular,30,45,60
+#cellPackaging.safety.cellPM,orderExpiration,61
+
+#-- inputs: cell, cellPM
+cellPackaging,noPlan,true
+cellPackaging,inBatch,2776,2776
+cellPackaging,batch,2776
+cellPackaging,prodDelay,Uniform,1,2
+cellPackaging,output,arraySmallAssembly.safety,2,1.0
+cellPackaging,outputDelay,Uniform,5,10
+
+#-------------------------
+#-- Sources for MTO orders
+arraySmallAssembly.safety.substrateSmall,mto,1.0
+arraySmallAssembly.safety.substrateSmall,source,substrateSmallProd
+
+#arraySmallAssembly.safety.substrateLarge,mto,1.0
+#arraySmallAssembly.safety.substrateLarge,source,substrateLargeProd
+
+arraySmallAssembly.safety.cell,mto,1.0
+arraySmallAssembly.safety.cell,source,cellProd
+
+#-- Sources for MTS orders
+arraySmallAssembly.safety.adhesive,resetExpiration,true
+arraySmallAssembly.safety.adhesive,reorderPoint,50
+arraySmallAssembly.safety.adhesive,targetLevel,100
+arraySmallAssembly.safety.adhesive,delay,Triangular,90,135,180
+#arraySmallAssembly.safety.adhesive,orderExpiration,181
+
+arraySmallAssembly.safety.diode,reorderPoint,1000
+arraySmallAssembly.safety.diode,targetLevel,3000
+arraySmallAssembly.safety.diode,delay,Triangular,360,450,540
+#arraySmallAssembly.safety.diode,orderExpiration,541
+
+
+
+
+# inputs: substrateSmall,substrateLarge,cell,adhesive,diode
+arraySmallAssembly,inBatch,1,0,270,0.4,10
+arraySmallAssembly,batch,1
+arraySmallAssembly,prodStages,6+1
+arraySmallAssembly,prodDelay.1,Uniform,1.2,2.3
+arraySmallAssembly,prodDelay.2,Uniform,1.2,2.3
+arraySmallAssembly,prodDelay.3,Uniform,1.2,2.3
+arraySmallAssembly,prodDelay.4,Uniform,1.2,2.3
+arraySmallAssembly,prodDelay.5,Uniform,1.2,2.3
+arraySmallAssembly,prodDelay.6,Uniform,1.2,2.3
+
+# inspection/rework
+arraySmallAssembly,prodDelay.7,Uniform,1,3
+arraySmallAssembly,qaDelay,Uniform,12,22
+arraySmallAssembly,faulty,0.00
+arraySmallAssembly,rework,0.05
+arraySmallAssembly,output,arraySmallCustomer,0,1.0
+arraySmallAssembly,outputDelay,Uniform,10,15
+
+
+arraySmallAssembly.rework,inBatch,1
+arraySmallAssembly.rework,batch,1
+arraySmallAssembly.rework,prodStages,2
+#-- SASP Panel Reworked Delay:
+arraySmallAssembly.rework,prodDelay.1,Uniform,7,14
+#-- SASP Panel Reworked Inspection/Rework Delay:
+arraySmallAssembly.rework,prodDelay.2,Uniform,1,3
+#-- SASP Reworked Testing Panel Delay: Unif(7,22) per panel
+arraySmallAssembly.rework,qaDelay,Uniform,7,22
+
+
+#----------- SALP (shares inputs with SASP)  ---
+arrayLargeAssembly,useInputsOf,arraySmallAssembly
+
+# inputs: substrateSmall,substrateLarge,cell,adhesive,diode
+arrayLargeAssembly,inBatch,0,1,2152,2.8,48
+arrayLargeAssembly,batch,1
+#-- SALP Number of Assembly Stages in Pipeline: 6
+#-- SALP New Order Assembly Stage Delay: Unif(7, 9) days per stage
+arrayLargeAssembly,prodStages,6+1
+arrayLargeAssembly,prodDelay.1,Uniform,7,9
+arrayLargeAssembly,prodDelay.2,Uniform,7,9
+arrayLargeAssembly,prodDelay.3,Uniform,7,9
+arrayLargeAssembly,prodDelay.4,Uniform,7,9
+arrayLargeAssembly,prodDelay.5,Uniform,7,9
+arrayLargeAssembly,prodDelay.6,Uniform,7,9
+
+#-- SALP Panel Inspection/Rework Delay: Unif(5, 10) days per panel
+arrayLargeAssembly,prodDelay.7,Uniform,5,10
+#-- SALP New Testing Panel Delay: Unif(12, 22) days per panel
+arrayLargeAssembly,qaDelay,Uniform,12,22
+#-- SALP New Testing Percentage Goodput: 90 %
+#-- SALP New Testing Percentage Rework: 10 %
+arrayLargeAssembly,faulty,0.00
+arrayLargeAssembly,rework,0.10
+arrayLargeAssembly,output,arrayLargeCustomer,0,1.0
+#-- SALP or SASP Order Outgoing Transportation Delay to End-Customer: Unif(10, 15) days per order
+arrayLargeAssembly,outputDelay,Uniform,10,15
+
+arrayLargeAssembly.rework,inBatch,1
+arrayLargeAssembly.rework,batch,1
+arrayLargeAssembly.rework,prodStages,2
+#-- SALP Panel Reworked Delay: Unif(7, 54) days per panel
+arrayLargeAssembly.rework,prodDelay.1,Uniform,7,54
+#--  SALP Panel Reworked Inspection/Rework Delay: Unif(5, 10) days per panel
+arrayLargeAssembly.rework,prodDelay.2,Uniform,5,10
+#-- SALP Reworked Testing Panel Delay: Unif(7,22) per panel
+arrayLargeAssembly.rework,qaDelay,Uniform,7,22
+
+
+#=============================
+
+arraySmallCustomer,orderProbability,12/365
+arraySmallCustomer,orderSize,EmpiricalWalker,0,0,0,0,0.27,0,0.73
+arraySmallCustomer,source,arraySmallAssembly
+
+
+arrayLargeCustomer,orderProbability,4/365
+arrayLargeCustomer,orderSize,EmpiricalWalker,0,0,0,0,0,0,0.25,0,0,0,0.75
+arrayLargeCustomer,source,arrayLargeAssembly
+
