@@ -1,24 +1,24 @@
 <html>
   <head>
-    <title>SC-2</title>
+    <title>SC-3</title>
   </head>
   <body>
-    <h1>SC-2</h1>
+    <h1>SC-3</h1>
 
-<div align="center"><em>Updated: 2023-04-24, for sc2 ver. 1.004</em></div>
+<div align="center"><em>Updated: 2023-07-31, for sc3 ver. 1.007</em></div>
 
 
-    <p>This demo is based on the "SC-2" model provided by Rutgers' School of Business team (Ben M./ Chen Weiwei / Aman Goswami /et al), as of March 2023.
+    <p>This demo is based on the "SC-3" model provided by Rutgers' School of Business team (Ben M. et al), as of July 2023.
     </p>
 
     <P><strong>The source code of this application is available on GitHub, from
-<a href="https://github.com/vmenkov/DES-Supply-Chain-demo">https://github.com/vmenkov/DES-Supply-Chain-demo</a></strong>. The relevant package is edu.rutgers.sc2.
+<a href="https://github.com/vmenkov/DES-Supply-Chain-demo">https://github.com/vmenkov/DES-Supply-Chain-demo</a></strong>. The relevant package is edu.rutgers.sc3.
     
     <p>The code in this project represesnts a simple supply chain simulation implemented in Java using the <a href="https://cs.gmu.edu/~eclab/projects/mason/">MASON</a> API and the <a href="https://github.com/eclab/mason/tree/distributed-3.0/contrib/des/sim/des">MASON DES library</a>
 
-      <h2>SC-2 vs. SC-1 (a.k.a. Pharma3)</h2>
+      <h2>SC-23 vs. SC-2 and SC-1 (a.k.a. Pharma3)</h2>
 
-    <p>The source code for the SC-2 app lives in the same Github repository as that for the SC-1 (aka Pharma3) app developed in 2022. The SC-2 app can be compiled and used in essentially the same way as Pharma3, the main difference being that the main Java class for SC-2 is <tt>edu.rutgers.sc2.Demo</tt> (vs.  <tt>edu.rutgers.pharma3.Demo</tt>), and the main driver script is <tt>run-sc2.sh</tt>
+    <p>The source code for the SC-2 app lives in the same Github repository as that for the SC-2 and SC-1 (aka Pharma3) apps developed in 2022-2023. The SC-3 app can be compiled and used in essentially the same way as Pharma3, the main difference being that the main Java class for SC-3 is <tt>edu.rutgers.sc3.Demo</tt> (vs.  <tt>edu.rutgers.pharma3.Demo</tt>), and the main driver script is <tt>run-sc3.sh</tt>
 
       
       <h2>Prepare</h2>
@@ -76,7 +76,7 @@ cd $m/out
 jar cf des.jar sim/des/*.class
 cp des.jar ../lib    
 	  </pre>
-Warning: the above may take forever, as GitHub will tend to give you megabutyes and gigabytes of stuff you don't need. So, alternatively, you can just ask me for precompiled  des.jar, and put it into your ~/mason/lib
+Warning: the above may take forever, as GitHub will tend to give you megabytes and gigabytes of stuff you don't need. So, alternatively, you can just ask me for precompiled  des.jar, and put it into your ~/mason/lib
 
   </ul>
       
@@ -107,39 +107,49 @@ ant javadoc
 
 	       <h2>Run - text output only</h2>
 
-<p>You can run the simulation with a command like this:
+<p>You can run a single simulation with a command like this:
   <pre>
-    ./run-cs2.sh -until 365 > tmp.log
+    ./run-cs3.sh -until 365 > tmp.log
   </pre>
 The <tt>-until 365</tt> is a standard MASON option, which will cause the application to run for 365 units of simulation time (simulated days, in this model). Without this option, the application will likely never stop.
-
+  
   <h3>Command-line options</h3>
 
   
-<p>There are a few additional command-line options you can use with <tt>run-sc2.sh</tt>:
+<p>There are a few additional command-line options you can use with <tt>run-sc3.sh</tt>:
 
   <ul>
     <li><tt>-verbose</tt> --- causes various elements of the supply chain model to print various progress messages
+
+    <li><tt>-quiet</tt> --- suppresses most of the printing to the standard output
     <li><tt>-config config/sc2.csv</tt>  -- specifies the name of the configuration file (see below)
+
+
   </ul>
 
-<p>You can also use any of the options that all MASON applications take, such as the already-mentioned <tt>-until</tt>. See the MASON manual (found at the same web site) for details.
+<p>You can also use any of the options that all MASON applications take, such as the already-mentioned <tt>-until</tt>, or <tt>-seed</tt>. See the MASON manual (found at the same web site) for details.
 
   <h2>Run - with charts</h2>
 
-<p>See the description of   <tt> scripts/sc-2-run-all-disruptions.sh</tt> in 
+<p>This is similar to how it's done in SC-2. See the description of   <tt> scripts/sc-2-run-all-disruptions.sh</tt> in 
   <a href="sc-2-disrupt.html#runAll">Disruptions in SC-2: How to run</a>.
 
     <h2>Run - in an optimization program</h2>
    
-<p>Suppose you want to run the SC-2 application many times, with different disruption scenarios, collecting some important statistics (your objective function(s)) each time. For a simple (trivial) example of such a program, see the class <tt>edu.rutgers.test.TestSc2</tt>. In this class, the <tt>main()</tt> method runs a loop in which a model (<tt>Demo</tt> object) is created several times, and each time it's run with a different disruption scenario; the objective function is then retrieved from it and printed.
+<p>Suppose you want to run the SC-3 application many times, with different disruption scenarios, collecting some important statistics (your objective function(s)) each time. For a simple (trivial) example of such a program, see the class <tt>edu.rutgers.test.TestSc3</tt>. In this class, the <tt>main()</tt> method runs a loop in which a model (<tt>Demo</tt> object) is created several times, and each time it's run with a different disruption scenario; the objective function is then retrieved from it and printed.
 
-<p>This can be run with the script <tt>scripts/sc-2-optimization-test.sh</tt>. (Despite the name, there is no optimization going on there, of course. But your optimization code can use the Demo class the same way as shown in that trivial example.)
+<p>This can be run with the script <tt>scripts/sc-3-optimization-test.sh</tt>. (Despite the name, there is no optimization going on there, of course. But your optimization code can use the Demo class the same way as shown in that trivial example.)
 
+<p>This script can also be run with the
+  <pre>
+    -repeat <em>N</em>
+  </pre>
+  option, in order to perform N runs for each scenario and average the results.
+  
 	       
 	       <h2>Run - GUI</h2>
 
-<P>This is not supported in SC-2 at the moment.
+<P>This is not supported in SC-3 at the moment.
 	       
 	       <strike>
 <pre>
@@ -150,7 +160,7 @@ The <tt>-until 365</tt> is a standard MASON option, which will cause the applica
 
 	       <h2>Configuration file</h2>
 
-<p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/cs2.csv</tt>.
+<p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/cs3.csv</tt>.
 
   
 <p>The configuration file is in CSV format. All lines beginning with a hash mark (#) are ignored, as well as all empty lines.
@@ -175,28 +185,99 @@ means the that the parameter <tt>faulty</tt> for the element called <tt>Producti
   <p>
   The output file, for a run without the <tt>-verbose</tt> option, may look like this:
   <pre>
-    %run-sc2.sh -until 2000
+    %./run-sc3.sh -until 2000
     
-Disruptions=Scheduled 0 disruptions:
-
-SC2 DES/MASON simulation, ver=1.002, config=/Users/vmenkov/mason/work/config/sc2.csv
-===== 2000.0001629851329: Finish =================
-[Production.eeRMSupplier. Ever planned: 15775; still to do 0.0. Ever started: 15775 (159 ba) (in prod=0 ba) (in trans=0 ba)
-[Production line (BatchOfRMEE): accepted 159 ba, totaling 15775; utilization=0.001%]]
-[Production.eePMSupplier. Ever planned: 15775; still to do 0.0. Ever started: 15775 (159 ba) (in prod=0 ba) (in trans=0 ba)
-[Production line (BatchOfPMEE): accepted 159 ba, totaling 15775; utilization=0.001%]]
-[Production.eeCmoProd; stored inputs=([BatchOfRMEE:10362 u. Received (from all sources) 15775.0 u. [SafetyStock.eeCmoProd.safety.RMEE(BatchOfRMEE): [eeCmoProd.safety.RMEE has ordered 0 u,  has received 0 u. On order=0; in transit 0.0 ba]]]). Ever planned: 15775; still to do 0.0. Ever started: 15775 (1578 ba) = (in prod=0+(0) ba; (in trans=0 ba) (in QA= 0+1 ba; discarded=325 (33 ba); rework=1350 (135 ba); good=15450 (1545 ba))
-[Production line (BatchOfEE): accepted 1713 ba, totaling 17125; utilization=17.128%]]
-[Production.eePackaging; stored inputs=([BatchOfEE:0 u. Received (from all sources) 15450.0 u, BatchOfPMEE:2345 u. Received (from all sources) 16295.0 u. [SafetyStock.eePackaging.safety.PMEE(BatchOfPMEE): [eePackaging.safety.PMEE has ordered 520 u,  has received 520 u. On order=0; in transit 0.0 ba]]]). No planning (driven by input). Ever started: 15450 (1545 ba) = (in prod=0+(0) ba; (in QA= 0+1 ba; discarded=0 (0 ba); rework=210 (21 ba); good=15450 (1545 ba))
-[Production line (BatchOfEE): accepted 1566 ba, totaling 15660; utilization=15.683%]]
-[Pool.eeDC(BatchOfEE): [eeDC has received 15450 u (not counting initial=1500 u), has sent 3810 u. Available=13140 u. Ever ordered 12322, expecting receipt of 0 u. Still need to send=0 u]]
-[Pool.eeDP(BatchOfEE): [eeDP has received 350 u (not counting initial=690 u), has sent 0 u. Available=1040 u. Ever ordered 350, expecting receipt of 0 u. Still need to send=0 u]]
-[Pool.eeHEP(BatchOfEE): [eeHEP has received 1536288 u (not counting initial=50000 u), has sent 1581705 u. Available=4583 u. Ever ordered 3453, expecting receipt of 0 u. Still need to send=0 u]]
-[MedTech.eeMedTech: [eeMedTech has received orders for 15775 u]]
-[WaitingPatientQueue.WaitingPatientQueue(Patient): [WaitingPatientQueue; waiting patients=0]]
-[ServicedPatientPool.ServicedPatientPool(Patient): [ServicedPatientPool; accepted 1581705 patients; currently treated=48595; patients cured=1506397, sent back to wait=26713. EE destroyed=1, sent to repair=26712. EE still in repair pool=281]]
+Demo.start
+Disruptions=null
+SC3 DES/MASON simulation, ver=1.007, config=config/sc3.csv
+===== 2000.4874778414937: Finish =================
+   --- SUBSTRATES ---
+[Production.prepregProd; stored inputs=([
+	batch.fiber:1781.  Ordered 5711, received 5711. On order=0; in transit 0.0 ba, 
+	batch.resin:102. (Discarded expired=382.8919999999998 u = 7.0 ba).  Ordered 3566, received 3370. On order=195; in transit 1.0 ba])
+Ever planned: 120132; still to do 2238.0. Ever started: 117894 (112 ba) = (in prod=0+(1) ba){QA: (in QA= 3 ba; discarded=5752 (103 ba); good=108523}
+Queued(+prod): 0+(1); [prepregProd.prodDelay: accepted 112 ba, totaling 117894; released 116094.0 ; utilization=97.178%]
+. Released 108523.0]
+[Production.substrateLargeProd; stored inputs=([
+	batch.prepreg:2091. (Discarded expired=3454.0 u = 3.0 ba).  Ordered 114380, received 108523. On order=5857, 
+	batch.aluminum:351.  Ordered 18648, received 17820. On order=828; in transit 3.0 ba])
+Ever planned: 212; still to do 14.0. Ever started: 198 (99 ba) = (in prod=[0]0+(1) : [1]0+(1) : [2]1+(1) : [3]0+(0) : [4]0+(1) : [5]0+(1) ba){QA: (in QA= 0 ba; discarded=8 (8 ba); rework=18 (18 ba); good=178}
+[substrateLargeProd.pipeline: 
+	Stage[1] Queued(+prod): 0+(1); [substrateLargeProd.prodDelay.1: accepted 99 ba, totaling 198; released 196.0 ; utilization=75.064%]
+	Stage[2] Queued(+prod): 0+(1); [substrateLargeProd.prodDelay.2: accepted 98 ba, totaling 196; released 194.0 ; utilization=72.04%]
+	Stage[3] Queued(+prod): 1+(1); [substrateLargeProd.prodDelay.3: accepted 96 ba, totaling 192; released 190.0 ; utilization=73.008%]
+	Stage[4] Queued(+prod): 0+(0); [substrateLargeProd.prodDelay.4: accepted 95 ba, totaling 190; released 190.0 ; utilization=45.019%]
+	Stage[5] Queued(+prod): 0+(1); [substrateLargeProd.prodDelay.5: accepted 95 ba, totaling 190; released 188.0 ; utilization=44.239%]
+	Stage[6] Queued(+prod): 0+(1); [substrateLargeProd.prodDelay.6: accepted 94 ba, totaling 188; released 186.0 ; utilization=44.183%]]
+. Released 178.0]
+[Production.substrateSmallProd; stored inputs=([
+	batch.prepreg:2091. (Discarded expired=3454.0 u = 3.0 ba).  Ordered 114380, received 108523. On order=5857, 
+	batch.aluminum:351.  Ordered 18648, received 17820. On order=828; in transit 3.0 ba])
+Ever planned: 376; still to do 19.0. Ever started: 357 (181 ba) = (in prod=[0]0+(1) : [1]0+(1) : [2]6+(1) : [3]3+(1) : [4]0+(1) ba){QA: (in QA= 1 ba; discarded=18 (17 ba); rework=35 (35 ba); good=309}
+[substrateSmallProd.pipeline: 
+	Stage[1] Queued(+prod): 0+(1); [substrateSmallProd.prodDelay.1: accepted 181 ba, totaling 357; released 355.0 ; utilization=77.245%]
+	Stage[2] Queued(+prod): 0+(1); [substrateSmallProd.prodDelay.2: accepted 180 ba, totaling 355; released 353.0 ; utilization=77.212%]
+	Stage[3] Queued(+prod): 6+(1); [substrateSmallProd.prodDelay.3: accepted 173 ba, totaling 341; released 339.0 ; utilization=81.725%]
+	Stage[4] Queued(+prod): 3+(1); [substrateSmallProd.prodDelay.4: accepted 169 ba, totaling 333; released 331.0 ; utilization=81.238%]
+	Stage[5] Queued(+prod): 0+(1); [substrateSmallProd.prodDelay.5: accepted 168 ba, totaling 331; released 329.0 ; utilization=79.777%]]
+. Released 309.0]
+   --- CELL ---
+[Production.cellProd; stored inputs=([
+	batch.cellRM:34078.  Ordered 544728, received 508806. On order=35922; in transit 1.0 ba])
+Ever planned: 582542; still to do 37814.0. Ever started: 544728 (215 ba) = (in prod=[0]0+(1) : [1]2 ba)
+[cellProd.pipeline: 
+	Stage[1] Queued(+prod): 0+(1); [cellProd.prodDelay.1: accepted 215 ba, totaling 544728; released 541952.0 ; utilization=91.447%]
+	Stage[2] [cellProd.prodDelay.2: accepted 214 ba, totaling 541952; released 537939.0 ; utilization=150.20%]]
+. Released 537939.0]
+[Production.cellAssembly; stored inputs=([
+	batch.cell:48339. Received 537939.0, 
+	batch.coverglass:19418.  Ordered 582542, received 509018. On order=73524; in transit 26.0 ba])
+No planning (driven by input). Ever started: 489600 (153 ba) = (in prod=0+(1) ba){QA: (in QA= 1 ba; discarded=24274 (151 ba); good=458926}
+Queued(+prod): 0+(1); [cellAssembly.prodDelay: accepted 153 ba, totaling 489600; released 486400.0 ; utilization=79.268%]
+. Released 458926.0]
+[Production.cellPackaging; stored inputs=([
+	batch.cell:886. Received 458926.0, 
+	batch.cellPM:13344.  Ordered 465816, received 449160. On order=16656; in transit 1.0 ba])
+No planning (driven by input). Ever started: 458040 (165 ba) = (in prod=0+(0) ba)
+Queued(+prod): 0+(0); [cellPackaging.prodDelay: accepted 165 ba, totaling 458040; released 458040.0 ; utilization=12.196%]
+. Released 458040.0]
+   --- ARRAY ASSEMBLY ---
+[Production.arrayLargeAssembly; stored inputs=([
+	batch.substrateLarge:7.  Ordered 214, received 178. On order=36, 
+	batch.cell:1876.  Ordered 559888, received 452488. On order=107400, 
+	batch.adhesive:55.  Ordered 559, received 507. On order=52; in transit 1.0 ba, 
+	batch.diode:738.  Ordered 8036, received 4006. On order=4030; in transit 1.0 ba])
+Ever planned: 214; still to do 43.0. Ever started: 171 (171 ba) = (in prod=[0]0+(0) : [1]0+(1) : [2]0+(1) : [3]0+(1) : [4]0+(1) : [5]0+(1) : [6]0+(1) ba){QA: (in QA= 2 ba; discarded=0 (0 ba); rework=19 (19 ba); good=161}
+[arrayLargeAssembly.pipeline: 
+	Stage[1] Queued(+prod): 0+(0); [arrayLargeAssembly.prodDelay.1: accepted 171 ba, totaling 171; released 171.0 ; utilization=68.10%]
+	Stage[2] Queued(+prod): 0+(1); [arrayLargeAssembly.prodDelay.2: accepted 171 ba, totaling 171; released 170.0 ; utilization=68.192%]
+	Stage[3] Queued(+prod): 0+(1); [arrayLargeAssembly.prodDelay.3: accepted 170 ba, totaling 170; released 169.0 ; utilization=67.727%]
+	Stage[4] Queued(+prod): 0+(1); [arrayLargeAssembly.prodDelay.4: accepted 169 ba, totaling 169; released 168.0 ; utilization=67.737%]
+	Stage[5] Queued(+prod): 0+(1); [arrayLargeAssembly.prodDelay.5: accepted 168 ba, totaling 168; released 167.0 ; utilization=67.017%]
+	Stage[6] Queued(+prod): 0+(1); [arrayLargeAssembly.prodDelay.6: accepted 167 ba, totaling 167; released 166.0 ; utilization=66.328%]
+	Stage[7] Queued(+prod): 0+(1); [arrayLargeAssembly.prodDelay.7: accepted 166 ba, totaling 166; released 165.0 ; utilization=61.794%]]
+. Released 161.0]
+[Production.arraySmallAssembly; stored inputs=([
+	batch.substrateSmall:0.  Ordered 368, received 306. On order=62, 
+	batch.cell:1876.  Ordered 559888, received 452488. On order=107400, 
+	batch.adhesive:55.  Ordered 559, received 507. On order=52; in transit 1.0 ba, 
+	batch.diode:738.  Ordered 8036, received 4006. On order=4030; in transit 1.0 ba])
+Ever planned: 368; still to do 62.0. Ever started: 306 (306 ba) = (in prod=[0]0+(0) : [1]0+(0) : [2]0+(0) : [3]0+(1) : [4]0+(0) : [5]0+(0) : [6]0+(1) ba){QA: (in QA= 2 ba; discarded=0 (0 ba); rework=19 (19 ba); good=302}
+[arraySmallAssembly.pipeline: 
+	Stage[1] Queued(+prod): 0+(0); [arraySmallAssembly.prodDelay.1: accepted 306 ba, totaling 306; released 306.0 ; utilization=26.863%]
+	Stage[2] Queued(+prod): 0+(0); [arraySmallAssembly.prodDelay.2: accepted 306 ba, totaling 306; released 306.0 ; utilization=26.63%]
+	Stage[3] Queued(+prod): 0+(0); [arraySmallAssembly.prodDelay.3: accepted 306 ba, totaling 306; released 306.0 ; utilization=26.893%]
+	Stage[4] Queued(+prod): 0+(1); [arraySmallAssembly.prodDelay.4: accepted 306 ba, totaling 306; released 305.0 ; utilization=26.592%]
+	Stage[5] Queued(+prod): 0+(0); [arraySmallAssembly.prodDelay.5: accepted 305 ba, totaling 305; released 305.0 ; utilization=27.031%]
+	Stage[6] Queued(+prod): 0+(0); [arraySmallAssembly.prodDelay.6: accepted 305 ba, totaling 305; released 305.0 ; utilization=26.43%]
+	Stage[7] Queued(+prod): 0+(1); [arraySmallAssembly.prodDelay.7: accepted 305 ba, totaling 305; released 304.0 ; utilization=30.608%]]
+. Released 302.0]
+   --- END CUSTOMER ---
+arrayLargeCustomer: Ordered=214.0, received=160.0. Avg waiting time for 17 filled orders 538.1644632068416 days, for 6 unfilled orders 243.1541445081604 days so far, for all 23 orders 455.4512897399216 days so far.
+arraySmallCustomer: Ordered=368.0, received=298.0. Avg waiting time for 56 filled orders 275.5492659824413 days, for 14 unfilled orders 266.9739643279801 days so far, for all 70 orders 273.8248846714898 days so far.
+All customers: Avg waiting time for 73 filled orders 365.8232400283288 days, for 20 unfilled orders 256.3083733638818 days so far, for all 93 orders 340.60847691314683 days so far.
 ================================================
-7.305u 0.293s 0:04.69 161.8%	0+0k 0+0io 0pf+0w
+1.747u 0.204s 0:01.22 159.0%	0+0k 0+0io 2687pf+0w
 
   </pre>
 
@@ -206,8 +287,9 @@ SC2 DES/MASON simulation, ver=1.002, config=/Users/vmenkov/mason/work/config/sc2
 
   <p>When you run the application with the <tt>-charts <em>dir_name</em></tt> option, the application writes a number of time series files into the charts directory for the run. Each file pertains to a particular node of the supply chain (e.g. eeCmoProd.csv describes the behavior of the EE CMO Production node); it has one row per day, with a number of columns containing the value of various relevant variables.
 
-  <p>The time series can be visualized with a tool such as <tt>gnuplot</tt>. For a sample gnuplot command file, see <tt>gnu/sc2/sc2.gnu</tt>.
+  <p>The time series can be visualized with a tool such as <tt>gnuplot</tt>. For a sample gnuplot command file, see <tt>gnu/sc3/sc3.gnu</tt>.
 
+    <strike>
   <h2>Explanation of the model</h2>
 
 <p>See <a href="sc-2-sketch.txt">design sketch</a>
@@ -246,7 +328,9 @@ SC2 DES/MASON simulation, ver=1.002, config=/Users/vmenkov/mason/work/config/sc2
 <li>eeMedTech -- the "headquarters" of the MedTech company (variables related to the EE supply)
 <li>the names for the DS branch nodes are similar, with "ds" instead of "ee".
 </ul>
-  
+</strike>
+
+   
  <strike>
   <h3>Resources</h3>
 

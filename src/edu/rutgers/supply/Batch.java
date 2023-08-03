@@ -333,7 +333,14 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
     public void resetExpiration(double now) {
 	getLot().resetExpiration(now);
     }
-    
+
+    /** This is needed to override Entity.equals(), which is too loose
+	a comparison (as of 2023-08-02). This is needed so that
+	Provider.entities.remove() can work.
+    */
+    public boolean equals(Object o) {
+	return this==o;
+    }
     
 }
     

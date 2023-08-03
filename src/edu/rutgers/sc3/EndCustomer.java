@@ -216,7 +216,7 @@ public class EndCustomer extends MSink implements Reporting {
 	    if (sumN>0) avgT = sumT/sumN;
 	}
 
-	protected Object clone()                throws CloneNotSupportedException {
+	protected Object clone() throws CloneNotSupportedException {
 	    return super.clone();
 	}
 

@@ -158,17 +158,46 @@ public class TestSc3 {
 	Demo.MakesDemo maker = new Demo.MakesDemo(argv);
 	argv = maker.argvStripped;
 
-	long seed = 0;
+	if (maker.repeat < 1) throw new  IllegalInputException("repeat<1");
+
+
 	int cnt=0;
 
 	//-- Baseline runs
-	for(int k=1; k<= 3; k++) {
-	    String label = "("+(cnt++)+") Baseline:" + k;
+	int repeatCnt = (maker.repeatSet? maker.repeat: 3);
+
+	// Create a  disruption scenario
+	Disruptions disr0 = createDisruptionScenarioA(null, null, 0);
+	if (!maker.repeatSet) {
+	    // No -repeat option: Explicitly do and display multiple runs, without averaging
+	    int K = 3;
+	    for(int k=1; k<= K; k++) {
+		String label = "("+(cnt++)+") Baseline:" + k;
+		test(argv, maker, disr0, label);
+	    }
+	} else {
+	    // With -repeat option, do averaging
+	    String label = "("+(cnt++)+") Baseline";
+	    test(argv, maker, disr0, label);
+	}
+	System.out.println();
+
+	// If specified a disruption file, just use that scenario,
+	// and then exit
+	if (maker.disruptions0!=null) {
+	    String label =  "Custom scenario";
 	    // Create a  disruption scenario
-	    Disruptions disr = createDisruptionScenarioA(null, null, k);
-	    test(argv, maker, disr, seed++, label);
+	    Disruptions disr = maker.disruptions0;
+	    test(argv, maker, disr, label);
+	    System.exit(0);
 	}
 
+
+
+	
+
+
+	
 	Type type;
 
 	//-- Halt
@@ -193,8 +222,9 @@ public class TestSc3 {
 		String label =  "("+(cnt++)+") " + type +":" + nodes[j] + ":"+k;
 		// Create a  disruption scenario
 		Disruptions disr = createDisruptionScenarioA(type, nodes[j], k);
-		test(argv, maker, disr, seed++, label);
+		test(argv, maker, disr, label);
 	    }
+	    System.out.println();
 	}
 	
 	//--- Production delays
@@ -207,8 +237,9 @@ public class TestSc3 {
 		String label =  "("+(cnt++)+") " + type +":" + nodes[j] + ":" + k;
 		// Create a  disruption scenario
 		Disruptions disr = createDisruptionScenarioB(type, nodes[j], k);
-		test(argv, maker, disr, seed++, label);
+		test(argv, maker, disr, label);
 	    }
+	    System.out.println();
 	}
 
 	//---- Replenishment or transportation delays
@@ -243,13 +274,13 @@ public class TestSc3 {
 	System.out.println("----  Disruption type " + type + " ----");
 
 	for(int j=0; j< units.length; j++) {
-	    System.out.println();
 	    for(int k=1; k<= 3; k++) {
 		String label =  "("+(cnt++)+") " + type +":" + units[j] + ":" + k;
 		// Create a  disruption scenario
 		Disruptions disr = createDisruptionScenarioB(type, units[j], k);
-		test(argv, maker, disr, seed++, label);
+		test(argv, maker, disr, label);
 	    }
+	    System.out.println();
 	}
 
 	//--- Adulteration
@@ -266,51 +297,91 @@ public class TestSc3 {
 	System.out.println("----  Disruption type " + type + " ----");
 
 	for(int j=0; j< nodesC.length; j++) {
-	    System.out.println();
 	    for(int k=1; k<= 3; k++) {
 		String label =  "("+(cnt++)+") " + type +":" + nodesC[j] + ":" + k;
 		// Create a  disruption scenario
 		Disruptions disr = createDisruptionScenarioC(type, nodesC[j], k);
-		test(argv, maker, disr, seed++, label);
+		test(argv, maker, disr, label);
 	    }
+	    System.out.println();
 	}
 	
 	System.exit(0);
 
     }
+
+    
+    static private long seed = 0;
+
+    static final DecimalFormat df = new DecimalFormat("0.###");
     
     /** Wrapper for a single simulation run */
     private static void test(String[] argv,
 			     Demo.MakesDemo maker,
-			     Disruptions disr, long seed, String label) {
+			     Disruptions disr, String label) {
 	final double until = 2000;
 
-	Demo demo = (Demo)maker.newInstance( seed, argv);   
-	demo.setQuiet( true);
-	demo.setDisruptions(disr);
-		
-	// Run simulation
-	System.out.println("Run No. " + label + ", seed=" + seed+"; Disruptions=" + disr);
+	int repeatCnt =  maker.repeat;
+
+	String msg = "Run "  + (repeatCnt>1? "group ":"") +
+	    " No. " + label + ", seed=" + seed;
+	if (repeatCnt > 1) msg += ".." + (seed+repeatCnt-1);
+	msg += "; Disruptions=" + disr;
+
+	System.out.println(msg);
 	System.out.println(disr.toCsv());
+
+	Vector<Double> vAvgT = new Vector<>();
+	
+
+	for(int j=0; j<repeatCnt; j++) {
+	    Demo demo = (Demo)maker.newInstance( seed++, argv);   
+	    demo.setQuiet( true);
+	    demo.setDisruptions(disr);
 	    
-	myLoop( demo, until);
-		
-	EndCustomer.Stats[] stats = demo.getWaitingStats();
-       	EndCustomer.Stats awf=stats[0], awu=stats[1], aw = stats[2];
+	    // Run simulation
+	    
+	    myLoop( demo, until);
+	    
+	    EndCustomer.Stats[] stats = demo.getWaitingStats();
+	    EndCustomer.Stats awf=stats[0], awu=stats[1], aw = stats[2];
+	    
+	    Vector<String> v = new Vector<>();
+
+	    if (repeatCnt==1) {
+		if (awf.cnt>0) 	v.add( " for "+awf.cnt+" filled orders " + df.format(awf.avgT)   + " days");
+		if (awu.cnt>0) 	v.add( " for "+awu.cnt+" unfilled orders " + df.format(awu.avgT)  + " days so far");     
+		if (aw.cnt>0) 	v.add( " for all "+aw.cnt+" orders " + df.format(aw.avgT)     + " days so far");
 	
-	Vector<String> v = new Vector<>();
-	
-	if (awf.cnt>0) 	v.add( " for "+awf.cnt+" filled orders " + awf.avgT   + " days");
-	if (awu.cnt>0) 	v.add( " for "+awu.cnt+" unfilled orders " + awu.avgT  + " days so far");     
-	if (aw.cnt>0) 	v.add( " for all "+aw.cnt+" orders " + aw.avgT     + " days so far");
-	
-	String s = 
-	    (v.size()>0) ? "Avg waiting time" + String.join(",", v) + ".":
-	    "No orders!";
+		String s = 
+		    (v.size()>0) ? "Avg waiting time" + String.join(",", v) + ".":
+		    "No orders!";
 			
-	System.out.println(s);
+		System.out.println(s);
+	    }
+	    vAvgT.add( aw.avgT);
+	}
+	if (repeatCnt>1 && vAvgT.size()>0) {
+	    double[] res = avgStd(vAvgT);
+	    String s = 
+		"For all "+vAvgT.size()+" runs, avg waiting time=" + df.format(res[0]) + "+-" + df.format(res[1]);
+	    System.out.println(s);
+	}
     }
 
+    /** The average and the st dev */
+    private static double[] avgStd(Vector<Double> v) {
+	double s=0, s2=0;
+	int n = v.size();
+	for(Double x: v) {
+	    s += x;
+	    s2 += x*x;
+	}
+	double a = s/n;
+	double dev = Math.sqrt(s2/n - a*a);
+	double[] res = {a, dev};
+	return res;
+    }
     
     
 }

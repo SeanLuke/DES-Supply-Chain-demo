@@ -215,8 +215,8 @@ public class Demo extends SimState {
 	    interpreted by the constructor (such as -config XXX) will be put here. */
 	final String[] argvStripped;
 
-	/** For use in RepeatTest */
-	//	int repeat=1;
+	/** For use in test.TestSc3 */
+	//public int repeat=1;
 	
 	/** Initializes the Config and Disruptions structures from their respective
 	    config files. 
@@ -240,8 +240,8 @@ public class Demo extends SimState {
 		    disruptPath= argv[++j];
 		} else if (a.equals("-charts") && j+1<argv.length) {
 		    chartsPath= argv[++j];
-		    //} else if (a.equals("-repeat") && j+1<argv.length) {
-		    // repeat = Integer.parseInt(argv[++j]);
+		    //		} else if (a.equals("-repeat") && j+1<argv.length) {
+		    //repeat = Integer.parseInt(argv[++j]);
 		} else {
 		    va.add(a);
 		}

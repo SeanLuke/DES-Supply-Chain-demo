@@ -141,13 +141,17 @@ class InputStore extends sim.des.Queue {
     }
     
     /** Removes a batch of stored input resource, to indicate that
-	it has been consumed to produce something else. If necessary
-	and possible, falls back on the safety stock.
-	
+	it has been consumed to produce something else. If the desired
+	amount is nor equal to the size of the first batch in line to
+	be consumed, this method consumes (removed) an appropriate number
+	of batches, and/or possibly a fraction of a batch as well.
+
+	<p>
 	This method should only called if hasEnough() has returned
 	true for all ingredients, because we don't want to consume
 	one ingredient without being able to consume all other
 	ingredients!
+
 	
 	@return the consumed batch (so that its data can be used
 	for later analysis) if Batch product, or null if fungible
@@ -184,9 +188,13 @@ class InputStore extends sim.des.Queue {
 
 	    if (needed > 0) throw new IllegalArgumentException("Could not consume " + batchSize + " units from " + getName() +", because it only had " + consumed);
 	    currentStock -= consumed;
+	    doubleCheck();
 	    if (newBatch.getContentAmount() != consumed) throw new AssertionError();
 	    if (!offerReceiver(sink, newBatch)) throw new AssertionError("Sinks ought not refuse stuff!");
 
+	    //boolean debug = !Demo.quiet && getName().equals("substrateSmallProd.input.prepreg");
+	    //if (debug) System.out.println("DEBUG: " +getName() + " had "+consumed+" units consumed: " + report(true));
+	    
 	    return newBatch;
 		
 	} else if (getTypicalProvided() instanceof CountableResource) {
@@ -197,7 +205,7 @@ class InputStore extends sim.des.Queue {
 	    if (a1>0) {
 		boolean z = provide(sink, a1);
 		if (!z) throw new IllegalArgumentException("Broken sink? Accept() fails!");
-		currentStock -= batchSize;
+		currentStock -= a1;
 
 		if (sink.getLastConsumed() != a1) {
 		    String msg = "Batch size mismatch on " + sink +": have " + sink.getLastConsumed()+", expected " + batchSize;
@@ -233,6 +241,16 @@ class InputStore extends sim.des.Queue {
 
 	    boolean has = expiredProductSink.hasEnoughNonExpired(this, entities, expiredAmt, inBatchSize);
 	    currentStock -= expiredAmt[0];
+
+	    if (expiredAmt[0]!=0) {
+		//boolean debug = !Demo.quiet && getName().equals("substrateSmallProd.input.prepreg");
+		//if (debug) System.out.println("DEBUG: " +getName() + " had " +expiredAmt[0] + " units expired: " + report(true));
+	    }
+
+
+
+	    
+	    doubleCheck();
 	    return has;
 	} else if (getTypicalProvided()  instanceof CountableResource) {
 	    double spare = getAvailable() -  inBatchSize;
@@ -256,8 +274,14 @@ class InputStore extends sim.des.Queue {
 		remove(b);
 		double a = b.getContentAmount();
 		currentStock -= a;
+		doubleCheck();
 		destroyed += a;
 		stolenBatches ++;
+		
+		//boolean debug = !Demo.quiet && getName().equals("substrateSmallProd.input.prepreg");
+		//if (debug) System.out.println("DEBUG: " +getName() + " had " +a + " units destroyed: " + report(true));
+
+
 	    }
 	} else {
 	    if (getAvailable()>0) {
@@ -305,11 +329,14 @@ class InputStore extends sim.des.Queue {
 
 	if (!prototype.isSameType(amount)) throw new AssertionError(getName() + " receiving " + amount+ ", from " + provider);
 
+	//boolean debug = !Demo.quiet && getName().equals("substrateSmallProd.input.prepreg");
+	
 
 	boolean z = super.accept(provider,  amount, atLeast,  atMost);
 	if (!z) throw new AssertionError();
 	currentStock += a;
-
+	//if (debug) System.out.println("DEBUG: " + getName() + " accepted "+a+" units; " + report(true));
+	doubleCheck();
 	if (isInit) return z; // it's no time to do anything else as the system is not ready yet
 	
 	everReceived  += a;
@@ -338,6 +365,27 @@ class InputStore extends sim.des.Queue {
 	return z;
     }
 
+
+    
+    /** Checks whether my arithmetic was correct. If in doubt, uncomment
+	the body of this method... */
+    private void doubleCheck() {
+	/*
+	double sum = 0;
+	for(Entity e: entities) {
+	    sum +=  (e instanceof Batch)? ((Batch)e).getContentAmount() : e.getAmount();
+	}
+	if (Math.abs(sum-currentStock)>0.0001) {
+	    System.out.println(this);
+	    throw new AssertionError(getName() + ": currentStock=" + currentStock +", sum="+sum);
+	}
+	*/
+    }
+
+    public String toString() {
+	return getName() + ": "+super.toString()  + "\n" +" stored: " + Util.joinNonBlank("; ", entities);
+    }
+    
     /** How much stuff is stored by this pool? 
 	@return the total content of the pool (in units)
     */
@@ -345,13 +393,7 @@ class InputStore extends sim.des.Queue {
 	if (resource != null) {
 	    return resource.getAmount();
 	} else if (entities != null) {
-	    /*
-	      double sum = 0;
-	      for(Entity e: entities) {
-	      sum +=  (e instanceof Batch)? ((Batch)e).getContentAmount() : e.getAmount();
-	      }
-	      if (sum!=currentStock) throw new AssertionError("currentStock=" + currentStock +", sum="+sum);
-	    */
+	    doubleCheck();
 	    return currentStock;
 	    
 	}  else {

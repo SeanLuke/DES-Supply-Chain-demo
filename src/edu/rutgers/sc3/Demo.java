@@ -40,7 +40,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.007";
+    public String version = "1.008";
 
     
     /** Set this to true to print a lot of stuff */
@@ -522,15 +522,16 @@ public class Demo extends SimState {
 	    config file
 	*/
 	final private Config config0;
-	final private Disruptions disruptions0;
+	/** The disruption scenario specified on the command line. Null if none have been specified */
+	final public Disruptions disruptions0;
 	/** The data from the command line argument array, after the removal of options
 	    interpreted by the constructor (such as -config XXX) will be put here. */
 	public final String[] argvStripped;
 
 	/** For use in RepeatTest */
-	//	int repeat=1;
+	public int repeat=1;
+	public boolean repeatSet = false;
 	
-
 	/** Initializes the Config and Disruptions structures from their respective
 	    config files. 
 	    @param argv The actual command line array. The constructor will look for
@@ -539,8 +540,8 @@ public class Demo extends SimState {
 	public MakesDemo(String[] argv) throws IOException, IllegalInputException    {
 
 	    String confPath = "config/sc3.csv";
-	    String disruptPath = null;
 	    String chartsPath = "charts";
+	    String disruptPath = null;
 
 	    Vector<String> va = new Vector<String>();
 	    for(int j=0; j<argv.length; j++) {
@@ -555,8 +556,9 @@ public class Demo extends SimState {
 		    disruptPath= argv[++j];
 		} else if (a.equals("-charts") && j+1<argv.length) {
 		    chartsPath= argv[++j];
-		    //} else if (a.equals("-repeat") && j+1<argv.length) {
-		    // repeat = Integer.parseInt(argv[++j]);
+		} else if (a.equals("-repeat") && j+1<argv.length) {
+		    repeat = Integer.parseInt(argv[++j]);
+		    repeatSet = true;				    
 		} else if (a.equals("-M") && j+1<argv.length) {
 		    M =  Integer.parseInt(argv[++j]);
 		    if (M<1 || M>2) throw new IllegalInputException("Illegal M=" + M+"; M may only be 1 or 2");
@@ -581,7 +583,7 @@ public class Demo extends SimState {
 	    argvStripped = va.toArray(new String[0]);
 	    
 	}
-	  	public java.lang.Class	simulationClass() {
+	public java.lang.Class	simulationClass() {
 	    return Demo.class;
 	}	    
 	public java.lang.reflect.Constructor[]	getConstructors() {
@@ -612,8 +614,11 @@ public class Demo extends SimState {
 	MakesDemo maker = new MakesDemo(argv);
 	argv = maker.argvStripped;
 
-	//doLoop(Demo.class, argv);
-	doLoop(maker, argv);
+	for(int j=0; j<maker.repeat; j++) {
+	    System.out.println("Run No. " + (j+1));
+	    //doLoop(Demo.class, argv);
+	    doLoop(maker, argv);
+	}
 	
 	System.exit(0);
     }

@@ -174,11 +174,24 @@ public class SafetyStock extends Probe implements Reporting {
 	String un= Batch.getUnderlyingName(prototype);
 
 	if (para.get("delay")==null) {
+	    // No lead time specified. This is appropriate if the
+	    // product is sourced from a "real" source (modeled
+	    // by a full-fledged supply chain node, with its
+	    // own built-in production times)
 	    if (para.get("source")==null) {
 		throw new IllegalInputException("No " + getName() +",delay value in the config file. All safety stocks are supposed to have a delay value, unless fed from a production node");
 	    }
 	    refillDelay = null;
 	} else {
+	    // The supply is from a "magic source", which has no
+	    // internal parameters of its own, and is fully specified
+	    // by a single lead time parameter
+	    if (para.get("source")!=null) {
+		throw new IllegalInputException("The " + getName() +",delay value in the config file is superfluous, because this input comes from a source=" +para.get("source") + " with its own properties");
+	    }
+
+
+	    
 	    AbstractDistribution refillDistr = para.getDistribution("delay", state.random); 
 	    //refillDelay = new Delay(state,prototype);
 	    //refillDelay.setDelayDistribution(refillDistr);

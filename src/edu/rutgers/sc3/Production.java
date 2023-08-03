@@ -453,7 +453,8 @@ class Production extends AbstractProduction
 
 	    InputStore p = inputStore[j];
 	    String rname = p.getUnderlyingName();
-	    String dname = getName() +  "." + rname;
+	    // The name of an input buffer, e.g. LargeArrayAssembly.diode
+	    String dname = getName() +  "." + rname;	    
 
 	    Disruptions.Type type = Disruptions.Type.Depletion;
 	    
@@ -513,6 +514,7 @@ class Production extends AbstractProduction
 
     /** Slowdown factors for various stages, as may be caused by disruptions. */
     Timed prodDelayFactorUntil = new Timed(),
+    /** Affects transportation from Prod to QA, and/or from QA to the consumer */
 	transDelayFactorUntil = new Timed(),
 	qaDelayFactorUntil = new Timed();
     
@@ -843,7 +845,7 @@ class Production extends AbstractProduction
 	if (!hasEnoughInputs(ratio)) {
 	    if (debug) {
 		System.out.println(getName()+ " is starved at t="+now+", ratio="+Util.joinNonBlank("/",ratio)+", inputs=" + 
-				    reportInputs(true));
+				   reportInputs(true));
 	    }
 	    return false;
  	}
@@ -858,9 +860,20 @@ class Production extends AbstractProduction
 
 	    double ne = recipe.inBatchSizes[j];
 	    if (prorate) ne = (ne * need) / recipe.outBatchSize;
+
+	    String before = getName()+ " was fine at t="+now+", ratio="+Util.joinNonBlank("/",ratio)+", inputs=" + 
+		reportInputs(true);
 	    
-	    Batch b = p.consumeOneBatch(ne);
-	    if (b!=null) usedBatches.add(b);    
+	    try {
+		Batch b = p.consumeOneBatch(ne);
+		if (b!=null) usedBatches.add(b);    
+	    }
+	    catch (IllegalArgumentException ex) {
+		System.out.println(before);
+		System.out.println(getName()+ " did not think it was starved at t="+now+", ratio="+Util.joinNonBlank("/",ratio)+", inputs=" + 
+				   reportInputs(true));
+		throw(ex);
+	    }
 	}
 
 	if (debug) System.out.println("At t=" + now + ", " + getName() + " starts a batch");// still available inputs="+ reportInputs() +"; in works=" +	    prodDelay.getDelayed()+"+"+prodDelay.getAvailable());

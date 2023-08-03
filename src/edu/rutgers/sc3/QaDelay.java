@@ -249,8 +249,10 @@ static public QaDelay mkQaDelay(Config config, ParaSet para, SimState state,
 	} else if (unitLevel) { // true unit-level decision
 
 	    double dp = discardProb;
-	    if (li!=null) 	dp    += li.getIncreaseInFaultRate();
+	    double dr = (li!=null)? li.getIncreaseInFaultRate(): 0;
+	    dp    += dr;
 	    dp = Math.min(dp, 1);
+	    //if (dr>0) 	System.out.println("DEBUG: at " +now +", "+ getName() + " testing a batch with dr=" +dr+", dp=" + dp);
 
 	    // The probability that the unit is "not good", i.e must be
 	    // either discarded or reworked

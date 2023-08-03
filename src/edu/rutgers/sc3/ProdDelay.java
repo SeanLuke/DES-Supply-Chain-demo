@@ -13,7 +13,7 @@ import edu.rutgers.util.*;
 import edu.rutgers.supply.Disruptions.Disruption;
 import edu.rutgers.sc3.Production.NeedsPriming;
 
-/** The actual "production stage" within a MaterialSuppler or
+/** One actual "production stage" within a MaterialSuppler or
     a Production unit. 
 
     <p>
@@ -51,8 +51,7 @@ public class ProdDelay extends CustomDelay
 	@param suff Either "", or something like ".1", ".2" etc. This is used
 	to form the name of this node.
     */
-    ProdDelay(SimState state,  Production _whose, //Resource resource,
-	      String suff) {
+    ProdDelay(SimState state,  Production _whose, String suff) {
 	super(state, _whose.outResource);
 	whose = _whose;
 	setName(whose.getName() + ".prodDelay" + suff);
@@ -101,7 +100,9 @@ public class ProdDelay extends CustomDelay
 	return "["+getName()+": accepted " +  batchCnt+" ba, totaling " + (long)totalStarted+"; released "+getEverReleased()+" ; utilization="+df.format(util*100)+"%]";
     }
 
-       
+
+    /** Controls disruption-level fault rate increase for batch products.
+	For fungible ones, use a similar var in QaDelay. */
     private Timed faultRateIncrease = new Timed();
     /** This is used by a disruptor to reduce the quality of the products
 	produced by this unit over a certain time interval. */
@@ -118,7 +119,7 @@ public class ProdDelay extends CustomDelay
        /** Overrides the super.offerReceiver(Receiver,Entity) in order to sometimes
 	reduce the quality of the offered batch.
 	
-	FIXME: this will only work for RM and Excipient, and not for
+	FIXME: In SC-1, this will only work for RM and Excipient, and not for
 	PacMat, because PacMat is fungible and does not use this
 	method. Fortunately, Abhisekh's menu of disruptions does not
 	include one that affects PacMat in this way...
@@ -128,11 +129,11 @@ public class ProdDelay extends CustomDelay
 	
 	Batch b  = (Batch)entity;
 	double r = faultRateIncrease.getValue(t);
-	//	if (r!=0) System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver creates a batch with dr=" + r);
+	//if (r!=0) System.out.println("DEBUG: at " +t +", "+ getName() + ".offerReceiver creates a batch with dr=" + r);
 
 	double a = b.getContentAmount();
 	
-	b.getLot().setIncreaseInFaultRate( r );
+	if (r!=0) b.getLot().setIncreaseInFaultRate( r );
 	boolean z=super.offerReceiver( receiver, entity);
 	double ot = getLastOfferTime();
 	if (z) {

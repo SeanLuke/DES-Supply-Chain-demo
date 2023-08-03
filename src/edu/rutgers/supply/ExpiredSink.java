@@ -87,8 +87,13 @@ public class ExpiredSink extends MSink  {
 	while( p.getAvailable()>0) {
 	    Batch b = (Batch)entities.getFirst();
 	    if (!accept(p, b, 1, 1))  return b;		    
-	    entities.remove(b);
+	    if (!entities.remove(b)) throw new AssertionError();
 	    removedAmt[0] += b.getContentAmount();
+	    //	    boolean debug = //!Demo.quiet &&
+	    //	p.getName().equals("substrateSmallProd.input.prepreg");
+	    //if (debug) System.out.println("DEBUG: from " +getName() + ", removed " + b +"; has=" + p);
+ 
+
 	}
 	return null;
     }
@@ -96,6 +101,8 @@ public class ExpiredSink extends MSink  {
     /** Does the specified provider has a sufficient amount of
 	non-expired resource? As a side effect, this method may remove
 	some expired batches.
+
+	@param entities The actual entities list from inside of Provider p (such as a Queue). This method may remove some of them, if it finds them expired, thus modifying the provider's state.
 	
 	@return True if at least atLeast non-expired resource has been found
      */    
@@ -105,12 +112,18 @@ public class ExpiredSink extends MSink  {
 	double sum = b0.getContentAmount();
 	if (sum >= atLeast) return true;
 
+	//-- Scanning not the "live" list "entities", but it's copy in
+	//-- an array, in order to avoid any problems on removal
 	for(Entity e: p.getEntities()) {
 	    Batch b= (Batch)e;
 	    if (b==b0) continue;
 	    if (accept(p, b, 1, 1)) {
-		entities.remove(b);
+		if (!entities.remove(b)) throw new AssertionError();
 		removedAmt[0] += b.getContentAmount();
+		//boolean debug = //!Demo.quiet &&
+		//    p.getName().equals("substrateSmallProd.input.prepreg");
+		//if (debug) System.out.println("DEBUG: from " +getName() + ", removed " + b+ "; has=" + p);
+
 	    } else {
 		sum += b.getContentAmount();
 		if (sum>=atLeast) return true;
