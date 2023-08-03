@@ -252,7 +252,7 @@ public class TestSc3 {
 	String[] units = {
 	    //-- Affecting replenishment times / input delays for the following input buffers
 	    "arraySmallAssembly.adhesive", // r-6 and tr-7
-	    "arraySmallAssembly.cell", // tr-11
+	    //"arraySmallAssembly.cell", // tr-11  // non-magic: won't work
 	    "arraySmallAssembly.diode", // r-7 and tr-8
 	    "cellPackaging.cellPM", // r-5 and tr-9
 	    "cellProd.cellRM", // r-8 and tr-5
