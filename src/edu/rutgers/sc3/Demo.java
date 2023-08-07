@@ -40,7 +40,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.008";
+    public String version = "1.009";
 
     
     /** Set this to true to print a lot of stuff */
@@ -545,6 +545,7 @@ public class Demo extends SimState {
 
 	    Vector<String> va = new Vector<String>();
 	    for(int j=0; j<argv.length; j++) {
+		boolean keep=false;
 		String a = argv[j];
 		if (a.equals("-verbose")) {
 		    verbose = true;
@@ -563,8 +564,10 @@ public class Demo extends SimState {
 		    M =  Integer.parseInt(argv[++j]);
 		    if (M<1 || M>2) throw new IllegalInputException("Illegal M=" + M+"; M may only be 1 or 2");
 		} else {
-		    va.add(a);
+		    keep = true;
 		}
+
+		if (keep) va.add(a);
 	    }
 	
 	    File f= new File(confPath);

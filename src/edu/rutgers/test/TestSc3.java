@@ -154,10 +154,28 @@ public class TestSc3 {
        </ul>
      */
     public static void main(String[] argv) throws IOException, IllegalInputException {
-      	
+
+
+	for(int j=0; j<argv.length; j++) {
+	    //boolean keep=false;
+	    String a = argv[j];
+	    if (a.equals("-seed") && j+1<argv.length) {
+		seed = Long.parseLong(argv[++j]);
+	    } else if (a.equals("-until") && j+1<argv.length) {
+		until =  Integer.parseInt(argv[++j]);
+	    } else {
+		//keep = true;
+	    }
+
+	    //if (keep) va.add(a);
+	}
+	
 	Demo.MakesDemo maker = new Demo.MakesDemo(argv);
 	argv = maker.argvStripped;
 
+
+
+	
 	if (maker.repeat < 1) throw new  IllegalInputException("repeat<1");
 
 
@@ -314,12 +332,13 @@ public class TestSc3 {
     static private long seed = 0;
 
     static final DecimalFormat df = new DecimalFormat("0.###");
+
+    static private double until = 2000;
     
     /** Wrapper for a single simulation run */
     private static void test(String[] argv,
 			     Demo.MakesDemo maker,
 			     Disruptions disr, String label) {
-	final double until = 2000;
 
 	int repeatCnt =  maker.repeat;
 
