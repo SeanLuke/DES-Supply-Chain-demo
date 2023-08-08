@@ -17,7 +17,7 @@ plot [0:*] [0:*] 'prepregProd.csv' using ($1):($4) w l t 'Fiber stock', \
 set term aqua 1
 set title 'Prepreg production'
 plot  'prepregProd.csv' using ($1):($3) w l t 'Outstanding plan', \
-  'prepregProd.csv' using ($1):($2 == 0 ? NaN : $2) w impulses t 'Daily production', \
+  'prepregProd.csv' using ($1):($2) w impulses t 'Daily production'
 
 set term aqua 2
 set title 'Substrate: inputs'
@@ -46,8 +46,27 @@ plot  'arraySmallAssembly.csv' using ($1):($4) w l t 'Sub small stock', \
   'arraySmallAssembly.csv' using ($1):($6) w l t 'Sub large stock', \
   'arraySmallAssembly.csv' using ($1):(($8)/100) w l t 'Cell stock/100', \
   'arraySmallAssembly.csv' using ($1):($10) w l t 'Adhesive stock', \
-  'arraySmallAssembly.csv' using ($1):(($12)/100) w l t 'Diode stock/100', \
+  'arraySmallAssembly.csv' using ($1):(($12)/10) w l t 'Diode stock/10', \
 
 
+set term aqua 6
+set title 'SASP (Small Array) Assembly'
+plot  'arraySmallAssembly.csv' using ($1):($3) w l t 'Outstanding plan', \
+ 'arraySmallAssembly.csv' using ($1):($2) w impulses t 'Daily production'
 
+set term aqua 7
+set title 'SALP (Large Array) Assembly'
+plot  'arrayLargeAssembly.csv' using ($1):($3) w l t 'Outstanding plan', \
+  'arrayLargeAssembly.csv' using ($1):($2) w impulses t 'Daily production'
+
+
+set term aqua 8
+set title 'Orders SASP'
+plot  'arraySmallCustomer.csv' index 0 using ($2):(0):($3-$2):($3-$2) w vectors lc 'green' t 'Filled', \
+'arraySmallCustomer.csv' index 1 using ($2):(0):($3-$2):($3-$2) w vectors lc 'red' t 'Unfilled'
+
+set term aqua 9
+set title 'Orders SALP'
+plot  'arrayLargeCustomer.csv' index 0 using ($2):(0):($3-$2):($3-$2) w vectors lc 'green' t 'Filled', \
+'arrayLargeCustomer.csv' index 1 using ($2):(0):($3-$2):($3-$2) w vectors lc 'red' t 'Unfilled'
 

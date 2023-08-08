@@ -82,6 +82,14 @@ public class Charter {
 	@param _c The name of this object will be used to set the name of the output file.
      */
     public Charter(Schedule schedule,  Named _c) throws IOException {
+	this(schedule, _c, true);
+    }
+
+    /** Print time in the first column? */
+    final boolean showTime;
+
+    public Charter(Schedule schedule,  Named _c, boolean _showTime) throws IOException {
+	showTime = _showTime;
 	c = _c;
 	
 	sch = schedule;
@@ -95,6 +103,7 @@ public class Charter {
 	}
 
 	File f = new File(dir, c.getName() + ".csv");
+	//if (Demo.verbose) System.out.println("DEBUG: open chart file name=" + f);
 	w = new PrintWriter(new FileWriter(f));
 	allCharters.add(this);
     }
@@ -107,8 +116,16 @@ public class Charter {
      */
     public void printHeader(String... names) {
 	if (w==null) return;
-	w.println( "#time,"+		   String.join(",",   names));
+	String s = "#";
+	if (showTime) s += "time,";
+	w.println( s+		   String.join(",",   names));
     }
+
+    /** Prints an empty line into the CSV file. */
+    public void println() {
+	w.println();
+    }
+	
 
 
     /** Prints a line of data. This should be called from c.step()
@@ -118,8 +135,9 @@ public class Charter {
     */
     public void print(double... values) {
 	if (w==null) return;
-	w.println( ""+sch.getTime()+ ","+
-		   Util.joinNonBlank(",",   values)); // c.getValue());
+	String s = "";
+	if (showTime) s += "" + sch.getTime()+ ",";
+	w.println( s + Util.joinNonBlank(",",   values)); 
 	//w.flush();
     }
 

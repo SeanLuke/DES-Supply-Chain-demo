@@ -246,8 +246,8 @@ arraySmallAssembly.safety.adhesive,delay,Triangular,90,135,180
 #arraySmallAssembly.safety.diode,reorderPoint,1000
 #arraySmallAssembly.safety.diode,targetLevel,3000
 #-- VM: increase supply
-arraySmallAssembly.safety.diode,reorderPoint,3000
-arraySmallAssembly.safety.diode,targetLevel,6000
+arraySmallAssembly.safety.diode,reorderPoint,4000
+arraySmallAssembly.safety.diode,targetLevel,8000
 
 arraySmallAssembly.safety.diode,delay,Triangular,360,450,540
 #arraySmallAssembly.safety.diode,orderExpiration,541

@@ -2,6 +2,7 @@ package  edu.rutgers.sc3;
 
 import edu.rutgers.supply.*;
 
+import java.io.*;
 import java.util.*;
 import java.text.*;
 
@@ -187,7 +188,18 @@ public class EndCustomer extends MSink implements Reporting {
 	public double avgT = Double.NaN;
 	public int cnt=0;
 	
-	public Stats() {}	    
+	public Stats() {}
+	/** @param orders An array of orders (either all filled ones, or
+	    all unfilled ones) to analyze.
+	    @param now If the orders array contains filled orders,
+	    this parameter must contain Double.NaN, and is ignored,
+	    since each order's recorded fill timestamp is used to
+	    compute its waiting time. If the orders array contains
+	    unfilled orders (i.e. orders not filled by the end of
+	    simulation), then "now" must be a real number (not NaN),
+	    and we compute each order's waiting times from its
+	    creation to "now".
+	 */
 	public Stats(Vector<Order> orders, double now) {	    
 	    for(Order order: orders) {
 		double t = now;
@@ -319,6 +331,56 @@ public class EndCustomer extends MSink implements Reporting {
 	//	receivedToday = 0;
  
     }
-     
+
+
+    /** Unlike other classes, this tools saves not time series, but all orders.
+    */
+    private Charter charter=null;
+
+  
+    
+    private void prepareCharter() throws IOException {
+	charter=new Charter(state.schedule, this, false);
+	String headers[] = {"orderSize", "orderCreatedTime", "orderFilledTime"};
+	charter.printHeader(headers);
+    }
+
+
+    
+    /** For each order prints two numbers, creation time and fill time
+	(or "now", if unfilled). This method should be called once for all
+	filled orders and once for all unfilled one, at the very
+	end of the simulation.
+	
+       @param now As in the Stats(...) constructor */
+    private void plotSomeOrders(Vector<Order> orders, double now) {	    
+	try {
+	    if (charter==null) 	prepareCharter();       
+
+	    for(Order order: orders) {
+		double t = order.filledDate;
+		double data[] = { order.amount0,
+				  order.date,
+				  Double.isNaN(t)? now: t};
+		charter.print(data);
+	    }
+	} catch(IOException ex) {
+	    ex.printStackTrace(System.err);
+	    throw new IllegalArgumentException("IOException happened when saving data: " + ex);
+	}
+    }
+
+    /** Prints 2 datasets (filled and unfilled) into the charts file,
+	with a blank line between them
+     */
+    void plotAllOrders() {
+	plotSomeOrders(filledOrders, Double.NaN);
+	charter.println();
+	charter.println();
+	// Unfilled
+	plotSomeOrders(onOrder.data, now());
+    }
+
+	    
     
 }

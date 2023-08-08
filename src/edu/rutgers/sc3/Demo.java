@@ -40,7 +40,7 @@ run simulation
  */
 public class Demo extends SimState {
 
-    public String version = "1.009";
+    public String version = "1.010";
 
     
     /** Set this to true to print a lot of stuff */
@@ -477,6 +477,8 @@ public class Demo extends SimState {
 
 	//	v.add(dsRMSplitter.report());
 
+	// Create a CSV file with order tracks for each EndCustomer
+	plotWaitingStats();
 	EndCustomer.Stats[] stats = getWaitingStats();
        	EndCustomer.Stats awf=stats[0], awu=stats[1], aw = stats[2];
 	
@@ -514,7 +516,18 @@ public class Demo extends SimState {
 	return results;
     }
 
-    
+    /** Causes each customer print out the stats for all its orders,
+	into its CSV file (Charter)
+    */
+    void plotWaitingStats() {
+	for(int j=M-1; j>=0; j--) {
+	    EndCustomer ec = endCustomer[j];
+	    //System.out.println("DEBUG: Printing waiting stats for " + ec.getName());
+	    ec.plotAllOrders();
+	}
+    }
+
+        
     public static class MakesDemo implements  MakesSimState {
    
 	/** The Config object contains the parameters for
