@@ -1,0 +1,365 @@
+<html>
+  <head>
+    <title>SC-3 model: building blocks and control parameters</title>
+  </head>
+  <body>
+    <h1>SC-3 model: building blocks and control parameters
+    </h1>
+
+<div align="center"><em>Updated: 2023-08-08, for sc3 ver. 1.010</em></div>
+
+
+<h2>Overview</h2>
+
+    <p>Unlike our earlier modeling applications (SC-1 and SC-2), in which the relationships between the components of the supply chain had to be specified by writing Java code, in SC-3 most of these relations can be specifoed via the configuration file. The main file of the application, <tt>sc3/Demo.java</tt>, still contains the list of resources (various material and products that supply chain elements produce, consume, and ship to each other) and the list of production nodes, with the indication what resources each node consumes or receives. Everything else -- in particular, who sends what to whom, and in which way -- can now be specified via the config file. (One still <em>can</em> specify these relationshios vi the Java API, but it is probably easier to do it via the config file itself).
+
+    <p>The code in sc3/Demo.java (method <tt>initSupplyChain()</tt>) may have the following sections.
+
+      <p>
+      <strong>Define resources.</strong> Basically, all you need is to say how each resource is called, and to specify if it is countable (each batch contains an integer number of items) or uncountable (each batch may contain an arbitrary real value of the product).
+      <pre>
+	    // uncountable
+	    Batch fiberBatch = batchU("fiber"),
+		resinBatch = batchU("resin"),
+		prepregBatch = batchU("prepreg"),
+		aluminumBatch = batchU("aluminum"),
+		adhesiveBatch = batchU("adhesive");
+
+	    // countable
+	    Batch substrateBatch[] = {
+		batch("substrateSmall"),
+		batch("substrateLarge")};
+
+
+	    Batch arrayBatch[] = {
+		batch("arraySmall"),
+		batch("arrayLarge")};
+
+
+	    Batch
+		diodeBatch = batch("diode"),
+		cellBatch = batch("cell"),
+		cellRMBatch = batch("cellRM"),
+		cellPMBatch = batch("cellPM"),
+		coverglassBatch = batch("coverglass");
+	</pre>
+
+      <p>
+	<strong>Define production nodes.</strong> For each node, one needs to specify its name (which, in this example, is usually based on the name of the resource produced by the node), the name(s) of the input resources, and the name of the output resource.
+      <pre>
+	    prepregProd = new Production(this, "prepregProd", config,
+			 new Resource[] {fiberBatch, resinBatch},
+			 prepregBatch);
+	    add(prepregProd);
+
+
+	    for(int j=M-1; j>=0; j--) { 
+		substrateProd[j] = new Production(this,
+			  substrateBatch[j].getUnderlyingName() + "Prod",
+			  config,
+			  new Resource[] {prepregBatch, aluminumBatch},
+			  substrateBatch[j]);
+		add(substrateProd[j]);
+	    }
+      </pre>
+Once the application knows the name of the node, it will look for its properties in the config file. The <tt>add(node)</tt> call registers the node in some internal tables of the <tt>Demo</tt> object.
+
+      <p>
+      Each production node (implemented as an object of the <tt>Production</tt> class) can be thought of as a computer model of a factory of some kind. It may include several components, each of which is modeled by one or several DES objects:
+      <ul>
+	<li>An optional contract negotiation stage. This indicates that when a consumer of the product produced by this unit wants to order some amount of it, the order becomes effective not immediately, but some days later, due to the delay caused by negotiating the contract.
+	<li>Input buffers (<tt>InputStore</tt> objects), representing warehouses in which the factory stores the input materials. The input buffer may include a <tt>SafetyStock</tt> object, which models the process whereby the factory orders more input material. In certain cases (the so-called "magic sources" -- see the next section) the <tt>SafetyStock</tt> object may also model the entire process of obtaining the input material from some external source that's not separately modeled.
+	  
+	<li>One or several production stages, modeling the actual production line that produces the output product from the inputs.
+
+	<li>Optionally, transportation from the production line to the next stage, the QA (a.k.a. product testing)
+
+	<li>The optional QA (testing) step, at which some portion of the product coming from the production line may be discarded as faulty; another portion, defective but "fixable" may be sent to "rework", either back to the main production line or to the separate production line for rework (a repair shop, if you wish)
+
+	<li>An optional "rework" facility. It is only used in those nodes in which  the main QA step sends "defective but fixable" products to be reowrked not to the main production line but to a separate workshop. In this case the rework facility is modeled by a <tt>Production</tt> object, so that it also can have e.g. its own QA step. (Theoretically speaking, this means that we can built a recursive structure, with a Production node including another Production node as its rework facility, with that second Production node having the third Production node as its own rework facility, and so on; but of course this never actually happens in our model).
+
+	<li>An optional output transportation delay, modeling the transportation of the end product from the QA stage to another element of the supply chain, the consumer of this product. (That consumer may be another production node, or an end customer).
+      </ul>
+
+      <p><strong>Linking up.</strong> After all production nodes have been defined, we should loop over all Production objects that have been created, and establish links between them as described in the config file. This is done by the <tt>linkUp</tt> call. (<tt>EndCustomer</tt> is a different class of supply chain element, but it also has a method of with the same name and functonality. (We should have created a special intrface for it and call it e.g. <tt>Linkable</tt>, but did not get around to it.)
+	<pre>
+	  for(Steppable q: addedNodes.values()) {
+		if (q instanceof Production) {
+	    	    ((Production)q).linkUp(addedNodes);
+		} else if (q instanceof EndCustomer) {
+		    ((EndCustomer)q).linkUp(addedNodes);
+		}
+	    }
+	</pre>
+
+	
+
+
+<h2>Configuration file</h2>
+
+<p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/cs3.csv</tt>.
+
+  
+<p>The configuration file is in CSV format. All lines beginning with a hash mark (#) are ignored, as well as all empty lines.
+
+<p>The data lines have the following format:
+  <pre>
+    elementName,propertyName,val1[,val2,...]
+  </pre>
+
+<p>
+  The first column contains the name of the element of the network to which the property applies. The second column, the name of the specific property. The third column (and any subsequent) columns contain the value of the property.
+
+<p>When the config file is read in, an instance of the class <tt>edu.rutgers.util.ParaSet</tt> is used to represent all parameters pertaining to a particular <tt>elementName</tt>.
+
+<p>Normally, there is just one value column in each row of the config file. However, some types of properties need several columns to be described. For example, the following line
+  <pre>
+Production,faulty,Uniform,0.1,0.2
+    </pre>
+means the that the parameter <tt>faulty</tt> for the element called <tt>Production</tt> describes a uniform distribution with the range [0.1,0.2].  (This is the distribution from which the model of the post-production QA step draws the number that determines the portion of faulty items in each produced lot. This particular distribution means that 10% to 20% of items in each lot are found faulty.)
+
+Thw following sections describe parameters associated with various parts of a Production element's functionality.
+
+  <h3>Contract negotiation</h3>
+
+<p>In SC-3 model, some production units have a "contract negotiation delay" in front of them, described by the parameter
+  <pre><strong>orderDelay</strong></pre>
+For example, the line
+  <pre>
+substrateLargeProd,orderDelay,Uniform,7,60
+  </pre>
+  indicates that when some other unit wants to get substrateLargeProd to produce some substrate units, it will take from 7 to 60 days for that intent to be converted to an accepted order which substrateLargeProd will start working on.
+  
+  <h3>Input buffers</h3>
+
+<p><strong>Managed vs. unmanaged input buffers.</strong>  A production node typically needs one or several input materials, which are stored in "input buffers" (which model warehouses at a factory). In some cases, the production node does not need to explicitly control a particular input at all, because its supply is managed by somebody else. For example, a node that carries out packaging of some product usually is not controlling the supply of the product to be packaged; it simply flows in from an upstream node that manufactures that product, and that upstream node may receive its orders from someone else. In this case, we say that this paticular input buffer is unmanaged, and the config file has no parameters describing it.
+
+<p>Alternatively, the production node A may have to explicitly generate orders in order for an input material M to come to its input buffer. In the config file, the parameters related to this managed input buffer the element name in the form "A.safety.M". Thus, for example, all lines in the config file that start with <tt>prepregProd.safety.fiber,...</tt> have to do with the supply of fiber to the node <tt>prepregProd</tt>. The rest of this section discusses such managed input buffers and their associated parameters.
+
+      <p><strong>"Magic" sources vs "real" sources.</strong> A production node typically needs one or several input materials. In real life, of course, every material your factory needs is produced by some other production unit somewhere else, which has its own inputs, and so on. Since we can't model the entire world's industry within our model, the supply of input materials to a given node A can be modeled in a simplified way.
+
+      <p>In a simpler (for us) case, the supplier of a particular material is modeled, essentially, as a black box, to which orders for some amount of material can be sent, and which will, after a certain amount of time passes, will fill this order. Such a "magic source" is described by a single parameter (a scalar or a probabilistic distribution): the "lead time", i.e. the amount of time that passes from sending an order to it to the receipt of the ordered material. The model therefore does not take into account any performance constraints or material availability constraints that may exist in real life; this is why we refer to these sources as "magic sources".
+
+      <p>For each magic source the lead time is described by parameter
+	<pre><strong>delay</strong></pre>
+	The value of this parameter must be a distribution, e.g.
+	<pre>
+prepregProd.safety.fiber,delay,Triangular,180,270,360
+	  </pre>
+	
+      <p>In a more realistic situation, an input material may arrive to an input buffer from another production node of our supply chain, which has a full set of paramerers describing it. This is what we call in this document a "real source". For such a source, the "A.safety.M" section of the config file has no <tt>delay</tt> element, since the time between ordering a product and its arrival depends on the workings of separately modeled nodes of the chain. On the other hand, for each real source we must have a line with the parameter
+	<pre><strong>source</strong></pre>
+, whose value should be the name of a valid production node. Thus, for example, the line
+	<pre>
+	substrateSmallProd.safety.prepreg,source,prepregProd
+	</pre>
+	means that the Production node <tt>substrateSmallProd</tt> sends its orders for prepreg to the node <tt>prepregProd</tt>.
+
+      <p>Incidentally, it should be noted that with real sources, the line 
+	<tt>A.safety.M,source,B</tt> does not necessarily mean that node B makes material M and ships it directly to A. It only means that when A needs material M, it sends a production order to B; depending on how the supply chain is constructed, B may make some intermediate product M1 and send it to C, while C uses M1 to make M and send it to A. Or there may be even more intermediate stages.
+
+      <p><strong>MTS ordering vs. MTO ordering.</strong> Our application supports two protocols whereby production nodes generate orders for their input materials.
+
+	<p>With the <strong>MTS</strong> (Make-to-Stock) protocol, a production node's input buffer has two parameters,
+<pre><strong>reorderPoint
+targetLevel</strong> </pre>
+	  It monitors its current stock of the material, and when the stock level drops below the reorderPoint, it places an order with its supplier for a shipment of a sufficient size to bring the stock level to targetLevel. For example, the lines
+	  <pre>
+prepregProd.safety.fiber,targetLevel,2500
+prepregProd.safety.fiber,reorderPoint,1500	  </pre>
+	  means that when the amount of fiber stored in the appropriate input buffer of the prepregProd node drops below 1500, the node send an order to its supplier in the amount sufficient to bring the stock level back to 2500.
+
+	<p>With the <strong>MTO</strong> (Make-to-Order) protocol, a production node's input buffer generally does not stock the relevant material unless it knows that it will need to use it soon. This means that whenever node A receives an order to make some amount X of the product P it produces, it computes how much input material M will be needed to produce the X amount of P, and sends an appropriate order to its supplier. Input buffers practicing MTO ordering must have a parameter called
+	  <pre><strong>mto</strong> </pre>
+	  Its value is a real number, typically 1.0. Whenever a production node producing product A and practicing MTO with respect to the input material M receives an order to produce a certain amount (X) of product A, it computes how much M is needed for this (based on the stored <em>recipe</em>, discussed below), multiplies this number by the value of the <tt>mto</tt> parameter, and places the order with its source for M.
+
+	<p>
+	  For example, the production node substrateSmallProd has been defined as containing 2 input buffers, for prepreg and aluminum honeycomb, in this order. The recipe information 
+	  <pre>
+substrateSmallProd,inBatch,54*2,9*2
+substrateSmallProd,batch,2	  </pre>
+indicates that to produce a standaed batch (2 substrate units), the production unit needs 54*2 units of prepreg and 9*2 units of aluminum honeycomb.  The line
+<pre>substrateSmallProd.safety.aluminum,mto,1.0</pre>
+indicates that the aluminum honeycomb is ordered on the MTO protocol. Thus whenever the substrateSmallProd production node receives an order to make X substrate units, it places an order for X*9*1.0 = 9*X units of aluminum honeycomb.
+
+	<P><strong>"Orthogonality" of the ordering protocol and source type.</strong> Note that, for any input buffer, its ordering protocol (MTO vs MTS) and the type of the source (magic vs real) are specified separately and independently, and can be combined in any fashion.
+
+  <h3>Sharing of input buffers</h3>	  
+	<p>Sometimes two or more production nodes share their input materials. For example, in SC-3 model a factory has two separate production lines, one to make small substrate units and the other to make large ones, but both of them take their supplies (prepreg and aluminum honeycomb) from the same warehouses. This is modeled by only one of these nodes (in our case, substrateSmallProd) having its own set of input buffers, and the other node (substrateLargeProd) sharing them. In the config file this is indicated by the parameter
+	  <pre><strong>useInputsOf</strong> </pre>
+	  in the description of the latter node. Its value is the name of the former node.
+
+	<p>For example, the line 
+	  <pre>substrateLargeProd,useInputsOf,substrateSmallProd</pre>
+	  indicates that the node substrateLargeProd has no input buffers of its own, but uses those of substrateSmallProd.
+
+	  <p>Once node B has been declared as using the input buffers of node A (with <tt>B,useInputOf,A</tt>), no lines for elements of the form <tt>B.safety.M</tt> (for any material M) need be put into the config file. This is so because the input buffers' behavior is fully described by the lines for the elements of the form  <tt>B.safety.M</tt>.
+
+	<p><strong>Material ordering with shared input buffers.</strong> The MTS protocol is not affected by the fact that a given input buffer is used by multiple production nodes; it simply monitors the current stock levels, and reorders the material when the supplies run low.
+
+	<p>In the case of the MTO protocol, the config file only needs to contain the line  <tt>A.safety.M,mto,1.0</tt> in the section for the first production node (A).  The SC-3 application will automatically activate the MTO mechanism whenever any production node sharing A's input buffers receives a production order.
+	  
+	<p><strong>Using of shared input buffers for multi-stage production</strong> 
+	<p>Besides the obvious case (multiple production lines sharing the same input materials), shared input buffers can be used in the following, less obvious case.
+
+<p>
+	  Suppose that the production of a certain product, such as finished solar cells,  involves several production nodes: cellProd makes cells which then go to cellAssembly where coverglass is used to cover them. According to the model, coverglass needs to be ordered on the MTO principle, the order for coverglass to be sent out immediately when cellProd receives a production order. 
+
+<p>There are several ways to model this order flow in our application. The one we chose was as follows: all inputs that are physically used by cellProd or cellAssembly are put into a single array of input buffers in the cellProd node, and cellAssembly is told to share this array. In this way an order arriving to cellProd will trigger MTO orders on all MTO-protocol input buffers in that node, including that of coverglass.
+
+  <h3>Order-controlled and input-controlled production</h3>
+
+<p>
+  Every production node in our model is either order-controlled or input-controlled.
+
+  <p>
+    An order-controlled node receives production orders from other nodes of the supply chain (e.g. from its customers), and produces only as much product as demanded by the orders it has on file; once all orders have been filled, it stops working until more orders come.
+
+  <p>An input-controlled node receives no explicit orders and maintains no plan. Instead, it simply processes everything that comes into its input buffers, and stops only when at least one of the input buffers is empty.
+
+  <p>When the manufacturing process involves several production nodes arranged sequentially, the first node (e.g. cellProd) is order-controlled, while the downstream nodes (cellAssembly, cellPackaging) are input-contolled, since they are expected to "finish" and package all the cells that cellProd has produced.
+
+  <p>In our SC-3 application, the default condition of a production node is order-driven. If a node is input-driven, this is specified in the config file by the parameter 
+    	  <pre><strong>noPlan</strong> </pre>
+For example,
+	  <pre>cellPackaging,noPlan,true</pre>
+
+<p>Note that while an order-controlled node may have all unmanaged buffers (which implies that somebody else carefully controls the flow of materials into them), typically all of their bufferes are managed (using MTS or MTO). On the other hand, an input-controlled node will have at least one unmanaged input buffer, and any managed buffers it has should be run on the MTS protocol (since MTO is not applicable, due to the lack of orders).
+
+    <h3>Production recipe</h3>
+<p>When a production node is defined in the Java file (Demo.java), it is specified what input materials (resources) it uses, and what product (resource) it produces. The config file contains the "recipe", specifying the amounts of inputs and outputs; the relevant parameters are 
+	  <pre><strong>inBatch
+batch</strong></pre>
+The value of the latter parameter is an integer number (for countable resources) or a real number (for uncountable ones), and it specifies the size of the standard batch, i.e. how much product is produced at a time. The value of the former parameter is a list of numbers (integer or real, as the case may be), specifying the amounts of input materials that go into making a full batch of the output product.
+	  
+	<p>
+	  For example, the production node substrateSmallProd has been defined as containing 2 input buffers, for prepreg and aluminum honeycomb, in this order. The recipe information 
+	  <pre>
+substrateSmallProd,inBatch,54*2,9*2
+substrateSmallProd,batch,2	  </pre>
+indicates that to produce a standaed batch (2 substrate units), the production unit needs 54*2 units of prepreg and 9*2 units of aluminum honeycomb. 
+
+	  <h3>MTO-ordering recipe</h3>
+
+	<p>As mentioned above (under "Sharing of input buffers"), sometimes production node A has an array of input buffers that contain inputs not only for that node but also for another node B (and maybe also node C, etc). Therefore, sometimes node A may have an MTO-protocol input buffer that needs to order materials that are consumed not by node A itself, but by some downstream node B or C. For example, when cellProd receives an order to make some cells, its coverglass input buffer needs to send an MTO order for coverglass based on its expected consumption by the downstream cellAssembly node. This means that node A may need to generate MTO orders based not on its own recipe (describing consumption of inputs in node A itself), but based on a special "MTO recipe", which describes the demand for all MTO-orderable products in all nodes sharing A's input buffers.
+
+	<p>For such situations, a special "MTO recipe" may be provided at a production node, in addtion to the normal recipe. It is specified by the two parameters
+<pre><strong>inBatch.mto
+batch.mto</strong></pre>
+whose syntax is the same as for the "normal" recipe parameters <tt>inBatch</tt> and <tt>batch</tt>. For example, the cellProd node has an array of 3 input buffers, containing cellRM (used by cellProd itself), cell (used by cellAssembly), and coverglass (used by cellAssembly as well). The recipe used by cellProd for making cells, of course, uses only cellRM:
+<pre>cellProd,inBatch,2776,0,0
+cellProd,batch,2776</pre>
+But the "MTO recipe" also has an entry for coverglass:
+<pre>cellProd,inBatch.mto,2776,0,2776
+cellProd,batch.mto,2776</pre>
+This means that when cellProd receives an order to make cells, it places orders both for cellRM and for coverglass.
+	  
+<h3>Production stage(s)</h3>
+<h4>Single stage</h4>
+	<p>Most production nodes have a single production stage. Such a node needs, at a minimum, one parameter
+	  <pre><strong>prodDelay</strong></pre>
+	  which specifies how many days it takes to make a batch of output product from the input materials. The value can be either a scalar or a distribution. E.g.
+<pre>prepregProd,prodDelay,Triangular,14,17,21</pre>
+means that for each batch of prepreg its manufacturing time is drawn from the specified triangular distribution.
+
+<p>Most production stage can work on at most batch of product at a time. (Think of a bakery with just one large bread oven of a certain size, which is loaded with raw loaves all at once, and in which the batch of loaves stays until they are fully baked). However, our application also supports production stages in which any number of batches can be worked on simultaneously. (One can think of it as of an abstraction of a workshop where it takes a worker a certain amount of time to make a machine part -- but which has an infinite number of workers and tools, so that any number of parts can be machined at once). To specify this type of production, the parameter
+  <pre><strong>prodThrottled</strong></pre>
+  with the value <tt>false</tt> is used. E.g.
+  <pre>cellProd,prodThrottled,false</pre> would mean that the production stage of cellProd can process any number of batches simultaneously.
+
+<p>The SC-3 application does not have a way to specify a production stage which can process multiple batches at once, but no more than a certain number of them can be processed at once. (E.g. a bakery with 3 ovens, so that at most 3 batches of loaves can be baked at any time). This can be approximated, to a certain extent, by specifiying a larger batch size.
+  
+<h4>Multiple stages</h4>
+<p>It is also possible to model a production process with multiple stages, where the work is performed in a pipeline fashion. To do that, parameter
+    <pre><strong>prodStages</strong></pre>
+    is used to specify the number of stages. The properties of each stage are specified by the same parameters that are used for single-staged production, but with suffixes <tt>.1</tt>, <tt>.2</tt>, <tt>.3</tt>, etc. For example, the lines
+<pre>cellProd,prodStages,2
+cellProd,prodDelay.1,Uniform,7,10
+#--- the 2nd stage is concurrent (not throttled)
+cellProd,prodThrottled.2,false
+cellProd,prodDelay.2,Triangular,7,14,21
+</pre>
+define a two-stage production process in node cellProd, the first stage being a usual throttled stage (one batch at a time), and the second stage allowing unlimited concurrency.
+
+
+<h3>Transportation between the production and QA stages</h3>
+
+<P>The model represented by a production node may include a transportation step between the production stage(s) and the subsequent QA (testing) stages. If such a delay is present, the config file should contain parameter 
+  <pre><strong>trasnDelay</strong></pre>
+  , whose value is a distribution, from which the time (measured in days) taken to transport each batch is drawn. For example, the line
+  <pre>cellAssembly,transDelay,Uniform,1,2</pre>
+  indicates that it takes 1 to 2 days to transport a batch of assembled solar cells to the QA facility.
+
+  <p>Unlike production stages, transportation in SC-3 is assumed by default to be concurrent with infinite capacity; that is, any number of batches can travel simultaneously, independent of each other. (Think of a small business sending boxes of stuff from one site to another by UPS or via a major container shipping line like Merk. While in reality the shipping capacity of UPS is not infinite, a small business is not likely to send so many parcels as to slow down the shipping service's operation.) However, it is also possible to model a transportation link where only one batch of product can be moving at any given time. (Think a production company that moves product by its own truck -- and it only has one truck, into which only one pallet can fit). To do that, use the parameter
+      <pre><strong>transThrottled</strong></pre>
+      with the value <tt>true</tt> is used. 
+
+<h3>Testing (QA)</h3>
+
+  <p>A production node often includes a testing (a.k.a. QA) stage. At this stage, some of the product passes (i.e. is releades as good), some may be discarded as faulty, and some may be sent for "rework" (repairing fixable defects), either back to the production stage or to the separate dedicated rework facility.
+
+    <p>The operations of a QA stage are controlled by the parameters
+  <pre><strong>
+qaDelay
+qaDelayUnit
+qaThrottled
+qaUnitLevel
+faulty      
+rework
+  </strong></pre>
+
+    <p><strong>Whole-lot or partial-lot discard.</strong>
+      Depending on the properties of the product being tested, two different types of decisions can be modeled: whole-lot discard and partial-lot discard. In the whole-lot mode, the release/discard/rework decision is always made for the entire batch, presumably based on testing some small taken from it. This is, for example, how one would test bulk products arriving in bags or bottle; either you accept an entire bag of floor or bottle of oil as good, or you discard the entire bag or bottle. In the  "partial-lot discard" mode, which can be used for example for electronic devices, each unit of product contained in the batch is individually tested, and a release/discard/rework decision is made about that individual unit.
+
+    <p>The choice between whole-lot and partial-lot discard is controlled as follows:
+	    
+      <ul>
+	<li>If <tt>faulty</tt> describes a distribution, it is interpreted as the distribution from which the size of the "faulty portion" of each lot is drawn. This means that partial-lot discard will take place. The <tt>qaUnitLevel</tt> parameter should be either absent or be <tt>false</tt>, since the application won't need to <em>actually</em> test every unit in the batch -- it will simply decide how many units from the batch to discard based on the "faulty portion" value drawn for this batch from the provided distribution.
+
+	<li>If <tt>faulty</tt> contains a scalar, and  <tt>qaUnitLevel</tt> is <tt>false</tt> or absent, the whole-lot discard will take place, with the specifed probability.
+
+
+	<li>If <tt>faulty</tt> contains a scalar, and  <tt>qaUnitLevel</tt> is <tt>true</tt>, the QA stage will literally perform a "test" on each unit in the batch, discarding it with the specified probability. (This, of course, is the same outcome which would happen if you could specify <tt>faulty</tt> as a certain binomial distribution; but such a thing is not supported).
+
+
+</ul>
+
+
+    <p><strong>Rework portion.</strong> The parameter <tt>rework</tt> can only be used if <tt>faulty</tt> is a scalar (a single number, rather than a distribution). Its own value must be a scalar as well. Depending on whether whole-lot or partial-lot discard is in effect (see above), the value of <tt>rework</tt> is interpreted in an analogous way, determining either the probability with which either the entire lot or each individual unit is sent to rework.
+
+    <p><strong>QA time.</strong> The parameter <tt>qaDelay</tt> specifies, as a distribution, the time taken by a batch to go through QA. If instead of  <tt>qaDelay</tt>, the parameter   <tt>qaDelayUnit</tt> is present, the latter is interpreted as the time needed for testing a single unit, and the time for testing the entire batch is computed as the sum of times for each unit.
+
+    <p>As with production and transportation, QA may be sequential (one batch at a time) or parallel (any number of batches can be tested at the same time). The choice is controlled by <tt>qaThrottled</tt>. The default is <tt>false</tt> (parallel processing).
+
+    <p><strong>Rework destination.</strong> As described above, if the parameter <tt>rework</tt> with a non-zero value is provided, some batches or units are set to reprocessing (rework). By default, this means sending them back to the beginning of the production stage, where they are handled the same way as new batches made out of raw materials. Alternatively, you can specify a separate reprocessing system, with its production stage(s) and an optional QA stage. This system is described in the config file in the same way you'd describe a separate production node; for the name of the node, you use the name of the "main" production node suffixed with <tt>.rework</tt>.
+
+
+      
+<hr>
+
+
+  	<li>The optional QA (testing) step, at which some portion of the product coming from the production line may be discarded as faulty; another portion, defective but "fixable" may be sent to "rework", either back to the main production line or to the separate production line for rework (a repair shop, if you wish)
+
+	<li>An optional "rework" facility. It is only used in those nodes in which  the main QA step sends "defective but fixable" products to be reowrked not to the main production line but to a separate workshop. In this case the rework facility is modeled by a <tt>Production</tt> object, so that it also can have e.g. its own QA step. (Theoretically speaking, this means that we can built a recursive structure, with a Production node including another Production node as its rework facility, with that second Production node having the third Production node as its own rework facility, and so on; but of course this never actually happens in our model).
+  
+<hr>
+	  
+expiration
+initial
+
+	  orderProbability
+orderSize
+output
+outputDelay
+
+
+qaResetExpiration
+replan
+resetExpiration
+source
+
+
+
+  
+</body>
+</html>

@@ -5,7 +5,7 @@
   <body>
     <h1>SC-3</h1>
 
-<div align="center"><em>Updated: 2023-07-31, for sc3 ver. 1.007</em></div>
+<div align="center"><em>Updated: 2023-08-08, for sc3 ver. 1.010</em></div>
 
 
     <p>This demo is based on the "SC-3" model provided by Rutgers' School of Business team (Ben M. et al), as of July 2023.
@@ -16,7 +16,7 @@
     
     <p>The code in this project represesnts a simple supply chain simulation implemented in Java using the <a href="https://cs.gmu.edu/~eclab/projects/mason/">MASON</a> API and the <a href="https://github.com/eclab/mason/tree/distributed-3.0/contrib/des/sim/des">MASON DES library</a>
 
-      <h2>SC-23 vs. SC-2 and SC-1 (a.k.a. Pharma3)</h2>
+      <h2>SC-3 vs. SC-2 and SC-1 (a.k.a. Pharma3)</h2>
 
     <p>The source code for the SC-2 app lives in the same Github repository as that for the SC-2 and SC-1 (aka Pharma3) apps developed in 2022-2023. The SC-3 app can be compiled and used in essentially the same way as Pharma3, the main difference being that the main Java class for SC-3 is <tt>edu.rutgers.sc3.Demo</tt> (vs.  <tt>edu.rutgers.pharma3.Demo</tt>), and the main driver script is <tt>run-sc3.sh</tt>
 
@@ -140,25 +140,34 @@ The <tt>-until 365</tt> is a standard MASON option, which will cause the applica
 
 <p>This can be run with the script <tt>scripts/sc-3-optimization-test.sh</tt>. (Despite the name, there is no optimization going on there, of course. But your optimization code can use the Demo class the same way as shown in that trivial example.)
 
-<p>This script can also be run with the
+<p>This script can also be run with 
   <pre>
     -repeat <em>N</em>
   </pre>
   option, in order to perform N runs for each scenario and average the results.
-  
+The  <pre>
+    -until <em>N</em>
+  </pre>
+  option can be used to specify the length (in simulated days) of each run. The
+ <pre>
+    -disrupt <em>file.csv</em>
+  </pre>
+  option can be used to run simulation with a specific "custom" disruption scenario, instead of trying all the "standard" scenarios.
+
+ <p>
+For example, 
+  <pre>
+    scripts/sc-3-optimization-test.sh -repeat 100 -until 5000 -disrupt config/dis-sc3/test-7.csv
+    </pre>
+  will run 100 baseline simulations and 100 simulations with the disrupotion scenario from the specified file. Each simulation will run for 5000 simulated days.
 	       
 	       <h2>Run - GUI</h2>
 
 <P>This is not supported in SC-3 at the moment.
 	       
-	       <strike>
-<pre>
-  cd ~/mason/work
-  scripts/gui-3.sh
-</pre>
-</strike>
+  <h2>Configuration file</h2>
 
-	       <h2>Configuration file</h2>
+  (<p>For more details, see the page <A href="sc3-config.html">SC-3: configuration file parameters</a>)
 
 <p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/cs3.csv</tt>.
 
