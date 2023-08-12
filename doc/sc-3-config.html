@@ -6,14 +6,16 @@
     <h1>SC-3 model: building blocks and control parameters
     </h1>
 
-<div align="center"><em>Updated: 2023-08-08, for sc3 ver. 1.010</em></div>
+<div align="center"><em>Updated: 2023-08-10, for sc3 ver. 1.010</em></div>
 
 
 <h2>Overview</h2>
 
     <p>Unlike our earlier modeling applications (SC-1 and SC-2), in which the relationships between the components of the supply chain had to be specified by writing Java code, in SC-3 most of these relations can be specifoed via the configuration file. The main file of the application, <tt>sc3/Demo.java</tt>, still contains the list of resources (various material and products that supply chain elements produce, consume, and ship to each other) and the list of production nodes, with the indication what resources each node consumes or receives. Everything else -- in particular, who sends what to whom, and in which way -- can now be specified via the config file. (One still <em>can</em> specify these relationshios vi the Java API, but it is probably easier to do it via the config file itself).
 
-    <p>The code in sc3/Demo.java (method <tt>initSupplyChain()</tt>) may have the following sections.
+    <p>The code in sc3/Demo.java (method <tt>initSupplyChain()</tt>) may have the following sections. (See <tt>qaResetExpiration,
+resetExpiration
+</tt>).
 
       <p>
       <strong>Define resources.</strong> Basically, all you need is to say how each resource is called, and to specify if it is countable (each batch contains an integer number of items) or uncountable (each batch may contain an arbitrary real value of the product).
@@ -118,7 +120,25 @@ Production,faulty,Uniform,0.1,0.2
     </pre>
 means the that the parameter <tt>faulty</tt> for the element called <tt>Production</tt> describes a uniform distribution with the range [0.1,0.2].  (This is the distribution from which the model of the post-production QA step draws the number that determines the portion of faulty items in each produced lot. This particular distribution means that 10% to 20% of items in each lot are found faulty.)
 
-Thw following sections describe parameters associated with various parts of a Production element's functionality.
+Thw following sections describe parameters associated with various parts of a Production element's functionality, and also with some other elements.
+
+  <h3>Properties of resources</h3>
+
+
+<P>It is expected that there will be at least one line of parameters on the config file for every resource. This is
+  <pre></strong>
+  expiration
+</strong></pre>
+whose value is either a real number (the shelf life of the product in days), or <tt>+Infinity</tt> for products that don't expire.
+
+For example,
+<pre>
+fiber,expiration,
+resin,expiration,180
+</pre>
+
+<p>
+For some products in the SC-3 model the shelf life is measured from passing the QA, or from receipt at the consumer's input buffer; this is controlled by the parameters in the appropriate production nodes' sections.
 
   <h3>Contract negotiation</h3>
 
@@ -160,15 +180,19 @@ prepregProd.safety.fiber,delay,Triangular,180,270,360
 
       <p><strong>MTS ordering vs. MTO ordering.</strong> Our application supports two protocols whereby production nodes generate orders for their input materials.
 
-	<p>With the <strong>MTS</strong> (Make-to-Stock) protocol, a production node's input buffer has two parameters,
+	<p>With the <strong>MTS</strong> (Make-to-Stock) protocol, a production node's input buffer has two mandatory parameters,
 <pre><strong>reorderPoint
-targetLevel</strong> </pre>
+    targetLevel</strong> </pre>
 	  It monitors its current stock of the material, and when the stock level drops below the reorderPoint, it places an order with its supplier for a shipment of a sufficient size to bring the stock level to targetLevel. For example, the lines
 	  <pre>
 prepregProd.safety.fiber,targetLevel,2500
 prepregProd.safety.fiber,reorderPoint,1500	  </pre>
 	  means that when the amount of fiber stored in the appropriate input buffer of the prepregProd node drops below 1500, the node send an order to its supplier in the amount sufficient to bring the stock level back to 2500.
 
+	  <p>There is also the optional parameter
+<pre><strong>initial</strong> </pre>
+, which specifies the initial stock level. If it's absent, <tt>targetLevel</tt> is used as the initial level.
+	  
 	<p>With the <strong>MTO</strong> (Make-to-Order) protocol, a production node's input buffer generally does not stock the relevant material unless it knows that it will need to use it soon. This means that whenever node A receives an order to make some amount X of the product P it produces, it computes how much input material M will be needed to produce the X amount of P, and sends an appropriate order to its supplier. Input buffers practicing MTO ordering must have a parameter called
 	  <pre><strong>mto</strong> </pre>
 	  Its value is a real number, typically 1.0. Whenever a production node producing product A and practicing MTO with respect to the input material M receives an order to produce a certain amount (X) of product A, it computes how much M is needed for this (based on the stored <em>recipe</em>, discussed below), multiplies this number by the value of the <tt>mto</tt> parameter, and places the order with its source for M.
@@ -207,6 +231,12 @@ indicates that the aluminum honeycomb is ordered on the MTO protocol. Thus whene
 
 <p>There are several ways to model this order flow in our application. The one we chose was as follows: all inputs that are physically used by cellProd or cellAssembly are put into a single array of input buffers in the cellProd node, and cellAssembly is told to share this array. In this way an order arriving to cellProd will trigger MTO orders on all MTO-protocol input buffers in that node, including that of coverglass.
 
+<p><strong>Resetting expiration date on arrival to input buffer.</strong> Normally, one expects that products' shelf life is measured since the date of manufacturing. However, the SC-3 model calls for measuing the shelf life of some products since their arrival to the input buffer of the consumer. (That is, the product must be used e.g. within 180 days since it arrives to the input buffer; otherwise it must be discarded). This is specified with the parameter
+  <tt>resetExpiration</tt> in the description of the appropriate input biffer, which has the value <tt>true</tt>. For example
+<pre>
+arraySmallAssembly.safety.adhesive,resetExpiration,true
+</pre>
+  
   <h3>Order-controlled and input-controlled production</h3>
 
 <p>
@@ -306,6 +336,7 @@ qaThrottled
 qaUnitLevel
 faulty      
 rework
+qaResetExpiration
   </strong></pre>
 
     <p><strong>Whole-lot or partial-lot discard.</strong>
@@ -333,31 +364,22 @@ rework
 
     <p><strong>Rework destination.</strong> As described above, if the parameter <tt>rework</tt> with a non-zero value is provided, some batches or units are set to reprocessing (rework). By default, this means sending them back to the beginning of the production stage, where they are handled the same way as new batches made out of raw materials. Alternatively, you can specify a separate reprocessing system, with its production stage(s) and an optional QA stage. This system is described in the config file in the same way you'd describe a separate production node; for the name of the node, you use the name of the "main" production node suffixed with <tt>.rework</tt>.
 
+    <p><strong>Resetting the expiration date.</strong> For some products, the SC-3 model measures their shelf life not from the manufacturing date but from the QA (testing) date. This can be specified with e.g.
+<pre>prepregProd,qaResetExpiration,true</pr>
 
       
 <hr>
-
-
-  	<li>The optional QA (testing) step, at which some portion of the product coming from the production line may be discarded as faulty; another portion, defective but "fixable" may be sent to "rework", either back to the main production line or to the separate production line for rework (a repair shop, if you wish)
-
-	<li>An optional "rework" facility. It is only used in those nodes in which  the main QA step sends "defective but fixable" products to be reowrked not to the main production line but to a separate workshop. In this case the rework facility is modeled by a <tt>Production</tt> object, so that it also can have e.g. its own QA step. (Theoretically speaking, this means that we can built a recursive structure, with a Production node including another Production node as its rework facility, with that second Production node having the third Production node as its own rework facility, and so on; but of course this never actually happens in our model).
-  
-<hr>
 	  
-expiration
-initial
+<!--
+
 
 	  orderProbability
 orderSize
 output
 outputDelay
 
-
-qaResetExpiration
 replan
-resetExpiration
-source
-
+-->
 
 
   
