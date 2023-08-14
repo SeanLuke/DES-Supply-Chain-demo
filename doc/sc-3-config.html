@@ -6,16 +6,15 @@
     <h1>SC-3 model: building blocks and control parameters
     </h1>
 
-<div align="center"><em>Updated: 2023-08-10, for sc3 ver. 1.010</em></div>
+<div align="center"><em>Updated: 2023-08-11, for sc3 ver. 1.010</em></div>
 
+<p>This document describes configuring the supply chain model in the <a href="sc-3.html">SC-3</a> application.
 
 <h2>Overview</h2>
 
-    <p>Unlike our earlier modeling applications (SC-1 and SC-2), in which the relationships between the components of the supply chain had to be specified by writing Java code, in SC-3 most of these relations can be specifoed via the configuration file. The main file of the application, <tt>sc3/Demo.java</tt>, still contains the list of resources (various material and products that supply chain elements produce, consume, and ship to each other) and the list of production nodes, with the indication what resources each node consumes or receives. Everything else -- in particular, who sends what to whom, and in which way -- can now be specified via the config file. (One still <em>can</em> specify these relationshios vi the Java API, but it is probably easier to do it via the config file itself).
+    <p>Unlike our earlier modeling applications (SC-1 and SC-2), in which the relationships between the components of the supply chain had to be specified by writing Java code, in SC-3 most of these relations can be specifed via the configuration file. The main file of the application, <tt>sc3/Demo.java</tt>, still contains the list of resources (various material and products that supply chain elements produce, consume, and ship to each other) and the list of production nodes, with the indication what resources each node consumes or receives. Everything else -- in particular, who sends what to whom, and in which way -- can now be specified via the config file. (One still <em>can</em> specify these relationshios vi the Java API, but it is probably easier to do it via the config file itself).
 
-    <p>The code in sc3/Demo.java (method <tt>initSupplyChain()</tt>) may have the following sections. (See <tt>qaResetExpiration,
-resetExpiration
-</tt>).
+    <p>The code in sc3/Demo.java (method <tt>initSupplyChain()</tt>) may have the following sections. 
 
       <p>
       <strong>Define resources.</strong> Basically, all you need is to say how each resource is called, and to specify if it is countable (each batch contains an integer number of items) or uncountable (each batch may contain an arbitrary real value of the product).
@@ -97,7 +96,7 @@ Once the application knows the name of the node, it will look for its properties
 	
 
 
-<h2>Configuration file</h2>
+<h2>Configuration file format</h2>
 
 <p>The simulation tool takes the parameters of each element of the model from the configuration file, which, by default, is <tt>config/cs3.csv</tt>.
 
@@ -120,25 +119,28 @@ Production,faulty,Uniform,0.1,0.2
     </pre>
 means the that the parameter <tt>faulty</tt> for the element called <tt>Production</tt> describes a uniform distribution with the range [0.1,0.2].  (This is the distribution from which the model of the post-production QA step draws the number that determines the portion of faulty items in each produced lot. This particular distribution means that 10% to 20% of items in each lot are found faulty.)
 
-Thw following sections describe parameters associated with various parts of a Production element's functionality, and also with some other elements.
+The following sections describe parameters associated with various parts of a Production element's functionality, and also with some other elements.
 
-  <h3>Properties of resources</h3>
+  <h2>Configuration parameter describing properties of resources</h2>
 
 
 <P>It is expected that there will be at least one line of parameters on the config file for every resource. This is
   <pre></strong>
   expiration
 </strong></pre>
-whose value is either a real number (the shelf life of the product in days), or <tt>+Infinity</tt> for products that don't expire.
+whose value is either a real number (the shelf life of the product, from the production date to the expiration date, measured in days), or <tt>+Infinity</tt> for products that don't expire (i.e. can be stored forever).
 
 For example,
 <pre>
-fiber,expiration,
+fiber,expiration,+Infinity
 resin,expiration,180
 </pre>
 
 <p>
-For some products in the SC-3 model the shelf life is measured from passing the QA, or from receipt at the consumer's input buffer; this is controlled by the parameters in the appropriate production nodes' sections.
+For some products in the SC-3 model the shelf life is measured from passing the QA, or from receipt at the consumer's input buffer; this is controlled by the parameters in the appropriate production nodes' sections. (See <tt>qaResetExpiration</tt> and <tt>resetExpiration</tt>).
+
+  <h2>Configuration parameters for Production nodes</h2>
+This sections describe config parameters associated with various parts of a Production element's functionality.
 
   <h3>Contract negotiation</h3>
 
@@ -148,7 +150,7 @@ For example, the line
   <pre>
 substrateLargeProd,orderDelay,Uniform,7,60
   </pre>
-  indicates that when some other unit wants to get substrateLargeProd to produce some substrate units, it will take from 7 to 60 days for that intent to be converted to an accepted order which substrateLargeProd will start working on.
+  indicates that when some other unit wants to get substrateLargeProd to produce some substrate units, it will take from 7 to 60 days for that intent to be converted to an accepted order, on which substrateLargeProd will then start working.
   
   <h3>Input buffers</h3>
 
@@ -337,6 +339,7 @@ qaUnitLevel
 faulty      
 rework
 qaResetExpiration
+replan
   </strong></pre>
 
     <p><strong>Whole-lot or partial-lot discard.</strong>
@@ -364,24 +367,56 @@ qaResetExpiration
 
     <p><strong>Rework destination.</strong> As described above, if the parameter <tt>rework</tt> with a non-zero value is provided, some batches or units are set to reprocessing (rework). By default, this means sending them back to the beginning of the production stage, where they are handled the same way as new batches made out of raw materials. Alternatively, you can specify a separate reprocessing system, with its production stage(s) and an optional QA stage. This system is described in the config file in the same way you'd describe a separate production node; for the name of the node, you use the name of the "main" production node suffixed with <tt>.rework</tt>.
 
-    <p><strong>Resetting the expiration date.</strong> For some products, the SC-3 model measures their shelf life not from the manufacturing date but from the QA (testing) date. This can be specified with e.g.
-<pre>prepregProd,qaResetExpiration,true</pr>
+    <p><strong>Resetting the expiration date.</strong> For some products, the SC-3 model measures their shelf life not from the manufacturing date but from the QA (testing) date. This can be specified by the parameter
+      <tt>qaResetExpiration</tt>, with the value <tt>true</tt>. For example, the line 
+      <pre>prepregProd,qaResetExpiration,true</pre>
+      indicates that the product (prepreg) produced by prepregProd measures its shelf line from the time it passes QA.
+
+    <p><strong>Re-planning to make up for discarded units or lots.</strong></p>
+    Suppose an order-driven production node has been givn an order to produce 100 widgets. It has made a plan to produce 100 of them, and, accordingly, produced 100. However, 3 of them have been discarded by QA, and only 97 will be shipped to the customer. In order to make sure that the customer receives the desired number of units, the production node needs some way compensate for such discarded units.  In the SC-3 app, this can be done as follows: if X units have been discarded by QA, the QA facility sends a signal back to the production stage to add X to the production plan.
+
+<p>This "replanning" functionality can be enabled by the parameter
+  <pre><strong>replan</strong></pre>, whose value is the name of the production unit to which the "replanning" order is sent. For example, the line
+<pre>substrateSmallProd,replan,substrateSmallProd</pre>
+indicates that the QA stage of  substrateSmallProd sends replanning orders back to the production stage of the same production node.
+  
+<p>While the above is a typical situation, sometimes plans are kept by an order-driven node A (such as cellProd), while the QA happens at some downstream node B (such as cellAssembly), which itself is input-driven. Therefore, B will need to send its replanning orders back to A. For example:
+<pre>cellAssembly,replan,cellProd</pre>
 
       
-<hr>
-	  
-<!--
+      <h3>Output product routing</h3>
+
+      <p>The following parameters specify what happens with the product produced by the production unit after it passes QA.
+ <pre><strong>output
+outputDelay  </strong></pre>
+
+ <p>
+   The values of the parameter <tt>output</tt> are a string,  which must be the name of a valid elment of the supply chain (a Production node or an EndConsumer node), followed by the (0-based) buffer number, followed by a number (typically 1.0) indicating which portion of the output goes to that node. This parameter is mandatory, because otherwise the application would not know where to send the product.
+
+ <p>(The application also allows to split the output, sending some portion of it to one node and another portion to another node. However, this cannnot be specified in the config file, since in the config file only one line can be provided for each <em>elementName,parameterName</em> combination. This functionality can only be specified in the Java code, via the setQaReceiver() method).
+
+ <p> The  parameter <tt>outputDelay</tt> is optional. Its value is a distribution. For each batch that passes QA, the time (measured in days) that will take for that batch to arrive to its destination node will be drawn from that distribution.
+
+ <p>Example:
+   <pre>prepregProd,outputDelay,Uniform,5,10
+prepregProd,output,substrateSmallProd.safety,0,1.0</pre>
+Here, 100% of the batches of prepreg  produced by prepregProd is sent to input buffer No. 0 (the prepreg input buffer) of substrateSmallProd. It will take 5 to 10 days for the batch to get there.
 
 
-	  orderProbability
-orderSize
-output
-outputDelay
+  <h2>Configuration parameters for EndCustomer nodes</h2>
 
-replan
--->
+  <p>The SC-3 supply chain includes 2 EndCustomer nodes, which send orders and receive finished product, but don't produce anything that's included into the model. They are described by 2 parameters:
+    <pre><strong>source
+orderProbability
+orderSize</strong></pre>
+    Here, the value of <tt>source</tt> must be the name of a valid production node to which te EndCustomer sends its orders. The parameter <tt>orderProbability</tt> has a scalar value in the range (0,1), which specifies the probability with which this customer will send an order on a given day. (Note that at present there is no way to describe a customer that may send more than 1 order per day). The parameter <tt>orderSize</tt> specifies a discrete distribution from which the size of each order is drawn.
 
-
+    <p>Example:
+    <pre>arraySmallCustomer,orderProbability,12/365
+arraySmallCustomer,orderSize,EmpiricalWalker,0,0,0,0,0.27,0,0.73
+arraySmallCustomer,source,arraySmallAssembly</pre>
+Here, arraySmallCustomer sends its orders to arraySmallAssembly. On each paeticular day, the probability that an order will be sent on that day is 12/365; this means that on average, 12 orders per year will be generated. The size of the order is drawn from a discrete distribution which gives 4 with the probability 27%, and 6 with the probability 73%.
+  
   
 </body>
 </html>
