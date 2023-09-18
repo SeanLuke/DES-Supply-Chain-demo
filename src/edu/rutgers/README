@@ -1,0 +1,14 @@
+Obsolete models (used for testing simpler concepts)
+masondemo1/
+pharma/
+pharma2/
+
+Active models 
+pharma3/ -- SC-1
+sc2/  -- SC-2
+sc3/ -- SC-3
+
+Common use code
+supply/ -- common concepts for multiple supply chains
+test/ -- test scripts (run the same model with different parameters)
+util/ -- common utility library
