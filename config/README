@@ -1,0 +1,56 @@
+This directory contains configuration files for various supply chain models.
+They are supplied with the --config option to the model's main script.
+The disruption scenario files are here as well.
+
+pharma3.csv  -- Standard (default) config file for SC-1
+Modified config files for SC-1 (for various experimental runs)
+pharma3.needs-anomaly.csv
+pharma3.nosafety-var10pc.csv
+pharma3.nosafety.csv
+pharma3.orig.csv
+pharma3.var10pc.csv
+
+sc2.csv -- Standard (default) config file for SC-2
+
+sc3.csv  -- Standard (default) config file for SC-3
+sc3-small.csv   -- Modified config file for SC-3, only contains small panels and their supply subchain
+
+
+dis-sc2/ -- sample disruption scenario files for SC-2
+dis-sc3/ -- sample disruption files for SC-3
+
+Sample disruption scenario files for SC-1:
+Eeach file for 1 disruption type:
+dis.A10.csv
+dis.A11.csv
+dis.A12.csv
+dis.A13.csv
+dis.A14.csv
+dis.A15.csv
+dis.A16.csv
+dis.A18.csv
+dis.A19.csv
+dis.A2.csv
+dis.A20.csv
+dis.A3.csv
+dis.A4.csv
+dis.A5.csv
+dis.A6.csv
+dis.A7.csv
+dis.A8.csv
+dis.A9.csv
+dis.all.csv -- multiple disruptions
+
+dis.baseline.csv -- An empty disruption scenario file. (Can be used for basline runs, if for some reason you still want to use the -disrupt option)
+
+pharma.csv
+pharma2.csv
+
+remove-safety.sh*
+
+
+change-var.pl*
+
+
+
+templates/
