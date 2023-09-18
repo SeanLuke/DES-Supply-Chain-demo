@@ -94,8 +94,8 @@
 	   destdir="web/api"
            use="true"
 	   link="https://docs.oracle.com/en/java/javase/11/docs/api/"
-	   header="&lt;em&gt;Rule Game&lt;/em&gt;"   
-	   windowtitle="Rule Game web API documentation" 
+	   header="&lt;em&gt;Supply Chains&lt;/em&gt;"   
+	   windowtitle="DES Supply Chain model API documentation" 
 	   additionalparam="-Xdoclint:none" />
 </target>
 

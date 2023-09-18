@@ -91,7 +91,7 @@ public class ThrottleQueue extends sim.des.Queue    implements     Named
 	it's ready.
 
 	
-	@param delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
+	@param _delay Models the production step whose capacity we want to restrict. (For example, a bread oven with space for exactly 1 batch of loaves, or a truck that has space for exactly 1 shipping container of stuff).
 	
 	@param cap The max number of batches that the production unit (the Delay object) can physically handle simultaneously. (Usually, 1).
 

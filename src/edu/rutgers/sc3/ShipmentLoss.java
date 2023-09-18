@@ -13,13 +13,17 @@ import sim.des.*;
 import edu.rutgers.util.*;
 import edu.rutgers.supply.Disruptions.Disruption;
 
-
+/** Destroys some shipments in a transportation delay (such as the one
+    between production and QA in a Production node, or one between
+    pools). */
 public class ShipmentLoss {
 
     /** Destroys some shipments in a transportation delay (such  as the one between production and QA
 	in a Production node, or one between pools).
 
 	All nodes with the same timestamps are interpreted as a single shipment.
+
+	@param transDelay The SimpleDelay object, representing shipments currently in transit, which is to be affected by a disruption. (That is, some shipments from it will disappear).
     */
     static double disruptShipments(SimState state, String name, SimpleDelay transDelay) {
 	Disruptions.Type type = Disruptions.Type.ShipmentLoss;

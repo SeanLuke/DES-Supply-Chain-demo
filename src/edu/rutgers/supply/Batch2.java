@@ -102,7 +102,6 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 	batches of this kind. The name of this resource is used to retrieve
 	the parameters for the resource.
 
-	@param config The config file, in which we expect to find a parameter set (ParaSet) with a name for the drug; that ParaSet may have a parameter named "expiration", to get she shelf life from.
    
 	@param config A configuration file which has a section (a
 	ParaSet) with the name that's the same as that of the
