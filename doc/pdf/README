@@ -1,0 +1,22 @@
+This directory contains the PDF versions of the documentation whose
+main version is contained in the HTML files. Unlike the HTML files, the
+PDF files do not have correct hyperlinks between them
+
+== Overview ==
+Supply Chain models.pdf
+
+== Active models ==
+SC-1.pdf
+Disruptions in SC-1.pdf
+Orders and production plans in SC-1.pdf
+
+SC-2.pdf
+Disruptions in SC-2.pdf
+Order timeout in SC-2.pdf
+
+SC-3.pdf
+
+
+=== Obsolete models ==
+Supply Chain Demo 1.pdf
+Supply Chain Demo 2.pdf
