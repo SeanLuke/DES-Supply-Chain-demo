@@ -1,0 +1,91 @@
+# Copyright 2006 by Sean Luke and George Mason University
+# Licensed under the Academic Free License version 3.0
+# See the file "LICENSE" for more information
+
+parent.0 = pharma3DemoCoev.params
+
+eval.problem = edu.rutgers.pharma3.Pharma3DemoCoevProblem2_DAvg_SAvg_5e9
+
+eval =                                  ec.coevolve.MultiPopCoevolutionaryEvaluator
+
+eval.num-shuffled=			4
+eval.num-current=                       0
+eval.num-gurus =                        0
+eval.num-prev =                         0
+eval.select-current =                   ec.select.RandomSelection
+eval.select-prev =                      ec.select.RandomSelection
+
+jobs=20
+generations=                            200
+select.tournament.size =                2
+pop.subpops =                           2
+pop.default-subpop =			0
+
+mason-time = 365
+mason-num-trials = 1
+mason-objectives = 1
+mason-rebuild-model = true
+pop.subpop.0.species.min-gene.0 = 50.0
+pop.subpop.0.species.max-gene.0 = 365.0
+
+init =	                                       ec.eda.cmaes.CMAESInitializer
+breed =                                        ec.eda.cmaes.CMAESBreeder
+
+
+pop.subpop.0 =                          ec.Subpopulation
+pop.subpop.0.duplicate-retries =        2
+pop.subpop.0.species =                  ec.eda.cmaes.CMAESSpecies
+pop.subpop.0.species.crossover-type =   one
+pop.subpop.0.species.genome-size =      21
+pop.subpop.0.species.fitness =          ec.simple.SimpleFitness
+pop.subpop.0.species.ind =              ec.vector.DoubleVectorIndividual
+pop.subpop.0.species.min-gene =         0.0
+pop.subpop.0.species.max-gene =         1.0
+pop.subpop.0.size =                            1
+pop.subpop.0.species.mutation-prob =           0.0
+pop.subpop.0.species.pipe =                    ec.breed.InitializationPipeline	
+pop.subpop.0.species.mutation-type =           reset
+pop.subpop.0.species.crossover-type =          one
+
+
+pop.subpop.1 =                          ec.Subpopulation
+pop.subpop.1.duplicate-retries =        2
+pop.subpop.1.species =                  ec.eda.cmaes.CMAESSpecies
+pop.subpop.1.species.crossover-type =   one
+pop.subpop.1.species.genome-size =      5
+pop.subpop.1.species.fitness =          ec.simple.SimpleFitness
+pop.subpop.1.species.ind =              ec.vector.DoubleVectorIndividual
+pop.subpop.1.species.min-gene =         0.0
+pop.subpop.1.species.max-gene =         1.0
+pop.subpop.1.size =                            1
+pop.subpop.1.species.mutation-prob =           0.0
+pop.subpop.1.species.pipe =                    ec.breed.InitializationPipeline	
+pop.subpop.1.species.mutation-type =           reset
+pop.subpop.1.species.crossover-type =          one
+
+
+
+#### Some default settings.  You may wish to change them.
+pop.subpop.0.species.alternative-termination = false
+pop.subpop.0.species.mean =                    center	
+pop.subpop.0.species.sigma =                   0.5
+pop.subpop.1.species.alternative-termination = false
+pop.subpop.1.species.mean =                    center	
+pop.subpop.1.species.sigma =                   0.5
+
+pop.subpop.0.species.lambda = 20
+pop.subpop.1.species.lambda = 20
+
+
+pop.subpop.0.species.covariance = scaled
+pop.subpop.1.species.covariance = scaled
+
+stat.num-children = 1
+stat.child.0 = ec.simple.SimpleShortStatistics
+
+stat.child.0.do-subpops = true
+
+stat.file = /scratch/rpatel17/MASON_DES_Output/Dec8_Coev/Jan12/coev5e9_10_30/coev_lam20_200gen_davg_savg.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/Dec8_Coev/Jan12/coev5e9_10_30/coev_lam20_200gen_davg_savg_short.stat
+
+

@@ -1,0 +1,19 @@
+parent.0 = cmaes.params
+parent.1 = SC3_OptDisruptions.master.params
+
+pop.subpop.0.size = 1
+generations = 200
+
+pop.subpop.0.species.lambda = 500
+
+
+pop.subpop.0.species.sigma =                   0.25
+
+pop.subpop.0.species.covariance = scaled
+
+
+eval.num-tests = 5
+
+
+stat.file = /scratch/rpatel17/MASON_DES_Output/SC_3_Output/opt_output/disruptions/aug31_5trial_fixed_sc3_500_200.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/SC_3_Output/opt_output/disruptions/aug31_5trial_fixed_sc3_500_200_short.stat

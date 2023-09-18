@@ -1,0 +1,28 @@
+parent.0 = cmaes.params
+parent.1 = pharma3DemoOptSafetyStocks.master.params
+
+
+pop.subpop.0.size = 1
+generations = 200
+
+pop.subpop.0.species.lambda = 20
+###pop.subpop.0.species.mu = 10
+
+pop.subpop.0.species.sigma =                   0.5
+
+pop.subpop.0.species.covariance = scaled
+
+
+stat.file = /scratch/rpatel17/MASON_DES_Output/Dec8_Coev/Jan12/ind5e9/200gen_20lambda_200_9.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/Dec8_Coev/Jan12/ind5e9/200gen_20lambda_200_9_short.stat
+
+
+
+
+
+
+
+
+
+
+

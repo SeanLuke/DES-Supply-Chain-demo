@@ -1,0 +1,9 @@
+parent.0 = mason.master.params
+num-mason-properties = 10
+mason-properties-as-array = true
+mason-time = 2000
+mason-num-trials = 1
+mason-objectives = 1
+mason-rebuild-model = true
+mason-class = edu.rutgers.sc2.DemoEvoTargetLvlOpt
+pop.subpop.0.species.mutation-stdev = 0.1

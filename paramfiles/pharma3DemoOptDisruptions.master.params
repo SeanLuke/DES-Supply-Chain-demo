@@ -1,0 +1,11 @@
+parent.0 = mason.master.params
+num-mason-properties = 21
+mason-properties-as-array = true
+mason-time = 365
+mason-num-trials = 1
+mason-objectives = 1
+mason-rebuild-model = true
+mason-class = edu.rutgers.pharma3.DemoNoCommandLineArg
+pop.subpop.0.species.mutation-stdev = 0.1
+pop.subpop.0.species.min-gene.0 = 50.0
+pop.subpop.0.species.max-gene.0 = 365.0

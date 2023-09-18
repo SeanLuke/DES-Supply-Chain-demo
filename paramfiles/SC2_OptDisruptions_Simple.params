@@ -1,0 +1,176 @@
+# Copyright 2006 by Sean Luke and George Mason University
+# Licensed under the Academic Free License version 3.0
+# See the file "LICENSE" for more information
+
+parent.0 = ec.params
+
+
+state = 				ec.simple.SimpleEvolutionState
+finish = 	        		ec.simple.SimpleFinisher
+exch = 					ec.simple.SimpleExchanger
+eval =					ec.simple.SimpleEvaluator
+stat =					ec.simple.SimpleStatistics
+quit-on-run-complete =			true
+pop = 					ec.Population
+pop.subpops =				1
+pop.subpop.0 = 				ec.Subpopulation
+
+
+pop.subpop.0.species.mutation-bounded =	true
+
+
+pop.subpop.0.species.mutation-stdev = 1.0
+
+
+eval.problem = edu.rutgers.sc2.DemoEvoDisrProblem
+
+
+jobs=1
+generations=                            200
+select.tournament.size =                2
+pop.subpops =                           1
+pop.default-subpop =			0
+
+mason-time = 2000
+mason-num-trials = 1
+mason-objectives = 1
+mason-rebuild-model = true
+
+
+init =	                                       ec.eda.cmaes.CMAESInitializer
+breed =                                        ec.eda.cmaes.CMAESBreeder
+
+
+pop.subpop.0 =                          ec.Subpopulation
+pop.subpop.0.duplicate-retries =        2
+pop.subpop.0.species =                  ec.eda.cmaes.CMAESSpecies
+pop.subpop.0.species.crossover-type =   one
+pop.subpop.0.species.genome-size =      92
+pop.subpop.0.species.fitness =          ec.simple.SimpleFitness
+pop.subpop.0.species.ind =              ec.vector.DoubleVectorIndividual
+pop.subpop.0.species.min-gene =         0.0
+pop.subpop.0.species.max-gene =         1.0
+pop.subpop.0.size =                            1
+pop.subpop.0.species.mutation-prob =           0.0
+pop.subpop.0.species.pipe =                    ec.breed.InitializationPipeline	
+pop.subpop.0.species.mutation-type =           reset
+pop.subpop.0.species.crossover-type =          one
+
+
+
+
+#### Some default settings.  You may wish to change them.
+pop.subpop.0.species.alternative-termination = false
+pop.subpop.0.species.mean =                    center	
+pop.subpop.0.species.sigma =                   0.5
+
+
+
+
+
+pop.subpop.0.species.lambda = 20
+
+
+pop.subpop.0.species.covariance = scaled
+
+stat.num-children = 1
+stat.child.0 = ec.simple.SimpleShortStatistics
+
+stat.child.0.do-subpops = true
+
+trial-num=0
+stat.file = /scratch/rpatel17/MASON_DES_Output/SC_2_Output/optimize_output/June5/individual_optimization/disruptions/simple_200gen.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/SC_2_Output/optimize_output/June5/individual_optimization/disruptions/simple_200gen_short.stat
+
+pop.subpop.0.species.min-gene.0 = 0.0
+pop.subpop.0.species.max-gene.0 = 2000.0
+pop.subpop.0.species.min-gene.1 = 0.0
+pop.subpop.0.species.max-gene.1 = 2000.0
+pop.subpop.0.species.min-gene.2 = 0.0
+pop.subpop.0.species.max-gene.2 = 2000.0
+pop.subpop.0.species.min-gene.3 = 0.0
+pop.subpop.0.species.max-gene.3 = 2000.0
+pop.subpop.0.species.min-gene.4 = 0.0
+pop.subpop.0.species.max-gene.4 = 2000.0
+pop.subpop.0.species.min-gene.5 = 0.0
+pop.subpop.0.species.max-gene.5 = 2000.0
+pop.subpop.0.species.min-gene.6 = 0.0
+pop.subpop.0.species.max-gene.6 = 2000.0
+pop.subpop.0.species.min-gene.7 = 0.0
+pop.subpop.0.species.max-gene.7 = 2000.0
+pop.subpop.0.species.min-gene.8 = 0.0
+pop.subpop.0.species.max-gene.8 = 2000.0
+pop.subpop.0.species.min-gene.9 = 0.0
+pop.subpop.0.species.max-gene.9 = 2000.0
+pop.subpop.0.species.min-gene.10 = 0.0
+pop.subpop.0.species.max-gene.10 = 2000.0
+pop.subpop.0.species.min-gene.11 = 0.0
+pop.subpop.0.species.max-gene.11 = 2000.0
+pop.subpop.0.species.min-gene.12 = 0.0
+pop.subpop.0.species.max-gene.12 = 2000.0
+pop.subpop.0.species.min-gene.13 = 0.0
+pop.subpop.0.species.max-gene.13 = 2000.0
+pop.subpop.0.species.min-gene.14 = 0.0
+pop.subpop.0.species.max-gene.14 = 2000.0
+pop.subpop.0.species.min-gene.15 = 0.0
+pop.subpop.0.species.max-gene.15 = 2000.0
+pop.subpop.0.species.min-gene.16 = 0.0
+pop.subpop.0.species.max-gene.16 = 2000.0
+pop.subpop.0.species.min-gene.17 = 0.0
+pop.subpop.0.species.max-gene.17 = 2000.0
+pop.subpop.0.species.min-gene.18 = 0.0
+pop.subpop.0.species.max-gene.18 = 2000.0
+pop.subpop.0.species.min-gene.19 = 0.0
+pop.subpop.0.species.max-gene.19 = 2000.0
+pop.subpop.0.species.min-gene.20 = 0.0
+pop.subpop.0.species.max-gene.20 = 2000.0
+pop.subpop.0.species.min-gene.21 = 0.0
+pop.subpop.0.species.max-gene.21 = 2000.0
+pop.subpop.0.species.min-gene.22 = 0.0
+pop.subpop.0.species.max-gene.22 = 2000.0
+pop.subpop.0.species.min-gene.23 = 0.0
+pop.subpop.0.species.max-gene.23 = 2000.0
+pop.subpop.0.species.min-gene.24 = 0.0
+pop.subpop.0.species.max-gene.24 = 2000.0
+pop.subpop.0.species.min-gene.25 = 0.0
+pop.subpop.0.species.max-gene.25 = 2000.0
+pop.subpop.0.species.min-gene.26 = 0.0
+pop.subpop.0.species.max-gene.26 = 2000.0
+pop.subpop.0.species.min-gene.27 = 0.0
+pop.subpop.0.species.max-gene.27 = 2000.0
+pop.subpop.0.species.min-gene.28 = 0.0
+pop.subpop.0.species.max-gene.28 = 2000.0
+pop.subpop.0.species.min-gene.29 = 0.0
+pop.subpop.0.species.max-gene.29 = 2000.0
+pop.subpop.0.species.min-gene.30 = 0.0
+pop.subpop.0.species.max-gene.30 = 2000.0
+pop.subpop.0.species.min-gene.31 = 0.0
+pop.subpop.0.species.max-gene.31 = 2000.0
+pop.subpop.0.species.min-gene.32 = 0.0
+pop.subpop.0.species.max-gene.32 = 2000.0
+pop.subpop.0.species.min-gene.33 = 0.0
+pop.subpop.0.species.max-gene.33 = 2000.0
+pop.subpop.0.species.min-gene.34 = 0.0
+pop.subpop.0.species.max-gene.34 = 2000.0
+pop.subpop.0.species.min-gene.35 = 0.0
+pop.subpop.0.species.max-gene.35 = 2000.0
+pop.subpop.0.species.min-gene.36 = 0.0
+pop.subpop.0.species.max-gene.36 = 2000.0
+pop.subpop.0.species.min-gene.37 = 0.0
+pop.subpop.0.species.max-gene.37 = 2000.0
+pop.subpop.0.species.min-gene.38 = 0.0
+pop.subpop.0.species.max-gene.38 = 2000.0
+pop.subpop.0.species.min-gene.39 = 0.0
+pop.subpop.0.species.max-gene.39 = 2000.0
+pop.subpop.0.species.min-gene.40 = 0.0
+pop.subpop.0.species.max-gene.40 = 2000.0
+pop.subpop.0.species.min-gene.41 = 0.0
+pop.subpop.0.species.max-gene.41 = 2000.0
+pop.subpop.0.species.min-gene.42 = 0.0
+pop.subpop.0.species.max-gene.42 = 2000.0
+pop.subpop.0.species.min-gene.43 = 0.0
+pop.subpop.0.species.max-gene.43 = 2000.0
+pop.subpop.0.species.min-gene.44 = 0.0
+pop.subpop.0.species.max-gene.44 = 2000.0
+pop.subpop.0.species.min-gene.45 = 0.0
+pop.subpop.0.species.max-gene.45 = 2000.0

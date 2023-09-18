@@ -1,0 +1,17 @@
+parent.0 = cmaes.params
+parent.1 = SC3_mitigate_based_on_top5.master.params
+
+pop.subpop.0.size = 1
+generations = 200
+
+pop.subpop.0.species.lambda = 100
+
+mason-num-trials = 3
+
+pop.subpop.0.species.sigma =                   0.5
+
+pop.subpop.0.species.covariance = scaled
+
+
+stat.file = /scratch/rpatel17/MASON_DES_Output/SC_3_Output/opt_output/disruptions/Mitigate_3trials_100lam_500gen.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/SC_3_Output/opt_output/disruptions/Mitigate_3trials_100lam_short_500gen.stat

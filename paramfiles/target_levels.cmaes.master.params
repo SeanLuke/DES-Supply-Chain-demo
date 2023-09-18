@@ -1,0 +1,18 @@
+parent.0 = cmaes.params
+parent.1 = target_levels.master.params
+
+pop.subpop.0.size = 1
+generations = 200
+
+pop.subpop.0.species.lambda = 50
+
+
+pop.subpop.0.species.sigma =                   0.25
+
+####pop.subpop.0.species.covariance = scaled
+
+mason-rebuild-model = true
+
+
+stat.file = /scratch/rpatel17/MASON_DES_Output/SC_2_Output/optimize_output/June5/individual_optimization/disruptions/50on35target_level_200.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/SC_2_Output/optimize_output/June5/individual_optimization/disruptions/50on35target_level_200_short.stat

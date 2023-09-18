@@ -1,0 +1,29 @@
+parent.0 = cmaes.params
+parent.1 = SC2_OptDisruptions.master.params
+
+pop.subpop.0.size = 1
+generations = 5
+
+pop.subpop.0.species.lambda = 2
+
+
+pop.subpop.0.species.sigma =                   0.05
+
+####pop.subpop.0.species.covariance = scaled
+
+
+stat.file = /scratch/rpatel17/MASON_DES_Output/SC_2_Output/optimize_output/June5/individual_optimization/disruptions/5gen_2lambda_200_TEST.stat
+stat.child.0.file = /scratch/rpatel17/MASON_DES_Output/SC_2_Output/optimize_output/June5/individual_optimization/disruptions/5gen_2lambda_200_TEST_short.stat
+
+
+
+
+
+
+
+
+
+
+
+
+
