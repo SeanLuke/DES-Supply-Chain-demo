@@ -1,0 +1,15 @@
+This directory contain sample command files for visualizing various time series  using Gnuplot.
+
+This is how to use them. For example, you have run the script sc-2-run-all-disruptions.sh. It has produced a number of output directories, one for each disruption scenario.  To visualize the time series for the run whose output is in charts-foo, you do
+
+cd charts-foo
+gnuplot
+
+and when running Gnuplot, you type
+
+load '../gnu/sc2/sc2.gnu'
+
+This will cause gnuplot to create half a dozen or more plots, each one in a separate Gnuplot window, with various interesting time series. (Such as production of product X, order backlog for product Y, etc).
+
+
+If you are not using Gnuplot because you prefer to use some other visualization software, you can still make some use of these files: if you read them, they let you figure which CSV files to look at, and which columns of them to use, to prepare a particular series of plots.
