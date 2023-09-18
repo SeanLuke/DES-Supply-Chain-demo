@@ -1,0 +1,25 @@
+This directory contains the documentation for the SC-1, SC-2, and SC-3 applications. To read it, please obtain a web browser (such as Netscape, Internet Explorer, Firefox, or Chrome), download the code from this repository, and open the file names index.html.
+
+--------
+Supply Chain models
+
+Documentation for the supply chain modeling applications based on the MASON/DES API.
+
+* pharma.html - Pharma: Model 1, based on the business model provided by Abhisekh, from Sean Luke's team at GMU.
+  
+* pharma2.html - Pharma2: Model 2, based on the business model provided by the Rutgers Supply Chain team in the fall of 2021.
+
+* pharma3.html - Pharma3 (aka SC-1): Model 3, based on the business model provided by the Rutgers Supply Chain team in the spring of 2022.
+
+ **<a href="disrupt.html">Disruptions in Pharma3</a>
+ **<a href="pharma3-orders.html">Orders and production plans in Pharma3</a>
+
+  
+*<a href="sc-2.html">SC-2</a>
+  **<a href="sc-2-disrupt.html">Disruptions in SC-2</a>
+  **<a href="order-timeout.html">Order timeout in SC-2</a>
+
+*<a href="sc-3.html">SC-3</a>
+  **<A href="sc-3-config.html">SC-3: configuration file parameters</a>
+
+
