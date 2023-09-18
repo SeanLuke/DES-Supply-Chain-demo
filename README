@@ -1,0 +1,28 @@
+build.xml  -- the control script for building the project from the source code using Apache Ant
+
+config/  -- configuration files for each models, and disruption scenario files
+
+doc/ -- all documentation.
+
+gnu/ -- Gnuplot command scripts, for use in visualization
+
+gui2.sh*
+gui3.sh*
+
+out/ -- place for output files
+
+
+run3.sh  -- main run script for SC-1
+run-sc2.sh -- main run script for SC-2
+run-sc3.sh -- main run script for SC-3
+
+Test scripts for test applications (simpler models than SC-1, SC-2, and SC-3)
+pop-run.sh -- a test script for a simple model (just to make sure you have Mason installed)
+run.sh
+run2.sh
+
+scripts/ -- other shell scripts (e.g. for multiple runs)
+src/ -- the Java source code for all applications
+
+zip.sh -- an auxiliary script to pack the source code and everything else into a single ZIP file (e.g. for backups)
+

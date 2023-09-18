@@ -1,0 +1,14 @@
+README
+convert-gnuplot-to-batch.pl*
+extract-anomaly-columns.sh*
+gamma.pl*
+graph-analysis.sh*
+mk-index.pl*
+repeat-test.sh*
+sc-2-optimization-test.sh*
+sc-2-run-all-disruptions.sh*
+sc-3-optimization-test.sh*
+set-var.sh
+test-population.sh*
+test-triangular.sh*
+test.sh*

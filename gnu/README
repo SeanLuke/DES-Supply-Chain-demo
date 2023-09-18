@@ -1,4 +1,4 @@
-This directory contain sample command files for visualizing various time series  using Gnuplot.
+This directory contain sample command files for visualizing various time series  using Gnuplot. They are distributed in 3 directories, sc1, sc2, sc3, for the 3 respective models.
 
 This is how to use them. For example, you have run the script sc-2-run-all-disruptions.sh. It has produced a number of output directories, one for each disruption scenario.  To visualize the time series for the run whose output is in charts-foo, you do
 

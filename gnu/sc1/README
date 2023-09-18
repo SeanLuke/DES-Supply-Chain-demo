@@ -1,0 +1,7 @@
+charts.gnu  -- the main command file for Gnuplot, for visualizing the main time series of a SC-1 run
+
+charts-batch.gnu -- same as above, but can be used from the command line ("gnuplot charts-batch.gnu").
+
+other-charts.gnu -- for some additional charts (not put into the main file to avoid opening too many windows)
+
+safety.gnu -- for safety stock charts
