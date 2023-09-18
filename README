@@ -9,8 +9,11 @@ gnu/ -- Gnuplot command scripts, for use in visualization
 gui2.sh*
 gui3.sh*
 
-out/ -- place for output files
+paramfiles/ -- control files for ECJ optimization files (from Raj)
 
+web/ -- Javadoc documentation for classes (also found in doc/api.zip in compressed form)
+
+out/ -- place for output files
 
 run3.sh  -- main run script for SC-1
 run-sc2.sh -- main run script for SC-2
