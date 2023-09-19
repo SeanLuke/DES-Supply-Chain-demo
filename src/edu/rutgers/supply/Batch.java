@@ -19,9 +19,9 @@ import edu.rutgers.util.ParaSet;
     name, expiration date, maybe some of the "life history"
     of the lot). 
     
-    A Batch object can represent "prototype batch" (a model
+    A Batch object can represent a "prototype batch" (a model
     used for creating real product lots) or a "real batch"
-    (representing an actual lot of the product.
+    (representing an actual lot of the product, with a specific amount).
 
     A "real batch" is e.g. a pallet on which several boxes of
     a drug, all with the same lot number, are stored.  It is possible
@@ -277,6 +277,7 @@ for both a countable resource named "Foo" and for a Batch of "Foo".
 
     /** If this is a "real" batch, retrieves its LotInfo structure (which
 	contains the lot number, expiration date, etc).
+	@throws  IllegalArgumentException If this is a prototype batch, rather than a "real" one
     */
     public LotInfo getLot() {
 	Object info = getInfo();

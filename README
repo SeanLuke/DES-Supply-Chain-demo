@@ -11,7 +11,6 @@ gui3.sh*
 
 paramfiles/ -- control files for ECJ optimization files (from Raj)
 
-web/ -- Javadoc documentation for classes (also found in doc/api.zip in compressed form)
 
 out/ -- place for output files
 
