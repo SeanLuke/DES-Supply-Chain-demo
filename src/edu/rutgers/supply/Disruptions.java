@@ -21,11 +21,11 @@ import edu.rutgers.util.IllegalInputException;
     disruption scenario.
 
     <p>During the simulation process, each supply chain element that
-    may be disrupted, watches out for disruptions that may affect
+    may be disrupted watches out for disruptions that may affect
     it. To do that, when the supply chain element is stepped daily, it
     checks (with Disruptions.hasToday()) whether the Disruptions
     object contains any Disruption instances that affect this element
-    on this calendar day; if such a Disruption instances are found,
+    on this calendar day; if such a Disruption instance is found,
     the supply chain element modifies its behavior for this day (and,
     possibly, for a certain future period) appropriately. E.g. it may
     destroy some amount of a product in its storage facility, or it may
@@ -107,13 +107,13 @@ public class Disruptions {
     }
 
 
-    /** A single disruption event. A disruption may take place of a
-	momentary even (Depletion) which is thought to happen at the
+    /** A single disruption event. A disruption may take form of a
+	momentary event (Depletion) which is thought to happen at the
 	beginning of the day, or a modification of the production
 	process which is in effect for one or several days (Adulteration, Halt).
 
-	<p>In SC-1 and SC-2 there was a distinction between events
-	that were ineffect for 1 day (Adulteration), and those that
+	<p>In SC-1 and SC-2, there was a distinction between events
+	that were in effect for 1 day (Adulteration), and those that
 	would last for for several days (Halt). This is because there
 	was just one numerical field ("magnitude" in the Java class,
 	aka "amount" in CSV files), which had the "intensity"
