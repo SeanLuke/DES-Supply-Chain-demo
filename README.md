@@ -29,6 +29,9 @@ Control files for ECJ optimization files (from Raj)
 ### out/
 A place for output files
 
-### scripts/ -- other shell scripts (e.g. for multiple runs)
-### src/ -- the Java source code for all applications
+### scripts/
+Other shell scripts (e.g. for multiple runs)
+
+### src/
+The Java source code for all applications
 
