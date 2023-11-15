@@ -11,7 +11,7 @@ set d=`dirname $0`
 
 
 set h=`(cd $d/..; pwd)`
-setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*'
+setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*':$h/classes
 
 
 # time java -Xprof edu.rutgers.sc2.Demo  $argv[1-]

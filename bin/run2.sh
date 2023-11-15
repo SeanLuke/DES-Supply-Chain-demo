@@ -6,7 +6,7 @@
 
 
 set h=`(cd ..; pwd)`
-setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*'
+setenv CLASSPATH $h/work/lib/demo.jar:$h/lib/'*':$h/classes
 
 
 #java edu.rutgers.pharma.Test -until 300

@@ -71,9 +71,9 @@ public class DemoEvoDisr extends Demo {
 
         //String confPath = "../config/sc2_1000.csv";
 
-        //String confPath = "../config/sc3.csv";
+        String confPath = "../config/sc3.csv";
 
-        String confPath = "config/sc3.csv";
+        //String confPath = "config/sc3.csv";
 
         File f= new File(confPath);
 	    this.config  = Config.readConfig(f);

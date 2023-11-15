@@ -29,7 +29,7 @@
 <path id="classpath"
        description="The classpath to use for compiling this app">
 
-   <fileset dir="${main}/../lib">
+   <fileset dir="${main}/lib">
      <include name="*.jar"/>
    </fileset> 
  </path>

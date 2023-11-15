@@ -552,7 +552,7 @@ public class Demo extends SimState {
 	 */
 	public MakesDemo(String[] argv) throws IOException, IllegalInputException    {
 
-	    String confPath = "config/sc3.csv";
+	    String confPath = "../config/sc3.csv";
 	    String chartsPath = "charts";
 	    String disruptPath = null;
 
